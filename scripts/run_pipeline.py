@@ -128,6 +128,20 @@ def main():
     print("  streamlit run app.py 로 대시보드를 실행하세요.")
     print("=" * 60)
 
+    notify(f"파이프라인 완료 ({elapsed / 60:.1f}분)", "Step 1~8 전체 업데이트 성공")
+
+
+def notify(title, message):
+    """macOS 알림 전송"""
+    import subprocess
+    try:
+        subprocess.run([
+            "osascript", "-e",
+            f'display notification "{message}" with title "Alpha Lab" subtitle "{title}" sound name "Glass"'
+        ], timeout=5)
+    except Exception:
+        pass
+
 
 if __name__ == "__main__":
     main()
