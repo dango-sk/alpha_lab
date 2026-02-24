@@ -627,8 +627,16 @@ def apply_quality_filter(df, filter_config):
 
 def score_stocks_from_strategy(conn, calc_date, strategy) -> list[tuple[str, float]]:
     """
-    전략 모듈/설정에 따라 팩터 데이터 -> 회귀분석 -> 채점 -> 가중합 -> 퀄리티 필터
+    전략 모듈/설정에 따라 팩터 데이터 -> 퀄리티 필터 -> 회귀분석 -> 채점 -> 가중합
     전체 파이프라인을 실행하고 (stock_code, score) 리스트를 반환.
+
+    파이프라인 순서:
+      1. load_factor_data → 원시 팩터
+      2. 대형주 필터 (WEIGHTS_SMALL이 비어있으면)
+      3. 퀄리티 필터 → 투자 가능 유니버스 확정
+      4. 회귀분석 → 매력도 계산
+      5. 사분위 스코어링 → 점수 계산
+      6. 가중합 → value_score
 
     strategy: ModuleType 또는 dict-like (WEIGHTS_LARGE, WEIGHTS_SMALL, ...)
     """
@@ -652,14 +660,24 @@ def score_stocks_from_strategy(conn, calc_date, strategy) -> list[tuple[str, flo
     })
     top_n = getattr(strategy, "PARAMS", {}).get("top_n", 30)
 
-    # 파이프라인 실행
+    # 대형주 전용: WEIGHTS_SMALL이 비어있으면 대형주만
+    if not weights_small:
+        df = df[df["size_group"] == "large"].copy()
+
+    # 퀄리티 필터 먼저 → 투자 가능 유니버스에서만 스코어링
+    df = apply_quality_filter(df, quality_filter)
+    df = df[df["quality_pass"] == 1].copy()
+
+    if len(df) < 10:
+        return []
+
+    # 파이프라인 실행 (퀄리티 통과 종목만)
     df, _reg_info = run_regressions(df, regression_models, outlier_filters)
     df = apply_scoring(df, scoring_rules, scoring_mode)
     df = calc_weighted_scores(df, weights_large, weights_small, score_map, scoring_mode)
-    df = apply_quality_filter(df, quality_filter)
 
-    # 퀄리티 통과 종목만, 점수 순 정렬
-    passed = df[df["quality_pass"] == 1].nlargest(top_n * 2, "value_score")
+    # 점수 순 정렬
+    passed = df.nlargest(top_n * 2, "value_score")
 
     # stock_code에서 'A' 접두사 제거
     result = []
@@ -744,9 +762,11 @@ def validate_strategy_code(code: str) -> tuple[bool, str]:
     if not isinstance(namespace["REGRESSION_MODELS"], list):
         return False, "REGRESSION_MODELS는 list여야 합니다."
 
-    # 6. 가중치 합 검증
+    # 6. 가중치 합 검증 (빈 WEIGHTS_SMALL은 대형주 전용 = OK)
     for name, weights in [("WEIGHTS_LARGE", namespace["WEIGHTS_LARGE"]),
                           ("WEIGHTS_SMALL", namespace["WEIGHTS_SMALL"])]:
+        if not weights:
+            continue
         total = sum(v for v in weights.values() if v > 0)
         if total < 0.95 or total > 1.05:
             return False, f"{name} 가중치 합이 {total:.2f}입니다. 1.0에 가까워야 합니다."
@@ -796,21 +816,19 @@ def code_to_module(code: str) -> ModuleType:
 # ═══════════════════════════════════════════════════════
 
 DEFAULT_STRATEGY_CODE = '''"""
-Strategy: A0 기본 전략
+Strategy: A0 기본 전략 (대형주)
 Created: 2026-02-23
 Description: 원본 사분위 밸류 전략 (밸류 35% + 회귀 30% + 성장 20% + 차별화 15%)
 
 설계 원리:
-  - 대형주(시총 상위 200): 사분위(Quartile, 0~4점) 채점. 종목 수가 적어 십분위 구간이 촘촘해짐을 방지.
-  - 중소형주(나머지): 십분위(Decile, 0~10점) 채점. 종목 수 충분하여 세밀한 분류 가능.
-  - 대형주와 중소형주에 서로 다른 가중치 적용. 중소형주에는 주가모멘텀·부채비율·유동비율 추가.
+  - 대형주(시총 상위 200) 유니버스 한정. KOSPI 200과 공정 비교 가능.
+  - 사분위(Quartile, 0~4점) 채점. 종목 수가 적어 십분위 구간이 촘촘해짐을 방지.
   - 4개 회귀 모델(PBR-ROE, EV/IC-ROIC, F.PER-이익성장, F.EV/EBIT-EBIT성장)로 내재가치 괴리도 측정.
 """
 
 # ─── 채점 방식 ───
 SCORING_MODE = {
     "large": "quartile",   # 대형주: 사분위 (0~4점)
-    "small": "decile",     # 중소형주: 십분위 (0~10점)
 }
 
 # ─── 팩터 가중치 (합계 1.0) ───
@@ -822,13 +840,7 @@ WEIGHTS_LARGE = {
     "F_EPS_M": .15,
 }
 
-WEIGHTS_SMALL = {
-    "T_PER": .05, "F_PER": .05, "T_EVEBITDA": .05, "F_EVEBITDA": .05,
-    "T_PBR": .05, "F_PBR": .05, "T_PCF": .05,
-    "ATT_PBR": .05, "ATT_EVIC": .05, "ATT_PER": .10, "ATT_EVEBIT": .10,
-    "T_SPSG": .10, "F_SPSG": .10,
-    "PRICE_M": .05, "NDEBT_EBITDA": .05, "CURRENT": .05,
-}
+WEIGHTS_SMALL = {}
 
 # ─── 회귀 모델 (name, x_col, y_col, formula_type) ───
 # formula_type: "ratio" | "ev_equity" | "ev_equity_ebit" | "simple"
@@ -886,6 +898,46 @@ PARAMS = {
 }
 
 # ─── 퀄리티 필터 ───
+QUALITY_FILTER = {
+    "exclude_spac_etf_reit": True,
+    "require_positive_oi": True,
+    "require_positive_roe": True,
+    "min_avg_volume": 500_000_000,
+}
+'''
+
+ATT2_STRATEGY_CODE = '''"""
+Strategy: ATT2 회귀 매력도 전략 (대형주)
+Description: PBR-ROE, EV/IC-ROIC 회귀 매력도 2종만 사용
+"""
+
+SCORING_MODE = {"large": "quartile"}
+
+WEIGHTS_LARGE = {"ATT_PBR": .50, "ATT_EVIC": .50}
+WEIGHTS_SMALL = {}
+
+REGRESSION_MODELS = [
+    ("pbr_roe", "roe", "pbr", "ratio"),
+    ("evic_roic", "roic", "ev_ic", "ev_equity"),
+]
+
+OUTLIER_FILTERS = {
+    "pbr_roe": {"x_min": 0, "x_max": 100, "y_min": 0, "y_max": 20},
+    "evic_roic": {"x_min": 0, "x_max": 500, "y_min": 0, "y_max": 51},
+}
+
+SCORE_MAP = {
+    "ATT_PBR": "pbr_roe_attractiveness_score",
+    "ATT_EVIC": "evic_roic_attractiveness_score",
+}
+
+SCORING_RULES = {
+    "pbr_roe_attractiveness": "rule2",
+    "evic_roic_attractiveness": "rule2",
+}
+
+PARAMS = {"top_n": 30, "tx_cost_bp": 30, "weight_cap_pct": 15}
+
 QUALITY_FILTER = {
     "exclude_spac_etf_reit": True,
     "require_positive_oi": True,

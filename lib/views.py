@@ -609,12 +609,9 @@ def _build_weights_html(
     large_only_set: set | None = None,
     small_only_set: set | None = None,
 ) -> str:
-    """가중치 데이터(format_weights_for_display 형식)를 HTML로 변환."""
+    """가중치 데이터(format_weights_for_display 형식)를 HTML로 변환 (대형주 전용)."""
     if not weights_data:
         return ""
-
-    large_only_set = large_only_set or set()
-    small_only_set = small_only_set or set()
 
     cat_totals = {}
     cat_groups = {}
@@ -624,10 +621,7 @@ def _build_weights_html(
         cat_groups.setdefault(cat, []).append(row)
 
     total = sum(cat_totals.values())
-    max_w = max(
-        max((r["_wl"] for r in weights_data), default=0.01),
-        max((r["_ws"] for r in weights_data), default=0.01),
-    )
+    max_w = max((r["_wl"] for r in weights_data), default=0.01)
 
     # ── 스택드 오버뷰 바 ──
     segs = ""
@@ -643,14 +637,6 @@ def _build_weights_html(
         )
     html = f'<div class="wv-overview">{segs}</div>'
 
-    # ── 범례 ──
-    html += (
-        '<div class="wv-legend">'
-        '<span><span class="wv-legend-dot" style="background:#fff; opacity:0.85;"></span>대형주</span>'
-        '<span><span class="wv-legend-dot" style="background:#fff; opacity:0.35;"></span>중소형주</span>'
-        '</div>'
-    )
-
     # ── 카테고리 카드 ──
     for cat, rows in cat_groups.items():
         c = _CAT_COLORS.get(cat, "#999")
@@ -658,28 +644,16 @@ def _build_weights_html(
 
         factors_html = ""
         for row in rows:
-            wl, ws = row["_wl"], row["_ws"]
+            wl = row["_wl"]
             wl_w = (wl / max_w) * 100 if wl > 0 else 0
-            ws_w = (ws / max_w) * 100 if ws > 0 else 0
-
-            badge = ""
-            code = row["_code"]
-            if code in large_only_set:
-                badge = '<span class="wv-badge" style="background:rgba(33,150,243,0.15); color:#64B5F6;">대형주</span>'
-            elif code in small_only_set:
-                badge = '<span class="wv-badge" style="background:rgba(255,152,0,0.15); color:#FFB74D;">중소형주</span>'
 
             factors_html += (
                 f'<div class="wv-factor">'
-                f'  <span class="wv-fname">{row["팩터"]}{badge}</span>'
+                f'  <span class="wv-fname">{row["팩터"]}</span>'
                 f'  <div class="wv-fbars">'
                 f'    <div class="wv-fbar">'
                 f'      <div class="wv-fbar-track"><div class="wv-fbar-fill" style="width:{wl_w}%;background:{c};"></div></div>'
-                f'      <span class="wv-fbar-val">{row["대형주"]}</span>'
-                f'    </div>'
-                f'    <div class="wv-fbar">'
-                f'      <div class="wv-fbar-track"><div class="wv-fbar-fill" style="width:{ws_w}%;background:{c};opacity:0.4;"></div></div>'
-                f'      <span class="wv-fbar-val" style="opacity:0.55;">{row["중소형주"]}</span>'
+                f'      <span class="wv-fbar-val">{row["비중"] if "비중" in row else row.get("대형주", "-")}</span>'
                 f'    </div>'
                 f'  </div>'
                 f'</div>'
@@ -816,7 +790,7 @@ def render_lab_content():
         bw = BASE_STRATEGY_WEIGHTS[selected_view]
         _view_code = (
             f"WEIGHTS_LARGE = {bw['weights_large']!r}\n"
-            f"WEIGHTS_SMALL = {bw['weights_small']!r}\n"
+            f"WEIGHTS_SMALL = {{}}\n"
             f"REGRESSION_MODELS = {bw['regression_models']!r}\n"
             f"SCORING_MODE = {bw['scoring']!r}\n"
             f"PARAMS = {{'top_n': 30, 'tx_cost_bp': 30, 'weight_cap_pct': 15}}\n"
@@ -833,7 +807,6 @@ def render_lab_content():
     strat_summary = extract_strategy_summary(_view_code) if _view_code else {}
     scoring_mode = strat_summary.get("scoring_mode", {})
     large_mode_label = "사분위(0-4점)" if scoring_mode.get("large") == "quartile" else "십분위(0-10점)"
-    small_mode_label = "사분위(0-4점)" if scoring_mode.get("small") == "quartile" else "십분위(0-10점)"
 
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
@@ -847,14 +820,13 @@ def render_lab_content():
         st.metric("회귀 모델 수", f"{n_reg}개")
     with col5:
         n_l = strat_summary.get("n_factors_large", 0)
-        n_s = strat_summary.get("n_factors_small", 0)
-        st.metric("팩터 수 (대형/중소)", f"{n_l} / {n_s}")
+        st.metric("팩터 수", f"{n_l}개")
 
     # ── 탭: 가중치 테이블 | 가중치 차트 | 전략 코드 ──
     tab1, tab2, tab3 = st.tabs(["가중치 테이블", "가중치 차트", "전략 코드"])
     with tab1:
         st.markdown(
-            f"**채점**: 대형주 {large_mode_label} · 중소형주 {small_mode_label}"
+            f"**채점**: 대형주 {large_mode_label} (시총 상위 200)"
         )
         if _view_code:
             weights_data = format_weights_for_display(_view_code)

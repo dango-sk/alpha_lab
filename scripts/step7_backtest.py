@@ -19,12 +19,34 @@ from scipy import stats
 
 sys.path.append(str(Path(__file__).parent.parent))
 from config.settings import DB_PATH, BACKTEST_CONFIG, CACHE_DIR
+from lib.factor_engine import (
+    score_stocks_from_strategy, code_to_module,
+    DEFAULT_STRATEGY_CODE, ATT2_STRATEGY_CODE, clear_factor_cache,
+)
+
+
+LARGE_CAP_CUTOFF = 200
 
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
+
+
+def _get_large_cap_set(conn, calc_date):
+    """calc_date 기준 시총 상위 200개 종목 코드 set 반환 (step3과 동일 로직)."""
+    rows = conn.execute("""
+        SELECT stock_code FROM daily_price
+        WHERE trade_date = (
+            SELECT MAX(trade_date) FROM daily_price
+            WHERE trade_date <= ? AND market_cap > 0
+        )
+        AND market_cap > 0
+        ORDER BY market_cap DESC
+    """, (calc_date,)).fetchall()
+    cutoff = min(LARGE_CAP_CUTOFF, len(rows) // 3)
+    return {code for code, in rows[:cutoff]}
 
 
 def get_monthly_rebalance_dates(conn):
@@ -52,59 +74,22 @@ def get_monthly_rebalance_dates(conn):
 
 
 def get_portfolio_stocks(conn, calc_date, strategy, top_n=30):
-    """전략별 포트폴리오 종목 선정"""
-    CANDIDATE_POOL = int(top_n * 2.0)
+    """전략별 포트폴리오 종목 선정 (대형주 유니버스 한정)
 
-    if strategy == "A":
-        rows = conn.execute("""
-            SELECT vf.stock_code, vf.value_score as score
-            FROM valuation_factors vf
-            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
-            ORDER BY vf.value_score DESC
-            LIMIT ?
-        """, (calc_date, CANDIDATE_POOL)).fetchall()
+    흐름: 대형주 200개 → 유동성/생존 필터 → 점수순 top_n개
+    """
+    large_cap_set = _get_large_cap_set(conn, calc_date)
 
-    elif strategy == "A0":
-        rows = conn.execute("""
-            SELECT vf.stock_code, vf.value_score_orig as score
-            FROM valuation_factors vf
-            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
-              AND vf.value_score_orig IS NOT NULL
-            ORDER BY vf.value_score_orig DESC
-            LIMIT ?
-        """, (calc_date, CANDIDATE_POOL)).fetchall()
-
-    elif strategy == "VM":
-        rows = conn.execute("""
-            SELECT s.stock_code, (vf.value_score + COALESCE(s.tech_score, 0)) as score
-            FROM signals s
-            JOIN valuation_factors vf ON s.stock_code = vf.stock_code
-                AND vf.calc_date = s.calc_date
-            WHERE s.calc_date = ? AND vf.quality_pass = 1
-            ORDER BY score DESC
-            LIMIT ?
-        """, (calc_date, CANDIDATE_POOL)).fetchall()
-
-    elif strategy == "ATT2":
-        # att2_score: step3에서 A0와 동일 체계로 사전 계산
-        # 대형=사분위(0~4)/4*100, 중소=십분위(0~10)/10*100 → 0~100
-        rows = conn.execute("""
-            SELECT vf.stock_code, vf.att2_score as score
-            FROM valuation_factors vf
-            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
-              AND vf.att2_score IS NOT NULL
-            ORDER BY vf.att2_score DESC
-            LIMIT ?
-        """, (calc_date, CANDIDATE_POOL)).fetchall()
-
-    else:
-        return []
-
-    # ─── 유동성 + 생존자 필터 ───
-    filtered = []
-    for code, score in rows:
-        if len(filtered) >= top_n:
-            break
+    # ─── 1. 대형주 중 유동성/생존 필터 통과 종목 ───
+    tradeable_large = set()
+    for code in large_cap_set:
+        price_exists = conn.execute("""
+            SELECT COUNT(*) FROM daily_price
+            WHERE stock_code = ? AND trade_date >= date(?, '-5 days')
+              AND trade_date <= ?
+        """, (code, calc_date, calc_date)).fetchone()[0]
+        if price_exists == 0:
+            continue
 
         vol_data = conn.execute("""
             SELECT AVG(close * volume) as avg_trade_amount
@@ -112,17 +97,79 @@ def get_portfolio_stocks(conn, calc_date, strategy, top_n=30):
             WHERE stock_code = ? AND trade_date <= ?
               AND trade_date >= date(?, '-30 days')
         """, (code, calc_date, calc_date)).fetchone()
-
-        price_exists = conn.execute("""
-            SELECT COUNT(*) FROM daily_price
-            WHERE stock_code = ? AND trade_date >= date(?, '-5 days')
-              AND trade_date <= ?
-        """, (code, calc_date, calc_date)).fetchone()[0]
-
-        if price_exists == 0:
-            continue
         if vol_data and vol_data[0] and vol_data[0] >= 100_000_000:
-            filtered.append((code, score))
+            tradeable_large.add(code)
+
+    if not tradeable_large:
+        return []
+
+    # ─── 2. 전략별 점수 조회 (tradeable 대형주만) ───
+    placeholders = ",".join("?" for _ in tradeable_large)
+    codes = list(tradeable_large)
+
+    # 동점 시 시총이 큰 종목 우선 (tiebreaker)
+    mcap_date = conn.execute("""
+        SELECT MAX(trade_date) FROM daily_price
+        WHERE trade_date <= ? AND market_cap > 0
+    """, (calc_date,)).fetchone()[0]
+
+    mcap_join = f"""
+        LEFT JOIN daily_price dp ON dp.stock_code = vf.stock_code
+            AND dp.trade_date = '{mcap_date}'
+    """
+
+    if strategy == "A":
+        rows = conn.execute(f"""
+            SELECT vf.stock_code, vf.value_score as score
+            FROM valuation_factors vf
+            {mcap_join}
+            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
+              AND vf.stock_code IN ({placeholders})
+            ORDER BY vf.value_score DESC, dp.market_cap DESC
+            LIMIT ?
+        """, [calc_date] + codes + [top_n]).fetchall()
+
+    elif strategy == "A0":
+        rows = conn.execute(f"""
+            SELECT vf.stock_code, vf.value_score_orig as score
+            FROM valuation_factors vf
+            {mcap_join}
+            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
+              AND vf.value_score_orig IS NOT NULL
+              AND vf.stock_code IN ({placeholders})
+            ORDER BY vf.value_score_orig DESC, dp.market_cap DESC
+            LIMIT ?
+        """, [calc_date] + codes + [top_n]).fetchall()
+
+    elif strategy == "VM":
+        rows = conn.execute(f"""
+            SELECT s.stock_code, (vf.value_score + COALESCE(s.tech_score, 0)) as score
+            FROM signals s
+            JOIN valuation_factors vf ON s.stock_code = vf.stock_code
+                AND vf.calc_date = s.calc_date
+            {mcap_join}
+            WHERE s.calc_date = ? AND vf.quality_pass = 1
+              AND s.stock_code IN ({placeholders})
+            ORDER BY score DESC, dp.market_cap DESC
+            LIMIT ?
+        """, [calc_date] + codes + [top_n]).fetchall()
+
+    elif strategy == "ATT2":
+        rows = conn.execute(f"""
+            SELECT vf.stock_code, vf.att2_score as score
+            FROM valuation_factors vf
+            {mcap_join}
+            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
+              AND vf.att2_score IS NOT NULL
+              AND vf.stock_code IN ({placeholders})
+            ORDER BY vf.att2_score DESC, dp.market_cap DESC
+            LIMIT ?
+        """, [calc_date] + codes + [top_n]).fetchall()
+
+    else:
+        return []
+
+    filtered = [(code, score) for code, score in rows]
 
     return filtered
 
@@ -399,21 +446,66 @@ STRATEGIES = [
     ("ATT2", "ATT2", "ATT2: 회귀 매력도 (ATT_PBR+ATT_EVIC)"),
 ]
 
+# 기본 전략 코드 맵 (factor_engine 기반 파이프라인)
+_BASE_STRATEGY_CODES = {
+    "A0": DEFAULT_STRATEGY_CODE,
+    "ATT2": ATT2_STRATEGY_CODE,
+}
+
+
+def make_engine_selector(strategy_key):
+    """factor_engine 기반 stock_selector 콜백 생성.
+
+    score_stocks_from_strategy()로 스코어링 후 유동성/생존 필터 적용.
+    """
+    code = _BASE_STRATEGY_CODES.get(strategy_key)
+    if not code:
+        return None
+    strategy_module = code_to_module(code)
+
+    def selector(conn, calc_date, top_n):
+        candidates = score_stocks_from_strategy(conn, calc_date, strategy_module)
+        filtered = []
+        for code_str, score in candidates:
+            if len(filtered) >= top_n:
+                break
+            price_exists = conn.execute("""
+                SELECT COUNT(*) FROM daily_price
+                WHERE stock_code = ? AND trade_date >= date(?, '-5 days')
+                  AND trade_date <= ?
+            """, (code_str, calc_date, calc_date)).fetchone()[0]
+            if price_exists == 0:
+                continue
+            vol_data = conn.execute("""
+                SELECT AVG(close * volume) as avg_trade_amount
+                FROM daily_price
+                WHERE stock_code = ? AND trade_date <= ?
+                  AND trade_date >= date(?, '-30 days')
+            """, (code_str, calc_date, calc_date)).fetchone()
+            if vol_data and vol_data[0] and vol_data[0] >= 100_000_000:
+                filtered.append((code_str, score))
+        return filtered
+
+    return selector
+
 
 def run_all_backtests():
-    """4개 전략 + 벤치마크 백테스트"""
+    """기본 전략 + 벤치마크 백테스트 (factor_engine 파이프라인 사용)"""
     print("\n" + "=" * 60)
     print("Step 7: 백테스트")
     print(f"   기간: {BACKTEST_CONFIG['start']} ~ {BACKTEST_CONFIG['end']}")
     print(f"   리밸런싱: 월 1회, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목")
     print(f"   거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp + 슬리피지")
     print(f"   비중: 시총비례 + 15% 캡")
+    print(f"   파이프라인: factor_engine (퀄리티필터→스코어링)")
     print("=" * 60)
 
     results = {}
     for key, strat, desc in STRATEGIES:
         print(f"\n  {key} ({desc}) 백테스트 중...")
-        result = run_backtest(strat)
+        selector = make_engine_selector(key)
+        result = run_backtest(strat, stock_selector=selector)
+        clear_factor_cache()
         if result:
             result["strategy"] = key
             results[key] = result

@@ -404,14 +404,11 @@ def chat_strategy_modification(
 
 
 def format_weights_for_display(strategy_code: str) -> list:
-    """전략 코드에서 가중치를 추출하여 대시보드 표시용 데이터로 변환.
-    대형주와 중소형주 가중치를 모두 표시한다.
-    """
+    """전략 코드에서 가중치를 추출하여 대시보드 표시용 데이터로 변환 (대형주 전용)."""
     try:
         namespace = {}
         exec(compile(strategy_code, "<strategy>", "exec"), {"__builtins__": {}}, namespace)
         weights_large = namespace.get("WEIGHTS_LARGE", {})
-        weights_small = namespace.get("WEIGHTS_SMALL", {})
     except Exception:
         return []
 
@@ -424,31 +421,27 @@ def format_weights_for_display(strategy_code: str) -> list:
     for cat, factors in FACTOR_CATEGORIES.items():
         for f in factors:
             wl = weights_large.get(f, 0)
-            ws = weights_small.get(f, 0)
-            if wl > 0 or ws > 0:
+            if wl > 0:
                 rows.append({
                     "카테고리": cat,
                     "팩터": FACTOR_LABELS.get(f, f),
-                    "대형주": f"{wl*100:.0f}%" if wl > 0 else "-",
-                    "중소형주": f"{ws*100:.0f}%" if ws > 0 else "-",
+                    "비중": f"{wl*100:.0f}%",
                     "_wl": wl,
-                    "_ws": ws,
+                    "_ws": 0,
                     "_code": f,
                 })
 
     # 커스텀 팩터
-    for f in set(list(weights_large.keys()) + list(weights_small.keys())):
+    for f in weights_large:
         if f not in all_known:
             wl = weights_large.get(f, 0)
-            ws = weights_small.get(f, 0)
-            if wl > 0 or ws > 0:
+            if wl > 0:
                 rows.append({
                     "카테고리": "커스텀",
                     "팩터": FACTOR_LABELS.get(f, f),
-                    "대형주": f"{wl*100:.0f}%" if wl > 0 else "-",
-                    "중소형주": f"{ws*100:.0f}%" if ws > 0 else "-",
+                    "비중": f"{wl*100:.0f}%",
                     "_wl": wl,
-                    "_ws": ws,
+                    "_ws": 0,
                     "_code": f,
                 })
 
@@ -463,12 +456,11 @@ def extract_strategy_summary(strategy_code: str) -> dict:
     except Exception:
         return {}
 
-    scoring_mode = namespace.get("SCORING_MODE", {"large": "quartile", "small": "decile"})
+    scoring_mode = namespace.get("SCORING_MODE", {"large": "quartile"})
     weights_large = namespace.get("WEIGHTS_LARGE", {})
-    weights_small = namespace.get("WEIGHTS_SMALL", {})
     regression_models = namespace.get("REGRESSION_MODELS", [])
 
-    # 카테고리별 합계 (LARGE 기준)
+    # 카테고리별 합계
     cat_totals = {}
     for cat, factors in FACTOR_CATEGORIES.items():
         total = sum(weights_large.get(f, 0) for f in factors)
@@ -486,9 +478,9 @@ def extract_strategy_summary(strategy_code: str) -> dict:
     return {
         "scoring_mode": scoring_mode,
         "n_factors_large": sum(1 for v in weights_large.values() if v > 0),
-        "n_factors_small": sum(1 for v in weights_small.values() if v > 0),
+        "n_factors_small": 0,
         "n_regressions": len(regression_models),
         "cat_totals": cat_totals,
-        "large_only": [f for f in weights_large if weights_large[f] > 0 and weights_small.get(f, 0) == 0],
-        "small_only": [f for f in weights_small if weights_small[f] > 0 and weights_large.get(f, 0) == 0],
+        "large_only": [],
+        "small_only": [],
     }

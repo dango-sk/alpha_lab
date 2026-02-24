@@ -20,7 +20,7 @@ sys.path.insert(0, str(ALPHA_LAB_DIR / "scripts"))
 from config.settings import DB_PATH, BACKTEST_CONFIG, CACHE_DIR
 from lib.factor_engine import (
     validate_strategy_code, code_to_module, score_stocks_from_strategy,
-    DEFAULT_STRATEGY_CODE, clear_factor_cache,
+    DEFAULT_STRATEGY_CODE, ATT2_STRATEGY_CODE, clear_factor_cache,
 )
 
 # ─── Strategy constants (기본 전략) ───
@@ -79,6 +79,12 @@ def _update_strategy_registry(results: dict):
 # step7 uses these internal codes
 _STRAT_CODE = {"A0": "A0", "ATT2": "ATT2"}
 
+# 기본 전략 코드 (factor_engine 파이프라인용)
+_BASE_STRATEGY_CODES = {
+    "A0": DEFAULT_STRATEGY_CODE,
+    "ATT2": ATT2_STRATEGY_CODE,
+}
+
 # ─── 기존 전략 팩터 가중치 (step3 기준) ───
 BASE_STRATEGY_WEIGHTS = {
     "A0": {
@@ -89,27 +95,19 @@ BASE_STRATEGY_WEIGHTS = {
             "T_SPSG": .10, "F_SPSG": .10,
             "F_EPS_M": .15,
         },
-        "weights_small": {
-            "T_PER": .05, "F_PER": .05, "T_EVEBITDA": .05, "F_EVEBITDA": .05,
-            "T_PBR": .05, "F_PBR": .05, "T_PCF": .05,
-            "ATT_PBR": .05, "ATT_EVIC": .05, "ATT_PER": .10, "ATT_EVEBIT": .10,
-            "T_SPSG": .10, "F_SPSG": .10,
-            "PRICE_M": .05, "NDEBT_EBITDA": .05, "CURRENT": .05,
-        },
+        "weights_small": {},
         "regression_models": ["pbr_roe", "evic_roic", "fper_epsg", "fevebit_ebitg"],
-        "scoring": {"large": "quartile", "small": "decile"},
-        "large_only": ["F_EPS_M"],
-        "small_only": ["PRICE_M", "NDEBT_EBITDA", "CURRENT"],
+        "scoring": {"large": "quartile"},
+        "large_only": [],
+        "small_only": [],
     },
     "ATT2": {
         "weights_large": {
             "ATT_PBR": .50, "ATT_EVIC": .50,
         },
-        "weights_small": {
-            "ATT_PBR": .50, "ATT_EVIC": .50,
-        },
+        "weights_small": {},
         "regression_models": ["pbr_roe", "evic_roic"],
-        "scoring": {"large": "quartile", "small": "decile"},
+        "scoring": {"large": "quartile"},
         "large_only": [],
         "small_only": [],
     },
@@ -137,42 +135,45 @@ def get_latest_price_date() -> str | None:
 
 
 def _get_strategy_stocks(conn, strategy: str, calc_date: str, top_n: int = 30):
-    """기본 전략은 DB 쿼리, 커스텀 전략은 factor_engine으로 종목 선정."""
-    from step7_backtest import get_portfolio_stocks
+    """모든 전략을 factor_engine 파이프라인으로 종목 선정.
 
-    if strategy in _STRAT_CODE:
-        return get_portfolio_stocks(conn, calc_date, _STRAT_CODE[strategy], top_n)
+    기본 전략(A0, ATT2)과 커스텀 전략 모두 동일한 파이프라인을 사용:
+      load_factor_data → 대형주필터 → 퀄리티필터 → 스코어링 → 유동성필터
+    """
+    # 전략 코드 결정
+    if strategy in _BASE_STRATEGY_CODES:
+        code = _BASE_STRATEGY_CODES[strategy]
+    else:
+        data = load_strategy(strategy)
+        if not data or "code" not in data:
+            return []
+        code = data["code"]
 
-    # 커스텀 전략: 저장된 코드 → 모듈 변환 → 채점
-    data = load_strategy(strategy)
-    if not data or "code" not in data:
-        return []
-
-    strategy_module = code_to_module(data["code"])
+    strategy_module = code_to_module(code)
     all_stocks = score_stocks_from_strategy(conn, calc_date, strategy_module)
 
-    # 유동성 + 생존자 필터 (step7_backtest.get_portfolio_stocks 동일 로직)
+    # 유동성 + 생존자 필터
     filtered = []
-    for code, score in all_stocks:
+    for code_str, score in all_stocks:
         if len(filtered) >= top_n:
             break
+        price_exists = conn.execute(
+            "SELECT COUNT(*) FROM daily_price "
+            "WHERE stock_code = ? AND trade_date >= date(?, '-5 days') "
+            "  AND trade_date <= ?",
+            (code_str, calc_date, calc_date),
+        ).fetchone()[0]
+        if price_exists == 0:
+            continue
         vol_data = conn.execute(
             "SELECT AVG(close * volume) as avg_trade_amount "
             "FROM daily_price "
             "WHERE stock_code = ? AND trade_date <= ? "
             "  AND trade_date >= date(?, '-30 days')",
-            (code, calc_date, calc_date),
+            (code_str, calc_date, calc_date),
         ).fetchone()
-        price_exists = conn.execute(
-            "SELECT COUNT(*) FROM daily_price "
-            "WHERE stock_code = ? AND trade_date >= date(?, '-5 days') "
-            "  AND trade_date <= ?",
-            (code, calc_date, calc_date),
-        ).fetchone()[0]
-        if price_exists == 0:
-            continue
         if vol_data and vol_data[0] and vol_data[0] >= 100_000_000:
-            filtered.append((code, score))
+            filtered.append((code_str, score))
 
     return filtered
 
@@ -287,7 +288,7 @@ def _compute_robustness(start, end, is_end, oos_start):
     from scipy import stats as sp_stats
     from step7_backtest import run_backtest, get_db, calc_etf_return, \
         calc_etf_monthly_returns, get_monthly_rebalance_dates, STRATEGIES, \
-        _numpy_to_python
+        make_engine_selector, _numpy_to_python
 
     # IS/OOS 분할
     is_results, oos_results = {}, {}
@@ -295,9 +296,11 @@ def _compute_robustness(start, end, is_end, oos_start):
     original_end = BACKTEST_CONFIG["end"]
 
     for key, strat, _ in STRATEGIES:
+        selector = make_engine_selector(key)
         try:
             BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"] = start, is_end
-            r = run_backtest(strat)
+            r = run_backtest(strat, stock_selector=selector)
+            clear_factor_cache()
             if r:
                 r["strategy"] = key
                 is_results[key] = r
@@ -306,7 +309,8 @@ def _compute_robustness(start, end, is_end, oos_start):
 
         try:
             BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"] = oos_start, end
-            r = run_backtest(strat)
+            r = run_backtest(strat, stock_selector=selector)
+            clear_factor_cache()
             if r:
                 r["strategy"] = key
                 oos_results[key] = r
@@ -342,9 +346,11 @@ def _compute_robustness(start, end, is_end, oos_start):
     # 전체 기간 백테스트 + 통계 유의성
     full_results = {}
     for key, strat, _ in STRATEGIES:
+        selector = make_engine_selector(key)
         try:
             BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"] = start, end
-            r = run_backtest(strat)
+            r = run_backtest(strat, stock_selector=selector)
+            clear_factor_cache()
             if r:
                 r["strategy"] = key
                 full_results[key] = r
@@ -815,7 +821,7 @@ def run_custom_backtest(top_n: int = 30, tx_cost_bp: int = 30, weight_cap: int =
     """커스텀 파라미터로 A0 전략 백테스트 실행."""
     from step7_backtest import (
         run_backtest, calc_all_benchmarks, get_monthly_rebalance_dates,
-        get_db, _numpy_to_python,
+        get_db, make_engine_selector, _numpy_to_python,
     )
 
     orig = {
@@ -828,7 +834,9 @@ def run_custom_backtest(top_n: int = 30, tx_cost_bp: int = 30, weight_cap: int =
         BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
         BACKTEST_CONFIG["weight_cap_pct"] = weight_cap
 
-        result = run_backtest("A0")
+        selector = make_engine_selector("A0")
+        result = run_backtest("A0", stock_selector=selector)
+        clear_factor_cache()
         results = {}
         if result:
             result["strategy"] = "A0"
