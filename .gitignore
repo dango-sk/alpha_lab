@@ -1,0 +1,20 @@
+# Environment & secrets
+.env
+.env.*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Cache (regeneratable via run_pipeline.py)
+cache/
+*.db
+
+# Logs
+pipeline.log
+
+# IDE & OS
+.claude/
+.DS_Store
+*.swp
