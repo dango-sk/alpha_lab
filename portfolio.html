@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>남수경 — Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0B0F1A;color:#F1F5F9;font-family:'Outfit','Pretendard',-apple-system,sans-serif;overflow-x:hidden;line-height:1.6}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#0B0F1A}
+::-webkit-scrollbar-thumb{background:#1E293B;border-radius:3px}
+a{color:#3B82F6;text-decoration:none}
+a:hover{text-decoration:underline}
+
+.container{max-width:1100px;margin:0 auto;padding:0 32px}
+
+/* HERO */
+.hero{padding:80px 0 60px;text-align:center;background:linear-gradient(180deg,#111827 0%,#0B0F1A 100%);border-bottom:1px solid #1E293B}
+.hero h1{font-size:36px;font-weight:800;letter-spacing:-0.03em;margin-bottom:8px}
+.hero .subtitle{font-size:16px;color:#94A3B8;margin-bottom:24px}
+.hero .tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.hero .tag{padding:4px 14px;border-radius:6px;font-size:12px;font-weight:600;background:#1E293B;color:#94A3B8;border:1px solid #334155}
+.hero .tag.highlight{background:#3B82F620;color:#3B82F6;border-color:#3B82F640}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:#0B0F1Aee;backdrop-filter:blur(12px);border-bottom:1px solid #1E293B;padding:12px 0}
+.nav-inner{display:flex;gap:24px;justify-content:center}
+.nav a{font-size:13px;font-weight:600;color:#64748B;padding:6px 16px;border-radius:8px;transition:all 0.2s}
+.nav a:hover,.nav a.active{color:#F1F5F9;background:#1E293B;text-decoration:none}
+
+/* SECTION */
+section{padding:60px 0}
+section h2{font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:-0.02em}
+section .section-sub{font-size:13px;color:#64748B;margin-bottom:32px}
+
+/* CARDS */
+.card{background:#111827;border:1px solid #1E293B;border-radius:14px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden}
+.card.glow-blue{box-shadow:0 0 40px #3B82F610}
+.card.glow-green{box-shadow:0 0 40px #10B98110}
+.card.glow-purple{box-shadow:0 0 40px #8B5CF610}
+
+/* METRICS GRID */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.metric{background:#1E293B44;border:1px solid #1E293B;border-radius:10px;padding:14px;text-align:center}
+.metric .label{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:4px}
+.metric .value{font-size:22px;font-weight:800;line-height:1.2}
+.metric .value.green{color:#10B981}
+.metric .value.blue{color:#3B82F6}
+.metric .value.yellow{color:#F59E0B}
+.metric .value.red{color:#EF4444}
+.metric .value.purple{color:#8B5CF6}
+.metric .sub{font-size:10px;color:#64748B;margin-top:2px}
+
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:10px 12px;color:#64748B;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #1E293B}
+.data-table td{padding:10px 12px;border-bottom:1px solid #1E293B33}
+.data-table tr:hover{background:#1E293B33}
+.data-table .highlight-row{background:#3B82F608}
+.green{color:#10B981}
+.red{color:#EF4444}
+.blue{color:#3B82F6}
+.yellow{color:#F59E0B}
+
+/* BAR CHART (CSS only) */
+.bar-group{margin-bottom:20px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-label{width:120px;font-size:12px;color:#94A3B8;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:20px;background:#1E293B;border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:700;color:#fff;min-width:30px;transition:width 0.6s ease}
+
+/* STACKED BAR */
+.stacked-bar{display:flex;height:28px;border-radius:6px;overflow:hidden;margin:12px 0}
+.stacked-bar div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+
+/* FACTOR GRID */
+.factor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.factor-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:8px;background:#1E293B33;border:1px solid #1E293B}
+.factor-item .name{font-size:12px;color:#F1F5F9}
+.factor-item .weight{font-size:12px;font-weight:700}
+
+/* TIMELINE */
+.pipeline{display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;margin:20px 0}
+.pipeline-step{padding:10px 18px;background:#1E293B;border-radius:8px;font-size:12px;font-weight:600;color:#94A3B8;text-align:center;min-width:100px}
+.pipeline-step.active{background:#3B82F620;color:#3B82F6;border:1px solid #3B82F640}
+.pipeline-arrow{font-size:16px;color:#334155;padding:0 4px}
+
+/* PROJECT HEADER */
+.project-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.project-header .badge{padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700}
+.project-header h3{font-size:20px;font-weight:700}
+.project-header .desc{font-size:13px;color:#94A3B8;flex-basis:100%;margin-top:4px}
+
+/* FEATURE LIST */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:16px}
+.feature{padding:16px;border-radius:10px;background:#1E293B33;border:1px solid #1E293B}
+.feature .icon{font-size:20px;margin-bottom:8px}
+.feature .title{font-size:13px;font-weight:700;color:#F1F5F9;margin-bottom:4px}
+.feature .detail{font-size:11px;color:#94A3B8;line-height:1.5}
+
+/* INSIGHT BOX */
+.insight{padding:12px 16px;border-radius:8px;border-left:3px solid;margin:16px 0;font-size:12px;line-height:1.6}
+.insight.blue{background:#3B82F608;border-color:#3B82F6;color:#94A3B8}
+.insight.yellow{background:#F59E0B08;border-color:#F59E0B;color:#94A3B8}
+.insight.green{background:#10B98108;border-color:#10B981;color:#94A3B8}
+.insight strong{color:#F1F5F9}
+
+/* FOOTER */
+.footer{text-align:center;padding:40px 0 24px;border-top:1px solid #1E293B;font-size:11px;color:#64748B}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #1E293B;padding-bottom:0}
+.tab{padding:8px 16px;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s}
+.tab.active{color:#3B82F6;border-bottom-color:#3B82F6}
+.tab:hover{color:#94A3B8}
+
+@media(max-width:768px){
+  .hero h1{font-size:24px}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .container{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="container">
+    <h1>남수경</h1>
+    <div class="subtitle">Data Analyst → Quant Researcher</div>
+    <div class="tags">
+      <span class="tag highlight">KAIST MFE</span>
+      <span class="tag">Python</span>
+      <span class="tag">Quant</span>
+      <span class="tag">Data Analysis</span>
+      <span class="tag">AI/ML</span>
+      <span class="tag">Portfolio Research</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-inner">
+    <a href="#alpha-lab" class="active">Alpha Lab</a>
+    <a href="#ipo-research">IPO Research</a>
+    <a href="#v-rainmaker">V-Rainmaker</a>
+    <a href="#about">About</a>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══ ALPHA LAB ═══ -->
+<section id="alpha-lab">
+  <h2>Alpha Lab</h2>
+  <div class="section-sub">한국 대형주 멀티팩터 퀀트 백테스트 시스템 · 2025</div>
+
+  <!-- Key Metrics -->
+  <div class="card glow-blue">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:14px;font-weight:700">A0 전략 (14팩터) vs KOSPI 200</div>
+        <div style="font-size:11px;color:#64748B">2021.01 ~ 2026.02 · 62개월 · 월간 리밸런싱 · 거래비용 30bp</div>
+      </div>
+      <span style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#10B98120;color:#10B981">Outperformance +7.0%p</span>
+    </div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="label">Total Return</div>
+        <div class="value green">193.2%</div>
+        <div class="sub">vs 벤치마크 116.4%</div>
+      </div>
+      <div class="metric">
+        <div class="label">CAGR</div>
+        <div class="value green">23.1%</div>
+        <div class="sub">vs 벤치마크 16.1%</div>
+      </div>
+      <div class="metric">
+        <div class="label">Sharpe Ratio</div>
+        <div class="value blue">0.97</div>
+        <div class="sub">vs 벤치마크 0.74</div>
+      </div>
+      <div class="metric">
+        <div class="label">MDD</div>
+        <div class="value yellow">-35.8%</div>
+        <div class="sub">vs 벤치마크 -33.9%</div>
+      </div>
+      <div class="metric">
+        <div class="label">월평균 수익률</div>
+        <div class="value" style="color:#F1F5F9">1.99%</div>
+      </div>
+      <div class="metric">
+        <div class="label">포트폴리오</div>
+        <div class="value" style="color:#F1F5F9">30</div>
+        <div class="sub">종목 · 15% 비중상한</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy Comparison -->
+  <div class="card">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">전략 비교</div>
+    <div style="font-size:11px;color:#64748B;margin-bottom:16px">팩터 조합별 성과 차이 분석</div>
+    <table class="data-table">
+      <thead>
+        <tr><th>전략</th><th>팩터 구성</th><th>총수익</th><th>CAGR</th><th>Sharpe</th><th>MDD</th></tr>
+      </thead>
+      <tbody>
+        <tr class="highlight-row"><td style="font-weight:700;color:#3B82F6">A0 (14팩터)</td><td>밸류 7 + 매력도 4 + 성장 3</td><td class="green">1.93x</td><td class="green">23.1%</td><td>0.97</td><td class="yellow">35.8%</td></tr>
+        <tr><td>Core7</td><td>밸류 + 매력도 + 성장</td><td>1.76x</td><td>21.7%</td><td>0.84</td><td class="red">40.6%</td></tr>
+        <tr><td>VR4</td><td>밸류 + 매력도 + 모멘텀</td><td>1.74x</td><td>21.5%</td><td>0.88</td><td>36.3%</td></tr>
+        <tr><td>ATT2</td><td>매력도만</td><td>1.33x</td><td>17.8%</td><td>0.88</td><td class="green">28.3%</td></tr>
+        <tr><td>Core5</td><td>매력도 + 성장 + 모멘텀</td><td>1.29x</td><td>17.4%</td><td>0.75</td><td class="red">46.2%</td></tr>
+        <tr style="color:#64748B"><td>KOSPI 200</td><td>벤치마크</td><td>1.16x</td><td>16.1%</td><td>0.74</td><td>33.9%</td></tr>
+      </tbody>
+    </table>
+    <div class="insight yellow">
+      <strong>핵심 발견 — 밸류에이션 앵커 효과:</strong> 밸류 팩터를 제거하면(Core5) CAGR 17.4%로 유지되나, 포트폴리오 평균 PER이 20→55로 급등하며 MDD가 46.2%로 확대. 단순 밸류 팩터가 직접적 알파 기여는 작더라도 <strong>하방 리스크를 억제하는 밸류에이션 앵커</strong> 역할을 함.
+    </div>
+  </div>
+
+  <!-- Factor System -->
+  <div class="card">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">14개 팩터 시스템</div>
+    <div style="font-size:11px;color:#64748B;margin-bottom:16px">대형주 사분위 스코어링 (시총 상위 200) · 가중합산 → 상위 30종목 편입</div>
+
+    <!-- Stacked bar for category weights -->
+    <div class="stacked-bar">
+      <div style="width:35%;background:#3B82F6">밸류에이션 35%</div>
+      <div style="width:30%;background:#8B5CF6">회귀 매력도 30%</div>
+      <div style="width:20%;background:#10B981">성장성 20%</div>
+      <div style="width:15%;background:#F59E0B">차별화 15%</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+      <!-- Left: Value -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#3B82F6;margin-bottom:10px">밸류에이션 (7개) — 낮을수록 저평가</div>
+        <div class="bar-row"><span class="bar-label">Trailing PER</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3B82F6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Forward PER</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3B82F6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Trailing EV/EBITDA</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3B82F6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Forward EV/EBITDA</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3B82F6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Trailing PBR</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3B82F6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Forward PBR</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3B82F6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Trailing PCF</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3B82F6">5%</div></div></div>
+      </div>
+      <!-- Right: Regression + Growth -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#8B5CF6;margin-bottom:10px">회귀 매력도 (4개) — 이익 대비 밸류에이션 괴리</div>
+        <div class="bar-row"><span class="bar-label">ATT_PBR</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#8B5CF6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">ATT_EVIC</span><div class="bar-track"><div class="bar-fill" style="width:14%;background:#8B5CF6">5%</div></div></div>
+        <div class="bar-row"><span class="bar-label">ATT_PER</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:#8B5CF6">10%</div></div></div>
+        <div class="bar-row"><span class="bar-label">ATT_EVEBIT</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:#8B5CF6">10%</div></div></div>
+
+        <div style="font-size:12px;font-weight:700;color:#10B981;margin-bottom:10px;margin-top:16px">성장/모멘텀 (3개)</div>
+        <div class="bar-row"><span class="bar-label">매출 성장률</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:#10B981">10%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Fwd 매출 성장</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:#10B981">10%</div></div></div>
+        <div class="bar-row"><span class="bar-label">Fwd EPS 모멘텀</span><div class="bar-track"><div class="bar-fill" style="width:42%;background:#F59E0B">15%</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Robustness -->
+  <div class="card">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">강건성 검증</div>
+    <div style="font-size:11px;color:#64748B;margin-bottom:16px">백테스트 과적합 여부를 다각도로 검증</div>
+    <div class="features">
+      <div class="feature">
+        <div class="title">IS / OOS 분할</div>
+        <div class="detail">In-Sample (2021.01~2024.06) 에서 설계한 전략이 Out-of-Sample (2024.07~2026.02) 에서도 초과수익 유지 여부 확인</div>
+      </div>
+      <div class="feature">
+        <div class="title">롤링 윈도우</div>
+        <div class="detail">24개월 롤링 Sharpe Ratio로 시간에 따른 전략 안정성 추적. 특정 구간 과적합 여부 검증</div>
+      </div>
+      <div class="feature">
+        <div class="title">팩터별 5분위 롱숏</div>
+        <div class="detail">14개 팩터 각각에 대해 Q1(싼) vs Q5(비싼) 수익률 차이 검증. 개별 팩터 유효성 확인</div>
+      </div>
+      <div class="feature">
+        <div class="title">통계적 유의성</div>
+        <div class="detail">월별 초과수익 t-test. 우연이 아닌 체계적 알파인지 p-value로 검증</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard & AI -->
+  <div class="card glow-blue">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">대시보드 & AI 전략 설계</div>
+    <div style="font-size:11px;color:#64748B;margin-bottom:16px">Streamlit 기반 인터랙티브 대시보드 · Claude API 연동</div>
+    <div class="features">
+      <div class="feature">
+        <div class="icon">📊</div>
+        <div class="title">성과 비교</div>
+        <div class="detail">멀티 전략 누적수익률 차트, 핵심 지표 비교 테이블</div>
+      </div>
+      <div class="feature">
+        <div class="icon">📅</div>
+        <div class="title">월별 분석</div>
+        <div class="detail">수익률 히트맵, 분포 분석, 롤링 성과 지표</div>
+      </div>
+      <div class="feature">
+        <div class="icon">💼</div>
+        <div class="title">포트폴리오</div>
+        <div class="detail">현재 보유종목, 섹터/시총 분포, 개별 비중</div>
+      </div>
+      <div class="feature">
+        <div class="icon">🔬</div>
+        <div class="title">통계 검증</div>
+        <div class="detail">IS/OOS 비교, 롤링 Sharpe, 팩터 롱숏 결과</div>
+      </div>
+      <div class="feature">
+        <div class="icon">🤖</div>
+        <div class="title">전략 실험실</div>
+        <div class="detail">AI와 자연어 대화로 투자 전략 설계 → 즉시 백테스트. 코딩 없이 팩터 가중치와 필터를 조합하여 전략 검증</div>
+      </div>
+      <div class="feature">
+        <div class="icon">⚙️</div>
+        <div class="title">자동 파이프라인</div>
+        <div class="detail">주가 수집 → 팩터 계산 → 시그널 → 백테스트 → 강건성. 매일 17시 자동 실행 (cron)</div>
+      </div>
+    </div>
+    <div class="insight blue">
+      <strong>GitHub:</strong> <a href="https://github.com/dango-sk/alpha_lab" target="_blank">github.com/dango-sk/alpha_lab</a> · Python, Streamlit, SQLite, Plotly, Claude API
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══ IPO RESEARCH ═══ -->
+<section id="ipo-research" style="border-top:1px solid #1E293B">
+  <h2>IPO Research Automation</h2>
+  <div class="section-sub">IPO 수요예측 리서치 자동화 도구 · 2025</div>
+
+  <div class="card glow-green">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">End-to-End IPO 리서치 파이프라인</div>
+    <div style="font-size:11px;color:#64748B;margin-bottom:20px">증권신고서 → 데이터 수집 → AI 분석 → 리서치 시트 자동 생성</div>
+
+    <!-- Pipeline -->
+    <div class="pipeline">
+      <div class="pipeline-step active">DART API<br><span style="font-size:10px;color:#64748B">증권신고서</span></div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-step active">38.co.kr<br><span style="font-size:10px;color:#64748B">수요예측 결과</span></div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-step active">Parser<br><span style="font-size:10px;color:#64748B">정형+비정형</span></div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-step active">AI Analyst<br><span style="font-size:10px;color:#64748B">LLM 분석</span></div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-step active">리서치 시트<br><span style="font-size:10px;color:#64748B">Excel/MD</span></div>
+    </div>
+
+    <div class="features" style="margin-top:24px">
+      <div class="feature">
+        <div class="icon">📄</div>
+        <div class="title">자동 데이터 수집</div>
+        <div class="detail">DART API로 증권신고서 원본 파싱. 공모사항, 유통가능주식수, 재무제표를 구조화된 데이터로 자동 변환</div>
+      </div>
+      <div class="feature">
+        <div class="icon">🤖</div>
+        <div class="title">AI 분석 엔진</div>
+        <div class="detail">Peer Valuation 적정성 검토, 수급/오버행 분석, 실적 추정 검증. 비교기업 매출 괴리, 락업 해제 리스크 자동 도출</div>
+      </div>
+      <div class="feature">
+        <div class="icon">⏱️</div>
+        <div class="title">리서치 시간 제거</div>
+        <div class="detail">수작업 데이터 수집·정리 시간을 없애고, 분석가가 핵심 검토 포인트 판단에 집중할 수 있도록 설계</div>
+      </div>
+    </div>
+
+    <div class="insight green">
+      <strong>의의:</strong> 이현자산운용에서 Pre-IPO 밸류에이션 과정에 참여하며 반복적인 리서치 작업이 많다는 것을 느끼고, 이를 해결하고자 직접 개발. 리서치 시트 작성의 데이터 수집 단계를 자동화하여 분석가가 판단에 집중할 수 있게 함.
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══ V-RAINMAKER ═══ -->
+<section id="v-rainmaker" style="border-top:1px solid #1E293B">
+  <h2>V-Rainmaker Dashboard</h2>
+  <div class="section-sub">vibers.ai · AI 마케팅 SaaS 대시보드 기획 및 프로토타입 개발 · 2026</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card glow-purple">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#8B5CF620;color:#8B5CF6">VoC Dashboard</span>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:12px">고객 감성분석 대시보드</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#94A3B8">
+        <div>• <strong style="color:#F1F5F9">Net Sentiment KPI</strong> — 긍정/부정/중립 비율 트래킹</div>
+        <div>• <strong style="color:#F1F5F9">채널별 감성 분해</strong> — Reddit, X, Amazon 별 분석</div>
+        <div>• <strong style="color:#F1F5F9">토픽별 감성</strong> — 효능, 성분, 가격 등 카테고리별</div>
+        <div>• <strong style="color:#F1F5F9">Desires & Fears</strong> — 고객 니즈/우려 프레임워크 + 대응 방향</div>
+        <div>• <strong style="color:#F1F5F9">경쟁사 비교</strong> — 5개 브랜드 NS 추이 비교</div>
+        <div>• <strong style="color:#F1F5F9">Risk Alert</strong> — 부정 감성 급증 자동 감지</div>
+      </div>
+    </div>
+
+    <div class="card glow-purple">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#8B5CF620;color:#8B5CF6">Content Dashboard</span>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:12px">콘텐츠 성과분석 대시보드</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#94A3B8">
+        <div>• <strong style="color:#F1F5F9">Engagement Rate</strong> — Like/Comment/Share 분해</div>
+        <div>• <strong style="color:#F1F5F9">채널별 추이</strong> — TikTok, Instagram 성과 비교</div>
+        <div>• <strong style="color:#F1F5F9">콘텐츠 유형별</strong> — 유형×성과 매트릭스</div>
+        <div>• <strong style="color:#F1F5F9">Top/Bottom 콘텐츠</strong> — 성공/실패 패턴 분석</div>
+        <div>• <strong style="color:#F1F5F9">경쟁사 벤치마크</strong> — 시장 대비 포지셔닝</div>
+        <div>• <strong style="color:#F1F5F9">Action Items</strong> — 데이터 기반 실행 제안</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight blue" style="margin-top:16px">
+    <strong>역할:</strong> KPI 정의, 데이터 구조 설계, 시각화 프로토타입(React) 개발. K-Beauty 브랜드(Medicube) 대상 VoC 감성분석과 콘텐츠 성과 추적 대시보드를 end-to-end로 기획·구현.
+  </div>
+</section>
+
+
+<!-- ═══ ABOUT ═══ -->
+<section id="about" style="border-top:1px solid #1E293B">
+  <h2>About</h2>
+  <div class="section-sub">경력 요약</div>
+
+  <div class="card">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#3B82F6;margin-bottom:12px">Career</div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:12px">
+          <div><span style="color:#64748B;width:120px;display:inline-block">2026.01 ~ 02</span> <strong>vibers.ai</strong> <span style="color:#64748B">— AI SaaS 대시보드 외주</span></div>
+          <div><span style="color:#64748B;width:120px;display:inline-block">2025.03 ~ 현재</span> <strong>KAIST MFE</strong> <span style="color:#64748B">— 금융공학 석사</span></div>
+          <div><span style="color:#64748B;width:120px;display:inline-block">2024.06 ~ 2025.02</span> <strong>이현자산운용</strong> <span style="color:#64748B">— Data Analyst</span></div>
+          <div><span style="color:#64748B;width:120px;display:inline-block">2021.12 ~ 2024.06</span> <strong>비바리퍼블리카(토스)</strong> <span style="color:#64748B">— Data Analyst</span></div>
+          <div><span style="color:#64748B;width:120px;display:inline-block">2019.09 ~ 2021.12</span> <strong>Wave Corporation</strong> <span style="color:#64748B">— Data Analyst</span></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#3B82F6;margin-bottom:12px">Skills & Certifications</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#94A3B8">
+          <div><strong style="color:#F1F5F9">Python</strong> — pandas, numpy, scipy, scikit-learn, statsmodels</div>
+          <div><strong style="color:#F1F5F9">Data</strong> — SQL, SQLite, Tableau, A/B Testing</div>
+          <div><strong style="color:#F1F5F9">Finance</strong> — Factor Investing, Portfolio Optimization, Valuation</div>
+          <div><strong style="color:#F1F5F9">AI/ML</strong> — Claude API, LLM, SHAP, Clustering</div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid #1E293B">
+            <div>투자자산운용사 · TOEFL 105 · DELF B2 (프랑스어)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="container">
+    남수경 · glaranam@gmail.com · <a href="https://github.com/dango-sk/alpha_lab" target="_blank">GitHub</a>
+  </div>
+</div>
+
+<!-- Smooth scroll -->
+<script>
+document.querySelectorAll('.nav a').forEach(function(a){
+  a.addEventListener('click',function(e){
+    e.preventDefault();
+    var id=this.getAttribute('href');
+    document.querySelector(id).scrollIntoView({behavior:'smooth'});
+    document.querySelectorAll('.nav a').forEach(function(l){l.classList.remove('active')});
+    this.classList.add('active');
+  });
+});
+window.addEventListener('scroll',function(){
+  var sections=document.querySelectorAll('section');
+  var navLinks=document.querySelectorAll('.nav a');
+  var current='';
+  sections.forEach(function(s){
+    if(window.scrollY>=s.offsetTop-100) current=s.getAttribute('id');
+  });
+  navLinks.forEach(function(l){
+    l.classList.remove('active');
+    if(l.getAttribute('href')==='#'+current) l.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>
