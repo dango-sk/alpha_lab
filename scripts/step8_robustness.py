@@ -38,7 +38,7 @@ for fname in fm.findSystemFonts():
         break
 matplotlib.rcParams["axes.unicode_minus"] = False
 
-BASELINE_KEY = "ATT2"
+BASELINE_KEY = "A0"
 N_BOOTSTRAP = 10_000
 ROLLING_WINDOW = 24
 

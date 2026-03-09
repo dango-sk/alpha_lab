@@ -123,13 +123,13 @@ def monthly_heatmap(results: dict) -> go.Figure:
         text.append([f"{r*100:+.1f}%" for r in rets])
 
     n_months = len(date_labels)
-    show_text = n_months <= 24
+    text_size = 11 if n_months <= 24 else (9 if n_months <= 48 else 7)
 
     fig = go.Figure(go.Heatmap(
         z=z, x=date_labels, y=labels,
         text=text,
-        texttemplate="%{text}" if show_text else None,
-        textfont=dict(size=11) if show_text else None,
+        texttemplate="%{text}",
+        textfont=dict(size=text_size),
         colorscale="RdYlGn", zmid=0,
         colorbar=dict(title="수익률(%)", len=0.9),
         hovertemplate="전략: %{y}<br>기간: %{x}<br>수익률: %{text}<extra></extra>",
@@ -140,7 +140,7 @@ def monthly_heatmap(results: dict) -> go.Figure:
     dtick = 1 if n_months <= 24 else (3 if n_months <= 48 else 6)
     fig.update_layout(**_base_layout(
         title="월별 수익률 히트맵",
-        height=max(len(keys) * 100 + 120, 350),
+        height=max(len(keys) * 120 + 120, 350),
         xaxis=dict(type="category", dtick=dtick, tickangle=-45, tickfont=dict(size=11)),
         yaxis=dict(tickfont=dict(size=13)),
     ))

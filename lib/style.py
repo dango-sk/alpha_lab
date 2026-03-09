@@ -63,17 +63,10 @@ def inject_css():
         font-weight: 600;
     }
 
-    /* 로딩 고양이 — Streamlit 스피너 커스텀 */
-    @keyframes catRun {
-        0%   { transform: translateX(0px) scaleX(1); }
-        49%  { transform: translateX(60px) scaleX(1); }
-        50%  { transform: translateX(60px) scaleX(-1); }
-        99%  { transform: translateX(0px) scaleX(-1); }
-        100% { transform: translateX(0px) scaleX(1); }
-    }
-    @keyframes pawFade {
-        0%, 100% { opacity: 0.2; }
-        50% { opacity: 0.6; }
+    /* 로딩 프로그레스 바 — Streamlit 스피너 커스텀 */
+    @keyframes progressSlide {
+        0%   { left: -40%; }
+        100% { left: 100%; }
     }
     .stSpinner > div {
         display: inline-flex !important;
@@ -83,18 +76,21 @@ def inject_css():
         background: rgba(255, 255, 255, 0.03);
         border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.06);
+        position: relative;
+        overflow: hidden;
     }
     .stSpinner > div::before {
-        content: "🐈‍⬛";
-        font-size: 22px;
-        display: inline-block;
-        animation: catRun 1.2s ease-in-out infinite;
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: -40%;
+        width: 40%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.8), transparent);
+        animation: progressSlide 1.2s ease-in-out infinite;
     }
     .stSpinner > div::after {
-        content: "🐾";
-        font-size: 12px;
-        animation: pawFade 0.6s ease-in-out infinite;
-        margin-left: -4px;
+        content: none;
     }
 
     /* 커스텀 로딩 오버레이 */
@@ -106,10 +102,20 @@ def inject_css():
         padding: 60px 20px;
         opacity: 0.8;
     }
-    .loading-cat {
-        font-size: 48px;
-        animation: catRun 1.2s ease-in-out infinite;
+    .loading-bar-track {
+        width: 200px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 2px;
+        overflow: hidden;
         margin-bottom: 16px;
+    }
+    .loading-bar-fill {
+        width: 40%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.8), transparent);
+        animation: progressSlide 1.2s ease-in-out infinite;
+        position: relative;
     }
     .loading-text {
         font-size: 14px;
@@ -127,35 +133,29 @@ def inject_css():
         75%  { content: "..."; }
     }
 
-    /* 페이지 전환 시 고양이 오버레이 — Streamlit rerun 감지 */
-    @keyframes catRunAcross {
-        0%   { left: 30%; transform: scaleX(1); }
-        49%  { left: 60%; transform: scaleX(1); }
-        50%  { left: 60%; transform: scaleX(-1); }
-        99%  { left: 30%; transform: scaleX(-1); }
-        100% { left: 30%; transform: scaleX(1); }
-    }
-    @keyframes overlayIn {
-        from { opacity: 0; }
-        to   { opacity: 1; }
+    /* 페이지 전환 시 프로그레스 바 오버레이 */
+    @keyframes topBarSlide {
+        0%   { left: -30%; }
+        100% { left: 100%; }
     }
 
-    /* Streamlit이 Running 상태일 때 콘텐츠 영역에 오버레이 */
+    /* Streamlit이 Running 상태일 때 상단 프로그레스 바 */
     .stApp[data-test-script-state="running"] [data-testid="stMain"]::after {
-        content: "🐈‍⬛";
+        content: "";
         position: fixed;
-        top: 45%;
-        left: 45%;
-        font-size: 42px;
+        top: 0;
+        left: -30%;
+        width: 30%;
+        height: 3px;
         z-index: 9999;
-        animation: catRunAcross 1s ease-in-out infinite, overlayIn 0.2s ease-out;
+        background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.9), transparent);
+        animation: topBarSlide 1s ease-in-out infinite;
         pointer-events: none;
-        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
     }
 
-    /* Running 상태에서 기존 콘텐츠 흐리게 */
+    /* Running 상태에서 기존 콘텐츠 살짝 흐리게 */
     .stApp[data-test-script-state="running"] [data-testid="stMain"] {
-        opacity: 0.4;
+        opacity: 0.6;
         transition: opacity 0.15s ease-out;
     }
 
@@ -164,7 +164,7 @@ def inject_css():
         transition: opacity 0.2s ease-in;
     }
 
-    /* Streamlit 기본 Running 뱃지 숨기기 (고양이로 대체) */
+    /* Streamlit 기본 Running 뱃지 숨기기 */
     [data-testid="stStatusWidget"] {
         display: none !important;
     }
@@ -453,7 +453,7 @@ def show_loading(placeholder, message: str = "데이터를 불러오는 중"):
     """플레이스홀더에 로딩 애니메이션 표시"""
     placeholder.markdown(f"""
     <div class="loading-overlay">
-        <div class="loading-cat">🐈‍⬛</div>
+        <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
         <div class="loading-text">{message}<span class="loading-dots"></span></div>
     </div>
     """, unsafe_allow_html=True)

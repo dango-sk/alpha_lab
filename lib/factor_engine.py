@@ -7,7 +7,6 @@ Factor Engine: step3에서 추출한 재사용 가능한 팩터 계산 엔진.
 import importlib.util
 import json
 import re
-import sqlite3
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -21,6 +20,7 @@ from scipy import stats
 ALPHA_LAB_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(ALPHA_LAB_DIR))
 from config.settings import DB_PATH
+from lib.db import read_sql
 
 LARGE_CAP_CUTOFF = 200
 FINANCE_TYPES = ["금융업", "은행업", "보험업", "증권업", "여신전문금융업", "기타금융업"]
@@ -158,7 +158,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     max_usable_year = dt.year - 1 if dt.month >= 4 else dt.year - 2
 
     # ─── 1. Trailing 재무 ───
-    fin_df = pd.read_sql_query("""
+    fin_df = read_sql("""
         SELECT ff.stock_code, ff.fiscal_year,
                ff.pbr, ff.roe, ff.roic,
                ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
@@ -179,7 +179,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     if fin_df.empty:
         return None
 
-    prev_rev_df = pd.read_sql_query("""
+    prev_rev_df = read_sql("""
         SELECT stock_code, revenue as prev_revenue
         FROM fnspace_finance WHERE fiscal_quarter='Annual' AND fiscal_year=?
     """, conn, params=(max_usable_year - 1,))
@@ -196,7 +196,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
 
     fwd_df = pd.DataFrame()
     if fwd_date:
-        fwd_df = pd.read_sql_query("""
+        fwd_df = read_sql("""
             SELECT stock_code, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
                    fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
             FROM fnspace_forward WHERE trade_date = ?
@@ -210,7 +210,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     ).fetchone()[0]
     fwd_3m_df = pd.DataFrame()
     if fwd_date_3m:
-        fwd_3m_df = pd.read_sql_query(
+        fwd_3m_df = read_sql(
             "SELECT stock_code, fwd_eps as fwd_eps_3m FROM fnspace_forward WHERE trade_date=?",
             conn, params=(fwd_date_3m,),
         )
@@ -220,7 +220,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         "SELECT MAX(trade_date) FROM daily_price WHERE trade_date < ?",
         (calc_date,),
     ).fetchone()[0]
-    price_df = pd.read_sql_query("""
+    price_df = read_sql("""
         SELECT 'A' || dp.stock_code as stock_code, dp.close, dp.market_cap, dp.trade_amount
         FROM daily_price dp WHERE dp.trade_date = ?
     """, conn, params=(price_date,))
@@ -232,12 +232,12 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     ).fetchone()[0]
     price_3m_df = pd.DataFrame()
     if price_date_3m:
-        price_3m_df = pd.read_sql_query(
+        price_3m_df = read_sql(
             "SELECT 'A'||stock_code as stock_code, close as close_3m FROM daily_price WHERE trade_date=?",
             conn, params=(price_date_3m,),
         )
 
-    master_df = pd.read_sql_query(
+    master_df = read_sql(
         "SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ FROM fnspace_master", conn,
     )
 
@@ -248,6 +248,12 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         if not df_extra.empty:
             merged = merged.merge(df_extra, on="stock_code", how="left")
     merged = merged[(merged["market_cap"] > 0) & (merged["close"] > 0)].copy()
+    if len(merged) == 0:
+        return None
+
+    # KOSPI 종목만 필터링 (벤치마크 KOSPI200과 공정 비교)
+    if "market" in merged.columns:
+        merged = merged[merged["market"] == "KOSPI"].copy()
     if len(merged) == 0:
         return None
 

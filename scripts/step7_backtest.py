@@ -1,16 +1,12 @@
 """
-Step 7: 백테스트 (4개 밸류 전략)
+Step 7: 백테스트
 
 전략:
-  A0:   원본 사분위 밸류 (value_score_orig)
-  A:    v3 십분위 밸류 (value_score)
-  A+M:  밸류 + 모멘텀 (value_score + tech_score)
-  ATT2: 회귀 매력도만 (ATT_PBR + ATT_EVIC)
+  A0: 원본 사분위 밸류 (멀티팩터)
 
-비중: 시총 비례 + 15% 캡 (전 전략 공통)
+비중: 시총 비례 + 비중상한 캡 (전 전략 공통)
 """
 import json
-import sqlite3
 import sys
 import numpy as np
 from datetime import datetime
@@ -21,32 +17,27 @@ sys.path.append(str(Path(__file__).parent.parent))
 from config.settings import DB_PATH, BACKTEST_CONFIG, CACHE_DIR
 from lib.factor_engine import (
     score_stocks_from_strategy, code_to_module,
-    DEFAULT_STRATEGY_CODE, ATT2_STRATEGY_CODE, clear_factor_cache,
+    DEFAULT_STRATEGY_CODE, clear_factor_cache,
 )
-
-
-LARGE_CAP_CUTOFF = 200
+from lib.db import get_conn
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+    return get_conn()
 
 
 def _get_large_cap_set(conn, calc_date):
-    """calc_date 기준 시총 상위 200개 종목 코드 set 반환 (step3과 동일 로직)."""
+    """calc_date 기준 시총 하한 이상 종목 코드 set 반환."""
+    min_mcap = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
     rows = conn.execute("""
         SELECT stock_code FROM daily_price
         WHERE trade_date = (
             SELECT MAX(trade_date) FROM daily_price
             WHERE trade_date <= ? AND market_cap > 0
         )
-        AND market_cap > 0
-        ORDER BY market_cap DESC
-    """, (calc_date,)).fetchall()
-    cutoff = min(LARGE_CAP_CUTOFF, len(rows) // 3)
-    return {code for code, in rows[:cutoff]}
+        AND market_cap >= ?
+    """, (calc_date, min_mcap)).fetchall()
+    return {code for code, in rows}
 
 
 def get_monthly_rebalance_dates(conn):
@@ -205,11 +196,11 @@ def _calc_slippage(market_cap):
 
 
 def calc_portfolio_return(conn, stocks, start_date, end_date):
-    """포트폴리오 수익률 계산 (시총비중 + 15% 캡)"""
+    """포트폴리오 수익률 계산 (시총비중 + 비중상한 캡)"""
     if not stocks:
         return 0.0
 
-    # ─── 시총 비중 + 15% 캡 ───
+    # ─── 시총 비중 + 비중상한 캡 ───
     raw_mcaps = []
     for code, _ in stocks:
         row = conn.execute("""
@@ -442,14 +433,12 @@ def run_backtest(strategy_name, stock_selector=None, progress_callback=None):
 
 # ─── 전략 정의 ───
 STRATEGIES = [
-    ("A0",   "A0",   "A0: 원본 사분위 밸류"),
-    ("ATT2", "ATT2", "ATT2: 회귀 매력도 (ATT_PBR+ATT_EVIC)"),
+    ("A0",   "A0",   "A0: 멀티팩터 전략"),
 ]
 
 # 기본 전략 코드 맵 (factor_engine 기반 파이프라인)
 _BASE_STRATEGY_CODES = {
     "A0": DEFAULT_STRATEGY_CODE,
-    "ATT2": ATT2_STRATEGY_CODE,
 }
 
 
@@ -496,7 +485,7 @@ def run_all_backtests():
     print(f"   기간: {BACKTEST_CONFIG['start']} ~ {BACKTEST_CONFIG['end']}")
     print(f"   리밸런싱: 월 1회, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목")
     print(f"   거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp + 슬리피지")
-    print(f"   비중: 시총비례 + 15% 캡")
+    print(f"   비중: 시총비례 + {BACKTEST_CONFIG.get('weight_cap_pct', 10)}% 캡")
     print(f"   파이프라인: factor_engine (퀄리티필터→스코어링)")
     print("=" * 60)
 

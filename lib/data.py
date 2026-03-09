@@ -4,7 +4,6 @@ Dashboard data layer: cached loaders + constants.
 import json
 import shutil
 import sys
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -18,30 +17,29 @@ sys.path.insert(0, str(ALPHA_LAB_DIR))
 sys.path.insert(0, str(ALPHA_LAB_DIR / "scripts"))
 
 from config.settings import DB_PATH, BACKTEST_CONFIG, CACHE_DIR
+from lib.db import get_conn as _get_conn
 from lib.factor_engine import (
     validate_strategy_code, code_to_module, score_stocks_from_strategy,
-    DEFAULT_STRATEGY_CODE, ATT2_STRATEGY_CODE, clear_factor_cache,
+    DEFAULT_STRATEGY_CODE, clear_factor_cache,
 )
 
 # ─── Strategy constants (기본 전략) ───
-BASE_STRATEGY_KEYS = ["A0", "ATT2"]
-STRATEGY_KEYS = ["A0", "ATT2"]  # 동적으로 갱신됨
-ALL_KEYS = ["A0", "ATT2", "KOSPI"]  # 동적으로 갱신됨
+BASE_STRATEGY_KEYS = ["A0"]
+STRATEGY_KEYS = ["A0"]  # 동적으로 갱신됨
+ALL_KEYS = ["A0", "KOSPI"]  # 동적으로 갱신됨
 
 STRATEGY_LABELS = {
     "A0":    "기존전략",
-    "ATT2":  "회귀only",
     "KOSPI": "KOSPI 200",
 }
 
 STRATEGY_COLORS = {
     "A0":    "#42A5F5",   # 밝은 파랑
-    "ATT2":  "#26C6DA",   # 청록
     "KOSPI": "#90A4AE",   # 회색
 }
 
 # 삭제된 전략 — 캐시에 남아있을 수 있으므로 로딩 시 필터링
-_REMOVED_STRATEGIES = {"A", "A+M", "VM"}
+_REMOVED_STRATEGIES = {"A", "A+M", "VM", "ATT2"}
 
 # 커스텀 전략용 팔레트
 _CUSTOM_PALETTE = [
@@ -77,12 +75,11 @@ def _update_strategy_registry(results: dict):
             STRATEGY_COLORS[key] = _CUSTOM_PALETTE[i % len(_CUSTOM_PALETTE)]
 
 # step7 uses these internal codes
-_STRAT_CODE = {"A0": "A0", "ATT2": "ATT2"}
+_STRAT_CODE = {"A0": "A0"}
 
 # 기본 전략 코드 (factor_engine 파이프라인용)
 _BASE_STRATEGY_CODES = {
     "A0": DEFAULT_STRATEGY_CODE,
-    "ATT2": ATT2_STRATEGY_CODE,
 }
 
 # ─── 기존 전략 팩터 가중치 (step3 기준) ───
@@ -101,24 +98,11 @@ BASE_STRATEGY_WEIGHTS = {
         "large_only": [],
         "small_only": [],
     },
-    "ATT2": {
-        "weights_large": {
-            "ATT_PBR": .50, "ATT_EVIC": .50,
-        },
-        "weights_small": {},
-        "regression_models": ["pbr_roe", "evic_roic"],
-        "scoring": {"large": "quartile"},
-        "large_only": [],
-        "small_only": [],
-    },
 }
 
 
-# ─── DB helper ───
-def _get_conn():
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+# ─── DB helper (lib.db에서 import) ───
+# _get_conn = lib.db.get_conn (상단에서 import 완료)
 
 
 @st.cache_data(ttl=3600)
@@ -137,7 +121,7 @@ def get_latest_price_date() -> str | None:
 def _get_strategy_stocks(conn, strategy: str, calc_date: str, top_n: int = 30):
     """모든 전략을 factor_engine 파이프라인으로 종목 선정.
 
-    기본 전략(A0, ATT2)과 커스텀 전략 모두 동일한 파이프라인을 사용:
+    기본 전략과 커스텀 전략 모두 동일한 파이프라인을 사용:
       load_factor_data → 대형주필터 → 퀄리티필터 → 스코어링 → 유동성필터
     """
     # 전략 코드 결정
@@ -239,7 +223,7 @@ def load_backtest_results(start: str = None, end: str = None):
 
 
 def load_all_results(start: str = None, end: str = None) -> dict:
-    """기본 백테스트(A0, ATT2, KOSPI) + 저장된 커스텀 전략 결과를 병합하여 반환.
+    """기본 백테스트(A0, KOSPI) + 저장된 커스텀 전략 결과를 병합하여 반환.
 
     저장된 전략 중 백테스트 결과가 있는 것만 포함한다.
     병합 후 STRATEGY_KEYS/ALL_KEYS/LABELS/COLORS를 동적으로 갱신한다.
@@ -318,12 +302,12 @@ def _compute_robustness(start, end, is_end, oos_start):
             BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"] = original_start, original_end
 
     # 벤치마크 IS/OOS
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_conn()
     is_ret = calc_etf_return(conn, "KS200", start, is_end)
     oos_ret = calc_etf_return(conn, "KS200", oos_start, end)
     conn.close()
 
-    baseline = next((k for k in ["ATT2", "A0"] if k in is_results), None)
+    baseline = next((k for k in ["A0"] if k in is_results), None)
     is_months = len(is_results.get(baseline, {}).get("monthly_returns", [])) if baseline else 1
     oos_months = len(oos_results.get(baseline, {}).get("monthly_returns", [])) if baseline else 1
 
@@ -362,7 +346,7 @@ def _compute_robustness(start, end, is_end, oos_start):
     if not baseline:
         return is_oos_data, {"full_results": {}, "bm_significance": {}}, {}
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_conn()
     rb_dates = full_results[baseline]["rebalance_dates"]
     bm_monthly = np.array(calc_etf_monthly_returns(conn, "KS200", rb_dates))
     conn.close()
@@ -447,7 +431,7 @@ def load_all_robustness_results(start: str = None, end: str = None,
     use_oos_start = oos_start or BACKTEST_CONFIG.get("oos_start", "2024-07-01")
 
     base_results = load_backtest_results(use_start, use_end)
-    baseline_key = next((k for k in ["ATT2", "A0"] if k in base_results), None)
+    baseline_key = next((k for k in ["A0"] if k in base_results), None)
     if not baseline_key:
         return is_oos_data, stat_data, rolling_all
 
@@ -456,7 +440,7 @@ def load_all_robustness_results(start: str = None, end: str = None,
         return is_oos_data, stat_data, rolling_all
 
     from step7_backtest import calc_etf_monthly_returns
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _get_conn()
     bm_monthly = np.array(calc_etf_monthly_returns(conn, "KS200", rb_dates))
     conn.close()
 
@@ -634,7 +618,7 @@ def get_holdings(strategy: str, calc_date: str, top_n: int = 30) -> pd.DataFrame
 
 @st.cache_data(ttl=3600)
 def get_portfolio_characteristics(strategy: str, calc_date: str) -> dict:
-    """전략 포트폴리오의 가중평균 밸류에이션 지표 계산."""
+    """전략 포트폴리오의 가중평균 + 단순평균 밸류에이션 지표 계산."""
     df = get_holdings(strategy, calc_date)
     if df.empty:
         return {}
@@ -643,11 +627,13 @@ def get_portfolio_characteristics(strategy: str, calc_date: str) -> dict:
         valid = df.dropna(subset=[metric, "비중(%)"])
         if valid.empty:
             result[metric] = None
+            result[f"{metric}_simple"] = None
             continue
         w = valid["비중(%)"].values
         v = valid[metric].values
         w_sum = w.sum()
         result[metric] = round(float((w * v).sum() / w_sum), 2) if w_sum > 0 else None
+        result[f"{metric}_simple"] = round(float(v.mean()), 2)
     return result
 
 
@@ -685,7 +671,7 @@ def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd
     """특정 월의 종목별 수익률 기여도를 계산한다.
 
     Parameters:
-        strategy: 전략 키 ("A0", "ATT2" 등)
+        strategy: 전략 키 ("A0" 등)
         start_date: 리밸런싱 시작일 (해당 월 첫 거래일)
         end_date: 리밸런싱 종료일 (다음 월 첫 거래일)
 

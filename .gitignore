@@ -10,6 +10,7 @@ __pycache__/
 # Cache (regeneratable via run_pipeline.py)
 cache/
 *.db
+!data/*.db
 
 # Logs
 pipeline.log

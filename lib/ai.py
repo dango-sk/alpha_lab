@@ -181,10 +181,9 @@ def is_ai_available() -> bool:
     return bool(ANTHROPIC_API_KEY)
 
 
-_DISPLAY_KEYS = {"A0", "ATT2", "KOSPI"}
+_DISPLAY_KEYS = {"A0", "KOSPI"}
 _KEY_LABELS = {
     "A0": "기존전략",
-    "ATT2": "회귀only",
     "KOSPI": "KOSPI 200",
 }
 
@@ -197,7 +196,7 @@ def generate_commentary(results: dict, context: str = "성과 비교") -> Option
 
     # 대시보드에 표시되는 전략만 필터
     summary_lines = []
-    for key in ["A0", "ATT2", "KOSPI"]:
+    for key in ["A0", "KOSPI"]:
         r = results.get(key)
         if not r or not isinstance(r, dict) or "cagr" not in r:
             continue
@@ -212,9 +211,18 @@ def generate_commentary(results: dict, context: str = "성과 비교") -> Option
             line += f", 평균종목수 {r['avg_portfolio_size']:.0f}"
         summary_lines.append(line)
 
+    # 커스텀 전략도 포함
+    for key, r in results.items():
+        if key in ("A0", "KOSPI") or not isinstance(r, dict) or "cagr" not in r:
+            continue
+        label = _KEY_LABELS.get(key, key)
+        line = (
+            f"- {label}: 총수익률 {r['total_return']:+.1%}, "
+            f"CAGR {r['cagr']:+.1%}, MDD {r['mdd']:.1%}, Sharpe {r['sharpe']:.2f}"
+        )
+        summary_lines.append(line)
+
     user_msg = f"""다음은 한국 주식시장 팩터 투자 전략 백테스트 결과입니다.
-대시보드에 표시되는 전략은 기존전략(사분위 밸류 기반), 회귀only(회귀 매력도 기반), KOSPI 200(벤치마크) 세 가지뿐입니다.
-이 세 전략만 언급해주세요.
 
 분석 맥락: {context}
 
@@ -223,9 +231,8 @@ def generate_commentary(results: dict, context: str = "성과 비교") -> Option
 다음 구조로 종합 분석해주세요:
 1. 전략별 절대 성과 요약 (수익률, 위험)
 2. 벤치마크 대비 초과수익 평가
-3. 두 팩터 전략(기존전략 vs 회귀only) 간 비교 — 어떤 전략이 더 우수한지, 왜 그런지
-4. 리스크 대비 수익(Sharpe) 관점에서의 평가
-5. 종합 결론 및 시사점"""
+3. 리스크 대비 수익(Sharpe) 관점에서의 평가
+4. 종합 결론 및 시사점"""
 
     try:
         response = client.messages.create(
@@ -246,8 +253,8 @@ def generate_stat_commentary(stat_data: dict) -> Optional[str]:
         return None
 
     lines = []
-    for key in ["A0", "ATT2"]:
-        sig = stat_data.get("bm_significance", {}).get(key)
+    for key in stat_data.get("bm_significance", {}):
+        sig = stat_data["bm_significance"][key]
         if not sig:
             continue
         label = _KEY_LABELS.get(key, key)
@@ -259,8 +266,7 @@ def generate_stat_commentary(stat_data: dict) -> Optional[str]:
             f"{'통계적으로 유의' if sig['significant'] else '유의하지 않음'}"
         )
 
-    user_msg = f"""다음은 기존전략(사분위 밸류)과 회귀only(회귀 매력도) 전략의 KOSPI 200 대비 초과수익률 통계 검증 결과입니다.
-이 두 전략만 분석해주세요.
+    user_msg = f"""다음은 전략의 KOSPI 200 대비 초과수익률 통계 검증 결과입니다.
 
 {chr(10).join(lines)}
 

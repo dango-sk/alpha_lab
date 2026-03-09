@@ -9,7 +9,7 @@ from datetime import date
 from lib.data import (
     load_backtest_results, load_all_results, load_robustness_results,
     load_all_robustness_results,
-    get_stock_comparison, get_holdings, get_monthly_attribution,
+    get_holdings, get_monthly_attribution,
     get_portfolio_characteristics, get_portfolio_turnover,
     run_strategy_backtest, save_strategy, load_strategy, list_strategies, delete_strategy,
     STRATEGY_KEYS, ALL_KEYS, STRATEGY_LABELS, STRATEGY_COLORS, BACKTEST_CONFIG,
@@ -29,7 +29,7 @@ from lib.ai import (
 )
 from lib.factor_engine import DEFAULT_STRATEGY_CODE
 from lib.style import kpi_card, section_header, color_value, show_loading
-from lib.chat import build_performance_context, build_stat_context, build_portfolio_context
+from lib.chat import build_performance_context, build_stat_context
 
 _dt = __import__("datetime")
 
@@ -139,6 +139,96 @@ def render_strategy_filter(results: dict) -> dict:
 
 
 # ═══════════════════════════════════════════════════════
+# 연도별 성과 분석 (월별/연도별 집계)
+# ═══════════════════════════════════════════════════════
+
+def _render_yearly_performance(results: dict, kpi_keys: list):
+    """월별/연도별 성과 테이블 + 연도별 Sharpe/MDD."""
+    for key in kpi_keys:
+        r = results.get(key)
+        if not r:
+            continue
+
+        label = STRATEGY_LABELS.get(key, key)
+        rets = r["monthly_returns"]
+        dates = r["rebalance_dates"][:-1]  # 시작일 기준
+
+        if not rets or not dates:
+            continue
+
+        # ── 월별 수익률 테이블 (연도 × 월) ──
+        st.subheader(f"{label}")
+        monthly_data = {}
+        for d, ret in zip(dates, rets):
+            year = d[:4]
+            month = int(d[5:7])
+            monthly_data.setdefault(year, {})[month] = ret
+
+        years = sorted(monthly_data.keys())
+        month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+        table_rows = []
+        for year in years:
+            row = {"연도": year}
+            year_rets = []
+            for m in range(1, 13):
+                ret = monthly_data[year].get(m)
+                if ret is not None:
+                    row[month_names[m - 1]] = f"{ret * 100:+.1f}%"
+                    year_rets.append(ret)
+                else:
+                    row[month_names[m - 1]] = ""
+            # YTD (연간 누적)
+            if year_rets:
+                ytd = np.prod([1 + r for r in year_rets]) - 1
+                row["YTD"] = f"{ytd * 100:+.1f}%"
+            else:
+                row["YTD"] = ""
+            table_rows.append(row)
+
+        df_monthly = pd.DataFrame(table_rows)
+        # 색상 적용
+        value_cols = month_names + ["YTD"]
+        styled_monthly = df_monthly.style.map(
+            lambda v: color_value(v), subset=[c for c in value_cols if c in df_monthly.columns]
+        )
+        st.dataframe(styled_monthly, width="stretch", hide_index=True)
+
+        # ── 연도별 지표 (Sharpe, MDD, Drawdown) ──
+        yearly_stats = []
+        for year in years:
+            year_rets_list = [monthly_data[year].get(m) for m in range(1, 13)
+                              if monthly_data[year].get(m) is not None]
+            if not year_rets_list:
+                continue
+            arr = np.array(year_rets_list)
+            ytd = np.prod(1 + arr) - 1
+            sharpe = (arr.mean() / arr.std() * np.sqrt(12)) if len(arr) > 1 and arr.std() > 0 else 0
+            # 연도 내 MDD
+            cum = np.cumprod(1 + arr)
+            peak = np.maximum.accumulate(cum)
+            dd = (cum - peak) / peak
+            mdd = float(dd.min())
+            yearly_stats.append({
+                "연도": year,
+                "수익률": f"{ytd * 100:+.1f}%",
+                "Sharpe": f"{sharpe:.2f}",
+                "MDD": f"{mdd:.1%}",
+                "월수": f"{len(year_rets_list)}",
+            })
+
+        if yearly_stats:
+            df_yearly = pd.DataFrame(yearly_stats)
+            styled_yearly = df_yearly.style.map(
+                lambda v: color_value(v), subset=["수익률", "Sharpe"]
+            ).map(
+                lambda v: color_value(v, reverse=True), subset=["MDD"]
+            )
+            st.dataframe(styled_yearly, width="stretch", hide_index=True)
+
+
+# ═══════════════════════════════════════════════════════
 # 1. 전략 성과 비교
 # ═══════════════════════════════════════════════════════
 def render_performance():
@@ -149,7 +239,9 @@ def render_performance():
     st.caption(
         f"기간: {start_str} ~ {end_str}  |  "
         f"리밸런싱: 월 1회, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목  |  "
-        f"비중: 시총비례 + 15% 캡  |  거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp"
+        f"비중: 시총비례 + {BACKTEST_CONFIG.get('weight_cap_pct', 10)}% 캡  |  "
+        f"거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp  |  "
+        f"유니버스: 시총 {BACKTEST_CONFIG.get('min_market_cap', 500_000_000_000) / 1_000_000_000_000:.1f}조 이상"
     )
 
     loading = st.empty()
@@ -194,6 +286,10 @@ def render_performance():
     df_perf = pd.DataFrame(table_data)
     styled = df_perf.style.map(lambda v: color_value(v), subset=["총수익률", "CAGR"]).map(lambda v: color_value(v, reverse=True), subset=["MDD"]).map(lambda v: color_value(v), subset=["Sharpe"])
     st.dataframe(styled, width="stretch", hide_index=True)
+
+    # ── 연도별 성과 ──
+    section_header("연도별 성과")
+    _render_yearly_performance(results, kpi_keys)
 
     # IS/OOS
     ref_key = next((k for k in STRATEGY_KEYS if k in results), None)
@@ -345,17 +441,10 @@ def render_portfolio():
             chars[key] = c
 
     # 채팅 컨텍스트 저장
-    if "A0" in holdings and "ATT2" in holdings:
-        common, a0_only, att2_only = get_stock_comparison(selected_date)
-        st.session_state["page_context"] = build_portfolio_context(
-            common, a0_only, att2_only, selected_date,
-            a0_chars=chars.get("A0", {}), att2_chars=chars.get("ATT2", {}),
-        )
-    else:
-        st.session_state["page_context"] = (
-            f"포트폴리오 분석 ({selected_date}), "
-            f"전략: {', '.join(STRATEGY_LABELS.get(k, k) for k in holdings)}"
-        )
+    st.session_state["page_context"] = (
+        f"포트폴리오 분석 ({selected_date}), "
+        f"전략: {', '.join(STRATEGY_LABELS.get(k, k) for k in holdings)}"
+    )
 
     active_keys = list(holdings.keys())
 
@@ -364,14 +453,19 @@ def render_portfolio():
     if chars:
         char_data = []
         for metric in ["PER", "PBR", "EV/EBITDA"]:
-            row = {"지표": f"가중평균 {metric}"}
+            row_w = {"지표": f"가중평균 {metric}"}
+            row_s = {"지표": f"단순평균 {metric}"}
             for key in active_keys:
-                v = chars.get(key, {}).get(metric)
+                c = chars.get(key, {})
                 short = STRATEGY_LABELS.get(key, key).split(":")[0].strip()
-                row[short] = f"{v:.2f}" if v is not None else "-"
-            char_data.append(row)
+                v_w = c.get(metric)
+                v_s = c.get(f"{metric}_simple")
+                row_w[short] = f"{v_w:.2f}" if v_w is not None else "-"
+                row_s[short] = f"{v_s:.2f}" if v_s is not None else "-"
+            char_data.append(row_w)
+            char_data.append(row_s)
         st.dataframe(pd.DataFrame(char_data), width="stretch", hide_index=True)
-        st.caption("각 종목의 포트폴리오 비중을 가중치로 사용한 가중평균")
+        st.caption("가중평균: 포트폴리오 비중 가중 | 단순평균: 30개 종목 동일 가중")
 
     # ── 2. 비중 집중도 분석 ──
     section_header("비중 집중도 분석")
@@ -759,7 +853,6 @@ def render_lab_content():
     _VIEW_EXPERIMENT = "__experiment__"
     view_options = [
         ("A0", STRATEGY_LABELS["A0"]),
-        ("ATT2", STRATEGY_LABELS["ATT2"]),
     ]
     if is_modified:
         view_options.append((_VIEW_EXPERIMENT, "수정 전략"))
@@ -793,7 +886,7 @@ def render_lab_content():
             f"WEIGHTS_SMALL = {{}}\n"
             f"REGRESSION_MODELS = {bw['regression_models']!r}\n"
             f"SCORING_MODE = {bw['scoring']!r}\n"
-            f"PARAMS = {{'top_n': 30, 'tx_cost_bp': 30, 'weight_cap_pct': 15}}\n"
+            f"PARAMS = {{'top_n': 30, 'tx_cost_bp': 30, 'weight_cap_pct': {BACKTEST_CONFIG.get('weight_cap_pct', 10)}}}\n"
             f"OUTLIER_FILTERS = {{}}\nSCORE_MAP = {{}}\nSCORING_RULES = {{}}\nQUALITY_FILTER = {{}}\n"
         )
     else:
