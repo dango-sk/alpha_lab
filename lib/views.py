@@ -241,7 +241,7 @@ def render_performance():
         f"리밸런싱: 월 1회, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목  |  "
         f"비중: 시총비례 + {BACKTEST_CONFIG.get('weight_cap_pct', 10)}% 캡  |  "
         f"거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp  |  "
-        f"유니버스: 시총 {BACKTEST_CONFIG.get('min_market_cap', 500_000_000_000) / 1_000_000_000_000:.1f}조 이상"
+        f"유니버스: 시총 약 {BACKTEST_CONFIG.get('min_market_cap', 500_000_000_000) / 1_000_000_000_000:.1f}조 ~ 500조"
     )
 
     loading = st.empty()
@@ -272,6 +272,17 @@ def render_performance():
 
     # Comparison Table
     section_header("성과 비교")
+    with st.expander("지표 설명", expanded=False):
+        st.markdown("""
+| 지표 | 설명 |
+|------|------|
+| **총수익률** | 백테스트 전 기간의 누적 수익률 (복리) |
+| **CAGR** | 연환산 복합 성장률 — 매년 균등하게 벌었다면의 연수익률 |
+| **MDD** | 고점 대비 최대 하락폭. 매 시점에서 직전 최고점 대비 하락률을 계산 → 그 중 최대값 |
+| **Sharpe** | (월평균 수익률 / 월 수익률 표준편차) × √12. 위험 대비 수익 효율. 1 이상이면 양호 |
+| **평균 회전율** | 매월 (신규 편입 + 편출 종목 수) / (2 × 전체 종목 수). 높으면 거래비용 증가 |
+| **비중 산출** | 각 종목 시총 / 30종목 시총 합계 → 개별 상한 10% 적용 → 초과분 재배분 반복 |
+""")
     table_data = []
     for key in kpi_keys:
         r = results.get(key)
@@ -299,6 +310,15 @@ def render_performance():
 
         section_header("IS / OOS 분할")
         st.caption(f"IS: {start_str} ~ {is_end}  |  OOS: {oos_start} ~ {end_str}")
+        with st.expander("IS/OOS란?", expanded=False):
+            st.markdown("""
+**과적합(overfitting) 검증 방법**
+
+- **IS (In-Sample)**: 모델을 만들 때 참고한 기간. 여기서 성과가 좋은 건 당연함
+- **OOS (Out-of-Sample)**: 모델이 한 번도 본 적 없는 기간. 여기서도 좋아야 '진짜' 유효한 전략
+- IS에서만 좋고 OOS에서 나쁘면 → 과적합 의심 (과거에만 맞는 전략)
+- 현재 전체 기간의 앞 70%를 IS, 뒤 30%를 OOS로 분할
+""")
         is_oos_data = []
         for key in kpi_keys:
             r = results.get(key)
@@ -469,6 +489,13 @@ def render_portfolio():
 
     # ── 2. 비중 집중도 분석 ──
     section_header("비중 집중도 분석")
+    with st.expander("HHI란?", expanded=False):
+        st.markdown("""
+- **HHI (Herfindahl-Hirschman Index)** = 각 종목 비중(%)²의 합
+- 30종목 균등 배분이면 HHI ≈ 333 / 높을수록 소수 종목에 집중
+- 예: 한 종목이 50%이면 HHI = 2,500+ → 극도로 집중된 포트폴리오
+- **Top5 비중합**: 상위 5개 종목의 비중 합계 — 50% 이상이면 집중도 높음
+""")
     kpi_cols = st.columns(min(len(active_keys), 4))
     for i, key in enumerate(active_keys):
         with kpi_cols[i % len(kpi_cols)]:
@@ -626,6 +653,12 @@ def render_statistics():
 
     section_header("1. In-Sample vs Out-of-Sample")
     st.caption(f"IS: {start_str} ~ {is_end}  |  OOS: {oos_start} ~ {end_str}")
+    with st.expander("IS/OOS란?", expanded=False):
+        st.markdown("""
+- **IS (In-Sample)**: 전체 기간의 앞 70%. 모델이 학습에 참고한 기간 → 성과가 좋은 게 당연
+- **OOS (Out-of-Sample)**: 뒤 30%. 모델이 본 적 없는 기간 → 여기서도 좋아야 진짜
+- IS와 OOS 성과가 비슷하면 과적합 위험이 낮음. IS만 좋으면 과거에만 맞는 전략일 수 있음
+""")
     st.plotly_chart(is_oos_comparison_chart(is_oos_data, keys=selected_keys), width="stretch")
 
     # IS/OOS table
@@ -677,6 +710,13 @@ def render_statistics():
 
     # Rolling
     section_header("3. 롤링 24개월 윈도우")
+    with st.expander("롤링 윈도우란?", expanded=False):
+        st.markdown("""
+- 24개월 윈도우를 한 달씩 이동하며 KOSPI 200 대비 초과수익을 계산
+- **승률** = 초과수익이 양수인 구간의 비율 (전략 vs KOSPI 200 비교이며, 전략 간 비교가 아님)
+- 승률 50% 초과 → 과반 이상의 기간에서 벤치마크를 이기고 있다는 의미
+- 승률이 높을수록 전략이 다양한 시장 환경에서 안정적으로 작동
+""")
     st.plotly_chart(rolling_window_chart(rolling_all, keys=selected_keys), width="stretch")
     rolling_table = []
     for key in selected_keys:
