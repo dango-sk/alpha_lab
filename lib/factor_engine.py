@@ -900,7 +900,7 @@ SCORING_RULES = {
 PARAMS = {
     "top_n": 30,
     "tx_cost_bp": 30,
-    "weight_cap_pct": 15,
+    "weight_cap_pct": 10,
 }
 
 # ─── 퀄리티 필터 ───
