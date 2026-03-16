@@ -332,14 +332,10 @@ def _compute_robustness(start, end, is_end, oos_start):
         finally:
             BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"] = original_start, original_end
 
-    # 벤치마크 IS/OOS
-    _uni = BACKTEST_CONFIG.get("universe", "KOSPI")
-    _bm_code = "292150" if _uni == "KOSPI+KOSDAQ" else "069500"
-    _bm_name = "KRX 300" if _uni == "KOSPI+KOSDAQ" else "KODEX 200"
-    conn = _get_conn()
-    is_ret = calc_etf_return(conn, _bm_code, start, is_end)
-    oos_ret = calc_etf_return(conn, _bm_code, oos_start, end)
-    conn.close()
+    # 벤치마크 IS/OOS — DB 없이 계산 불가, 빈 값 사용
+    _bm_name = "KODEX 200"
+    is_ret = None
+    oos_ret = None
 
     baseline = next((k for k in ["A0"] if k in is_results), None)
     is_months = len(is_results.get(baseline, {}).get("monthly_returns", [])) if baseline else 1
@@ -380,10 +376,11 @@ def _compute_robustness(start, end, is_end, oos_start):
     if not baseline:
         return is_oos_data, {"full_results": {}, "bm_significance": {}}, {}
 
-    conn = _get_conn()
     rb_dates = full_results[baseline]["rebalance_dates"]
-    bm_monthly = np.array(calc_etf_monthly_returns(conn, _bm_code, rb_dates))
-    conn.close()
+    # 벤치마크 월별 수익률: 캐시에서 가져옴
+    _cached_results = load_backtest_results(start, end)
+    _bm_cached = _cached_results.get("KOSPI", {}).get("monthly_returns", [])
+    bm_monthly = np.array(_bm_cached) if _bm_cached else np.zeros(len(rb_dates) - 1)
 
     rng = np.random.default_rng(42)
     bm_significance = {}
@@ -474,12 +471,12 @@ def load_all_robustness_results(start: str = None, end: str = None,
     if not rb_dates:
         return is_oos_data, stat_data, rolling_all
 
-    from step7_backtest import calc_etf_monthly_returns
-    conn = _get_conn()
-    _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
-    _bm_code = "292150" if _uni == "KOSPI+KOSDAQ" else "069500"
-    bm_monthly = np.array(calc_etf_monthly_returns(conn, _bm_code, rb_dates))
-    conn.close()
+    # 벤치마크 월별 수익률: 캐시의 KOSPI 결과에서 가져옴
+    bm_result = base_results.get("KOSPI", {})
+    bm_monthly_list = bm_result.get("monthly_returns", [])
+    if not bm_monthly_list:
+        return is_oos_data, stat_data, rolling_all
+    bm_monthly = np.array(bm_monthly_list)
 
     from scipy import stats as sp_stats
 
@@ -592,68 +589,33 @@ def load_all_robustness_results(start: str = None, end: str = None,
 
 
 # ═══════════════════════════════════════════════════════
-# Tier 2: DB queries (1-hour cache)
+# Tier 2: 캐시 기반 포트폴리오 데이터
 # ═══════════════════════════════════════════════════════
+
+_HOLDINGS_CACHE = CACHE_DIR / "holdings_cache.json"
+_ATTRIBUTION_CACHE = CACHE_DIR / "attribution_cache.json"
+
+
+def _load_holdings_cache() -> dict:
+    if _HOLDINGS_CACHE.exists():
+        return json.loads(_HOLDINGS_CACHE.read_text()).get("data", {})
+    return {}
+
+
+def _load_attribution_cache() -> dict:
+    if _ATTRIBUTION_CACHE.exists():
+        return json.loads(_ATTRIBUTION_CACHE.read_text()).get("data", {})
+    return {}
+
 
 @st.cache_data(ttl=3600)
 def get_holdings(strategy: str, calc_date: str, top_n: int = 30) -> pd.DataFrame:
-    """Get portfolio stocks with weights and metadata."""
-    from step7_backtest import _apply_mcap_cap
-
-    conn = _get_conn()
-    stocks = _get_strategy_stocks(conn, strategy, calc_date, top_n)
-
-    if not stocks:
-        conn.close()
+    """캐시에서 보유종목 데이터를 읽음."""
+    cache = _load_holdings_cache()
+    rows = cache.get(strategy, {}).get(calc_date, [])
+    if not rows:
         return pd.DataFrame()
-
-    # mcap weights
-    raw_mcaps = []
-    for code, _ in stocks:
-        row = conn.execute(
-            "SELECT market_cap FROM daily_price "
-            "WHERE stock_code=? AND trade_date>=? ORDER BY trade_date ASC LIMIT 1",
-            (code, calc_date),
-        ).fetchone()
-        raw_mcaps.append(row[0] if row and row[0] else 0)
-
-    cap = BACKTEST_CONFIG.get("weight_cap_pct", 15) / 100
-    weights = _apply_mcap_cap(raw_mcaps, cap=cap)
-
-    holdings = []
-    for i, (code, score) in enumerate(stocks):
-        meta = conn.execute(
-            "SELECT fm.stock_name, COALESCE(fm.sec_cd_nm, '기타') "
-            "FROM fnspace_master fm "
-            "WHERE fm.stock_code = 'A' || ? "
-            "ORDER BY fm.snapshot_date DESC LIMIT 1",
-            (code,),
-        ).fetchone()
-
-        # PER/PBR from fnspace_finance (latest annual)
-        fin = conn.execute(
-            "SELECT per, pbr, ev_ebitda "
-            "FROM fnspace_finance WHERE stock_code = 'A' || ? "
-            "AND (fiscal_quarter = 'Annual' OR fiscal_quarter IS NULL) "
-            "ORDER BY fiscal_year DESC LIMIT 1",
-            (code,),
-        ).fetchone()
-
-        holdings.append({
-            "종목코드": code,
-            "종목명": meta[0] if meta else code,
-            "섹터": meta[1] if meta else "기타",
-            "비중(%)": round(weights[i] * 100, 2),
-            "점수": round(score, 1),
-            "value_score": score,
-            "PER": round(fin[0], 1) if fin and fin[0] else None,
-            "PBR": round(fin[1], 2) if fin and fin[1] else None,
-            "EV/EBITDA": round(fin[2], 1) if fin and fin[2] else None,
-            "시가총액": raw_mcaps[i],
-        })
-
-    conn.close()
-    return pd.DataFrame(holdings)
+    return pd.DataFrame(rows)
 
 
 @st.cache_data(ttl=3600)
@@ -708,73 +670,12 @@ def get_portfolio_turnover(strategy: str, current_date: str, prev_date: str) -> 
 
 @st.cache_data(ttl=3600)
 def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd.DataFrame:
-    """특정 월의 종목별 수익률 기여도를 계산한다.
-
-    Parameters:
-        strategy: 전략 키 ("A0" 등)
-        start_date: 리밸런싱 시작일 (해당 월 첫 거래일)
-        end_date: 리밸런싱 종료일 (다음 월 첫 거래일)
-
-    Returns:
-        DataFrame with columns: 종목명, 섹터, 비중(%), 종목수익률(%), 기여도(%), 기여방향
-    """
-    from step7_backtest import _apply_mcap_cap
-
-    conn = _get_conn()
-    stocks = _get_strategy_stocks(conn, strategy, start_date,
-                                   BACKTEST_CONFIG.get("top_n_stocks", 30))
-    if not stocks:
-        conn.close()
+    """캐시에서 월별 기여도 데이터를 읽음."""
+    cache = _load_attribution_cache()
+    key = f"{start_date}_{end_date}"
+    rows = cache.get(strategy, {}).get(key, [])
+    if not rows:
         return pd.DataFrame()
-
-    # 시총 비중 계산
-    raw_mcaps = []
-    for code, _ in stocks:
-        row = conn.execute(
-            "SELECT market_cap FROM daily_price "
-            "WHERE stock_code=? AND trade_date>=? ORDER BY trade_date ASC LIMIT 1",
-            (code, start_date),
-        ).fetchone()
-        raw_mcaps.append(row[0] if row and row[0] else 0)
-
-    cap = BACKTEST_CONFIG.get("weight_cap_pct", 15) / 100
-    weights = _apply_mcap_cap(raw_mcaps, cap=cap)
-
-    rows = []
-    for i, (code, _) in enumerate(stocks):
-        sp = conn.execute(
-            "SELECT adj_close FROM daily_price "
-            "WHERE stock_code=? AND trade_date>=? AND adj_close>0 ORDER BY trade_date ASC LIMIT 1",
-            (code, start_date),
-        ).fetchone()
-        ep = conn.execute(
-            "SELECT adj_close FROM daily_price "
-            "WHERE stock_code=? AND trade_date<=? AND adj_close>0 ORDER BY trade_date DESC LIMIT 1",
-            (code, end_date),
-        ).fetchone()
-
-        if not sp or sp[0] <= 0:
-            continue
-        ret = ((ep[0] - sp[0]) / sp[0]) if (ep and ep[0] > 0) else -1.0
-        contribution = ret * weights[i] * 100  # 기여도(%)
-
-        meta = conn.execute(
-            "SELECT fm.stock_name, COALESCE(fm.sec_cd_nm, '기타') "
-            "FROM fnspace_master fm "
-            "WHERE fm.stock_code = 'A' || ? "
-            "ORDER BY fm.snapshot_date DESC LIMIT 1",
-            (code,),
-        ).fetchone()
-
-        rows.append({
-            "종목명": meta[0] if meta else code,
-            "섹터": (meta[1] if meta else "기타").replace("코스피 ", ""),
-            "비중(%)": round(weights[i] * 100, 1),
-            "종목수익률(%)": round(ret * 100, 1),
-            "기여도(%)": round(contribution, 2),
-        })
-
-    conn.close()
     df = pd.DataFrame(rows)
     if not df.empty:
         df = df.sort_values("기여도(%)", ascending=True)
@@ -783,18 +684,17 @@ def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd
 
 @st.cache_data(ttl=3600)
 def get_overlap_matrix(calc_date: str, top_n: int = 30) -> pd.DataFrame:
-    """Compute pairwise stock overlap between strategies."""
-    conn = _get_conn()
+    """캐시에서 종목 오버랩 계산."""
+    cache = _load_holdings_cache()
     sets = {}
     for label in _STRAT_CODE:
-        stocks = _get_strategy_stocks(conn, label, calc_date, top_n)
-        sets[label] = set(c for c, _ in stocks)
-    conn.close()
+        rows = cache.get(label, {}).get(calc_date, [])
+        sets[label] = set(r["종목코드"] for r in rows)
 
     labels = list(_STRAT_CODE.keys())
     matrix = []
     for a in labels:
-        row = [len(sets[a] & sets[b]) for b in labels]
+        row = [len(sets.get(a, set()) & sets.get(b, set())) for b in labels]
         matrix.append(row)
 
     return pd.DataFrame(matrix, index=labels, columns=labels)

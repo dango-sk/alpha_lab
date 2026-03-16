@@ -509,6 +509,152 @@ def load_backtest_cache():
     return data["results"]
 
 
+HOLDINGS_CACHE = CACHE_DIR / "holdings_cache.json"
+ATTRIBUTION_CACHE = CACHE_DIR / "attribution_cache.json"
+
+
+def save_portfolio_cache(results):
+    """모든 리밸런싱 날짜의 보유종목 + 기여도를 JSON 캐시로 저장."""
+    conn = get_db()
+    CACHE_DIR.mkdir(exist_ok=True)
+
+    holdings_all = {}   # {strategy: {date: [rows]}}
+    attr_all = {}       # {strategy: {"start_end": [rows]}}
+
+    for key in results:
+        if key == "KOSPI":
+            continue
+        rb_dates = results[key].get("rebalance_dates", [])
+        if len(rb_dates) < 2:
+            continue
+
+        code = _BASE_STRATEGY_CODES.get(key)
+        if not code:
+            continue
+        strategy_module = code_to_module(code)
+        rebal_type = BACKTEST_CONFIG.get("rebal_type", "monthly")
+        min_mcap = BACKTEST_CONFIG.get("min_market_cap", 0)
+        top_n = BACKTEST_CONFIG.get("top_n_stocks", 30)
+        cap = BACKTEST_CONFIG.get("weight_cap_pct", 10) / 100
+
+        # 마스터 데이터 한 번만 로드
+        from lib.db import read_sql
+        master_df = read_sql(
+            "SELECT stock_code, stock_name, COALESCE(sec_cd_nm, '기타') as sector FROM fnspace_master",
+            conn,
+        )
+        name_map = {r.stock_code: (r.stock_name, r.sector) for r in master_df.itertuples()}
+
+        holdings_all[key] = {}
+        attr_all[key] = {}
+
+        for idx in range(len(rb_dates) - 1):
+            calc_date = rb_dates[idx]
+
+            # 종목 선정
+            universe_set = get_universe_stocks(conn, calc_date, rebal_type, min_mcap)
+            if not universe_set:
+                continue
+            candidates = score_stocks_from_strategy(conn, calc_date, strategy_module)
+            clear_factor_cache()
+            stocks = [(c, s) for c, s in candidates if c in universe_set][:top_n]
+            if not stocks:
+                continue
+
+            codes = [c for c, _ in stocks]
+            placeholders = ",".join(["?"] * len(codes))
+
+            # 시총 + adj_close (시작)
+            start_rows = conn.execute(f"""
+                SELECT dp.stock_code, dp.market_cap, dp.adj_close
+                FROM daily_price dp
+                INNER JOIN (
+                    SELECT stock_code, MIN(trade_date) as d
+                    FROM daily_price WHERE stock_code IN ({placeholders}) AND trade_date >= ?
+                    GROUP BY stock_code
+                ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.d
+            """, (*codes, calc_date)).fetchall()
+            start_map = {r[0]: (r[1], r[2]) for r in start_rows}
+            raw_mcaps = [start_map.get(c, (0, 0))[0] or 0 for c in codes]
+            weights = _apply_mcap_cap(raw_mcaps, cap=cap)
+
+            # 밸류에이션
+            fin_rows = conn.execute(f"""
+                SELECT ff.stock_code, ff.per, ff.pbr, ff.ev_ebitda
+                FROM fnspace_finance ff
+                INNER JOIN (
+                    SELECT stock_code, MAX(fiscal_year) as my
+                    FROM fnspace_finance
+                    WHERE fiscal_quarter='Annual'
+                      AND stock_code IN ({','.join(['?']*len(codes))})
+                    GROUP BY stock_code
+                ) t ON ff.stock_code = t.stock_code AND ff.fiscal_year = t.my
+                    AND ff.fiscal_quarter = 'Annual'
+            """, tuple(f"A{c}" for c in codes)).fetchall()
+            fin_map = {r[0]: (r[1], r[2], r[3]) for r in fin_rows}
+
+            # Holdings 생성
+            h_rows = []
+            for i, (code, score) in enumerate(stocks):
+                acode = f"A{code}"
+                nm = name_map.get(acode, (code, "기타"))
+                fin = fin_map.get(acode, (None, None, None))
+                h_rows.append({
+                    "종목코드": code, "종목명": nm[0], "섹터": nm[1],
+                    "비중(%)": round(weights[i] * 100, 2),
+                    "점수": round(score, 1), "value_score": round(score, 1),
+                    "PER": round(fin[0], 1) if fin[0] else None,
+                    "PBR": round(fin[1], 2) if fin[1] else None,
+                    "EV/EBITDA": round(fin[2], 1) if fin[2] else None,
+                    "시가총액": raw_mcaps[i],
+                })
+            holdings_all[key][calc_date] = h_rows
+
+            # Attribution (종료일 adj_close)
+            if idx < len(rb_dates) - 1:
+                end_date = rb_dates[idx + 1]
+                ep_rows = conn.execute(f"""
+                    SELECT dp.stock_code, dp.adj_close FROM daily_price dp
+                    INNER JOIN (
+                        SELECT stock_code, MAX(trade_date) as d FROM daily_price
+                        WHERE stock_code IN ({placeholders}) AND trade_date <= ? AND adj_close > 0
+                        GROUP BY stock_code
+                    ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.d
+                """, (*codes, end_date)).fetchall()
+                ep_map = {r[0]: r[1] for r in ep_rows}
+
+                a_rows = []
+                for i, (code, _) in enumerate(stocks):
+                    sp = start_map.get(code, (0, 0))[1] or 0
+                    ep = ep_map.get(code, 0) or 0
+                    if sp <= 0:
+                        continue
+                    ret = (ep - sp) / sp if ep > 0 else -1.0
+                    acode = f"A{code}"
+                    nm = name_map.get(acode, (code, "기타"))
+                    a_rows.append({
+                        "종목명": nm[0], "섹터": nm[1].replace("코스피 ", ""),
+                        "비중(%)": round(weights[i] * 100, 1),
+                        "종목수익률(%)": round(ret * 100, 1),
+                        "기여도(%)": round(ret * weights[i] * 100, 2),
+                    })
+                attr_all[key][f"{calc_date}_{end_date}"] = a_rows
+
+            if (idx + 1) % 20 == 0:
+                print(f"    [{idx+1}/{len(rb_dates)-1}] {key} 포트폴리오 캐시...")
+
+    HOLDINGS_CACHE.write_text(json.dumps(
+        _numpy_to_python({"created_at": datetime.now().isoformat(), "data": holdings_all}),
+        ensure_ascii=False, indent=2,
+    ))
+    ATTRIBUTION_CACHE.write_text(json.dumps(
+        _numpy_to_python({"created_at": datetime.now().isoformat(), "data": attr_all}),
+        ensure_ascii=False, indent=2,
+    ))
+    print(f"  포트폴리오 캐시 저장: {HOLDINGS_CACHE}, {ATTRIBUTION_CACHE}")
+    conn.close()
+
+
 def show_comparison(results):
     """전략 비교 출력"""
     print("\n" + "=" * 60)

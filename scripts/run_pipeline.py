@@ -351,12 +351,14 @@ def step_sync_to_sqlite():
 def step_backtest():
     """step7_backtest 실행 + 캐시 저장 (로컬 SQLite 사용)"""
     os.environ["DATABASE_URL"] = ""  # 로컬 SQLite 강제
-    from step7_backtest import run_all_backtests, save_backtest_cache, show_comparison
+    from step7_backtest import run_all_backtests, save_backtest_cache, \
+        save_portfolio_cache, show_comparison
 
     results = run_all_backtests()
     if results:
         show_comparison(results)
         save_backtest_cache(results)
+        save_portfolio_cache(results)
     else:
         print("  백테스트 결과 없음")
 
