@@ -205,92 +205,91 @@ def _is_default_params(weight_cap_pct: int = None, universe: str = None) -> bool
            (universe is None or universe == "KOSPI")
 
 
+def _slice_period_single(val: dict, s: str, e: str) -> dict | None:
+    """단일 전략 결과를 지정 기간으로 슬라이싱.
+    데이터 구조: rebalance_dates(list), portfolio_values(list, 1:1),
+                 monthly_returns(list, len=dates-1)
+    """
+    if not isinstance(val, dict):
+        return None
+    rb = val.get("rebalance_dates", [])
+    if not rb:
+        return dict(val)
+
+    indices = [i for i, d in enumerate(rb) if s <= d <= e]
+    if not indices:
+        return None
+
+    v = dict(val)
+    pv = val.get("portfolio_values", [])
+    mr = val.get("monthly_returns", [])
+
+    v["rebalance_dates"] = [rb[i] for i in indices]
+
+    if pv and len(pv) == len(rb):
+        sliced_pv = [pv[i] for i in indices]
+        base = sliced_pv[0] if sliced_pv[0] != 0 else 1.0
+        v["portfolio_values"] = [p / base for p in sliced_pv]
+
+    if mr and len(mr) == len(rb) - 1:
+        mr_indices = [i for i in indices if i < len(mr)]
+        v["monthly_returns"] = [mr[i] for i in mr_indices]
+
+    ps = val.get("portfolio_sizes", [])
+    if ps and len(ps) == len(rb):
+        v["portfolio_sizes"] = [ps[i] for i in indices]
+
+    # 통계 재계산
+    new_pv = v.get("portfolio_values", [])
+    new_mr = v.get("monthly_returns", [])
+    if new_pv and len(new_pv) >= 2:
+        v["total_return"] = new_pv[-1] / new_pv[0] - 1
+        n_years = max(len(v["rebalance_dates"]) / 12, 0.5)
+        tr = v["total_return"]
+        v["cagr"] = (1 + tr) ** (1 / n_years) - 1 if tr > -1 else 0
+    if new_mr:
+        mr_arr = np.array(new_mr)
+        v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 0 else 0
+        v["months"] = len(new_mr)
+        v["avg_monthly_return"] = float(np.mean(mr_arr))
+        v["monthly_std"] = float(np.std(mr_arr))
+        cum_arr = np.cumprod(1 + mr_arr)
+        peak = np.maximum.accumulate(cum_arr)
+        dd = (cum_arr - peak) / peak
+        v["mdd"] = float(np.min(dd))
+
+    return v
+
+
+def _slice_period_multi(results: dict, s: str, e: str) -> dict:
+    """여러 전략 결과를 지정 기간으로 슬라이싱."""
+    if s == BACKTEST_CONFIG["start"] and e == BACKTEST_CONFIG["end"]:
+        return results
+    sliced = {}
+    for key, val in results.items():
+        r = _slice_period_single(val, s, e)
+        if r is not None:
+            sliced[key] = r
+    return sliced
+
+
 @st.cache_data(show_spinner=False)
 def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type: str = None):
     """기본 파라미터 전용 캐시 로더. 유니버스/리밸런싱 조합별 캐시 파일 사용."""
-    default_start = BACKTEST_CONFIG["start"]
-    default_end = BACKTEST_CONFIG["end"]
 
     def _filter(results):
         return {k: v for k, v in results.items() if k not in _REMOVED_STRATEGIES}
-
-    def _slice_period(results, s, e):
-        """캐시 결과를 지정 기간으로 슬라이싱.
-        데이터 구조: rebalance_dates(list), portfolio_values(list, 1:1),
-                     monthly_returns(list, len=dates-1)
-        """
-        if s == default_start and e == default_end:
-            return results
-        sliced = {}
-        for key, val in results.items():
-            if not isinstance(val, dict):
-                continue
-            v = dict(val)
-            rb = val.get("rebalance_dates", [])
-            pv = val.get("portfolio_values", [])
-            mr = val.get("monthly_returns", [])
-            if not rb:
-                sliced[key] = v
-                continue
-
-            # 기간 내 인덱스 찾기
-            indices = [i for i, d in enumerate(rb) if s <= d <= e]
-            if not indices:
-                continue
-
-            # rebalance_dates 슬라이싱
-            v["rebalance_dates"] = [rb[i] for i in indices]
-
-            # portfolio_values 슬라이싱 + 재정규화 (시작=1.0)
-            if pv and len(pv) == len(rb):
-                sliced_pv = [pv[i] for i in indices]
-                base = sliced_pv[0] if sliced_pv[0] != 0 else 1.0
-                v["portfolio_values"] = [p / base for p in sliced_pv]
-
-            # monthly_returns 슬라이싱 (i번째 return = rb[i]→rb[i+1])
-            if mr and len(mr) == len(rb) - 1:
-                # indices 중 마지막 제외 (return은 구간 사이)
-                mr_indices = [i for i in indices if i < len(mr)]
-                v["monthly_returns"] = [mr[i] for i in mr_indices]
-
-            # portfolio_sizes 슬라이싱
-            ps = val.get("portfolio_sizes", [])
-            if ps and len(ps) == len(rb):
-                v["portfolio_sizes"] = [ps[i] for i in indices]
-
-            # 통계 재계산
-            new_pv = v.get("portfolio_values", [])
-            new_mr = v.get("monthly_returns", [])
-            if new_pv and len(new_pv) >= 2:
-                v["total_return"] = new_pv[-1] / new_pv[0] - 1
-                n_years = max(len(v["rebalance_dates"]) / 12, 0.5)
-                tr = v["total_return"]
-                v["cagr"] = (1 + tr) ** (1 / n_years) - 1 if tr > -1 else 0
-            if new_mr:
-                mr_arr = np.array(new_mr)
-                v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 0 else 0
-                v["months"] = len(new_mr)
-                v["avg_monthly_return"] = float(np.mean(mr_arr))
-                v["monthly_std"] = float(np.std(mr_arr))
-                # MDD 재계산
-                cum_arr = np.cumprod(1 + mr_arr)
-                peak = np.maximum.accumulate(cum_arr)
-                dd = (cum_arr - peak) / peak
-                v["mdd"] = float(np.min(dd))
-
-            sliced[key] = v
-        return sliced
 
     # 콤보별 캐시 확인
     combo_path = _combo_backtest_path(universe, rebal_type)
     if combo_path.exists():
         full_results = _filter(json.loads(combo_path.read_text())["results"])
-        return _slice_period(full_results, start, end)
+        return _slice_period_multi(full_results, start, end)
     # fallback: 기존 단일 캐시 (KOSPI/monthly)
     if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
         if _BACKTEST_CACHE.exists():
             full_results = _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
-            return _slice_period(full_results, start, end)
+            return _slice_period_multi(full_results, start, end)
 
     st.warning("백테스트 캐시가 없습니다. 파이프라인을 실행해 캐시를 생성하세요.")
     return {}
@@ -354,14 +353,58 @@ def load_all_results(start: str = None, end: str = None,
 
     # 벤치마크는 캐시에 포함된 것을 그대로 사용 (DB 재계산 안 함)
 
-    # 저장된 커스텀 전략에서 백테스트 결과 병합 (항상)
+    # 저장된 커스텀 전략에서 백테스트 결과 병합
+    use_start = start or BACKTEST_CONFIG["start"]
+    use_end = end or BACKTEST_CONFIG["end"]
+    default_start = BACKTEST_CONFIG["start"]
+    default_end = BACKTEST_CONFIG["end"]
+
     for strat in list_strategies(universe=universe, rebal_type=rebal_type):
         name = strat["name"]
         if name in BASE_STRATEGY_KEYS or name == "KOSPI":
             continue
         data = load_strategy(name)
-        if data and data.get("results"):
-                results[name] = data["results"]
+        if not data or not data.get("results"):
+            continue
+
+        r = data["results"]
+        rb = r.get("rebalance_dates", [])
+
+        # full period 커버 여부 확인
+        needs_rebacktest = False
+        if rb:
+            if rb[0] > default_start or rb[-1] < default_end:
+                needs_rebacktest = True
+
+        if needs_rebacktest and data.get("code"):
+            # DB 접속 가능할 때만 재백테스트
+            try:
+                rebt = run_strategy_backtest(
+                    data["code"], universe=universe,
+                    weight_cap_pct_override=r.get("weight_cap_pct"),
+                    tx_cost_bp_override=r.get("tx_cost_bp"),
+                )
+                if rebt and "CUSTOM" in rebt:
+                    new_r = rebt["CUSTOM"]
+                    # 저장 업데이트
+                    save_strategy(
+                        name=name, code=data["code"],
+                        description=data.get("description", ""),
+                        results=new_r,
+                        universe=data.get("universe"),
+                        rebal_type=data.get("rebal_type"),
+                    )
+                    r = new_r
+            except Exception:
+                pass  # DB 없으면 기존 결과 그대로 사용
+
+        # 기간 슬라이싱 적용
+        if use_start != default_start or use_end != default_end:
+            sliced = _slice_period_single(r, use_start, use_end)
+            if sliced:
+                r = sliced
+
+        results[name] = r
 
     _update_strategy_registry(results)
     return results
