@@ -11,7 +11,7 @@ from lib.data import (
     load_backtest_results, load_all_results, load_robustness_results,
     load_all_robustness_results,
     get_holdings, get_monthly_attribution,
-    get_portfolio_characteristics, get_portfolio_turnover,
+    get_portfolio_characteristics, get_portfolio_turnover, _load_holdings_cache,
     run_strategy_backtest, save_strategy, load_strategy, list_strategies, delete_strategy,
     STRATEGY_KEYS, ALL_KEYS, STRATEGY_LABELS, STRATEGY_COLORS, BACKTEST_CONFIG,
     BASE_STRATEGY_WEIGHTS,
@@ -561,8 +561,15 @@ def render_portfolio():
 
     ref_key = strat_keys[0]
     rb_dates = results[ref_key]["rebalance_dates"]
+    # holdings 데이터가 있는 날짜만 필터 (초기 0종목 기간 제외)
+    _h_cache = _load_holdings_cache(universe, rebal_type)
+    _h_dates = set()
+    for _hk in _h_cache.values():
+        if isinstance(_hk, dict):
+            _h_dates.update(_hk.keys())
+    valid_dates = [d for d in rb_dates[:-1] if d in _h_dates] if _h_dates else rb_dates[:-1]
     selected_date = st.selectbox(
-        "리밸런싱 날짜", rb_dates[:-1], index=len(rb_dates) - 2, key="port_date",
+        "리밸런싱 날짜", valid_dates, index=max(len(valid_dates) - 1, 0), key="port_date",
     )
 
     # 각 전략별 보유 종목 로딩
