@@ -368,41 +368,11 @@ def load_all_results(start: str = None, end: str = None,
             continue
 
         r = data["results"]
-        rb = r.get("rebalance_dates", [])
-
-        # full period 커버 여부 확인
-        needs_rebacktest = False
-        if rb:
-            if rb[0] > default_start or rb[-1] < default_end:
-                needs_rebacktest = True
-
-        if needs_rebacktest and data.get("code"):
-            # DB 접속 가능할 때만 재백테스트
-            try:
-                rebt = run_strategy_backtest(
-                    data["code"], universe=universe,
-                    weight_cap_pct_override=r.get("weight_cap_pct"),
-                    tx_cost_bp_override=r.get("tx_cost_bp"),
-                )
-                if rebt and "CUSTOM" in rebt:
-                    new_r = rebt["CUSTOM"]
-                    # 저장 업데이트
-                    save_strategy(
-                        name=name, code=data["code"],
-                        description=data.get("description", ""),
-                        results=new_r,
-                        universe=data.get("universe"),
-                        rebal_type=data.get("rebal_type"),
-                    )
-                    r = new_r
-            except Exception:
-                pass  # DB 없으면 기존 결과 그대로 사용
 
         # 기간 슬라이싱 적용
-        if use_start != default_start or use_end != default_end:
-            sliced = _slice_period_single(r, use_start, use_end)
-            if sliced:
-                r = sliced
+        sliced = _slice_period_single(r, use_start, use_end)
+        if sliced:
+            r = sliced
 
         results[name] = r
 
