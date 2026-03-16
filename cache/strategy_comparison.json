@@ -1,0 +1,70 @@
+{
+  "A0_quartile": {
+    "strategy": "A0 (14팩터)",
+    "total_return": 1.4014193936025183,
+    "cagr": 0.18159895395917158,
+    "mdd": 0.34856007266189837,
+    "sharpe": 0.8716013155966277,
+    "months": 63,
+    "avg_monthly_return": 0.01593922944690112,
+    "monthly_std": 0.06334904443468586,
+    "avg_turnover": 0.27248677248677244,
+    "avg_portfolio_size": 30.0
+  },
+  "core5": {
+    "strategy": "Core5 (회귀+성장+모멘텀)",
+    "total_return": 0.9319678911021239,
+    "cagr": 0.13364263858981662,
+    "mdd": 0.4542283055409554,
+    "sharpe": 0.6629565700626935,
+    "months": 63,
+    "avg_monthly_return": 0.012627741576775797,
+    "monthly_std": 0.06598287424395616,
+    "avg_turnover": 0.3761904761904762,
+    "avg_portfolio_size": 30.0
+  },
+  "core7": {
+    "strategy": "Core7 (밸류+회귀+성장)",
+    "total_return": 1.1809847968401548,
+    "cagr": 0.1601262788597011,
+    "mdd": 0.4082048616096085,
+    "sharpe": 0.7292339300176973,
+    "months": 63,
+    "avg_monthly_return": 0.014833862995108613,
+    "monthly_std": 0.07046574034047053,
+    "avg_turnover": 0.31058201058201046,
+    "avg_portfolio_size": 30.0
+  },
+  "vr4": {
+    "strategy": "VR4 (밸류+회귀+모멘텀)",
+    "total_return": 1.213830550174527,
+    "cagr": 0.1634340925865323,
+    "mdd": 0.36548069794431876,
+    "sharpe": 0.7747091538980961,
+    "months": 63,
+    "avg_monthly_return": 0.014816190598890128,
+    "monthly_std": 0.06625039800492054,
+    "avg_turnover": 0.2746031746031746,
+    "avg_portfolio_size": 30.0
+  },
+  "att2": {
+    "strategy": "회귀2 (PBR+EVIC)",
+    "total_return": 1.281822501203726,
+    "cagr": 0.17015707692451976,
+    "mdd": 0.2784271798792011,
+    "sharpe": 0.8887791168672762,
+    "months": 63,
+    "avg_monthly_return": 0.014786532086114185,
+    "monthly_std": 0.05763192306131053,
+    "avg_turnover": 0.17407407407407402,
+    "avg_portfolio_size": 30.0
+  },
+  "KOSPI": {
+    "strategy": "KOSPI 200",
+    "total_return": 1.1643743122936883,
+    "cagr": 0.15843809974646517,
+    "mdd": 0.3393454645459964,
+    "sharpe": 0.7374155519806733,
+    "months": 63
+  }
+}
