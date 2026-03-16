@@ -17,7 +17,16 @@ sys.path.insert(0, str(ALPHA_LAB_DIR))
 sys.path.insert(0, str(ALPHA_LAB_DIR / "scripts"))
 
 from config.settings import BACKTEST_CONFIG, CACHE_DIR
-from lib.db import get_conn as _get_conn
+from lib.db import get_conn as _get_conn_raw
+
+
+def _get_conn():
+    """DB 커넥션 반환. 연결 실패 시 None 대신 예외를 st.error로 표시."""
+    try:
+        return _get_conn_raw()
+    except Exception as e:
+        st.error(f"DB 연결 실패: {e}. 이 탭은 DB 연결이 필요합니다.")
+        st.stop()
 from lib.factor_engine import (
     validate_strategy_code, code_to_module, score_stocks_from_strategy,
     DEFAULT_STRATEGY_CODE, clear_factor_cache,
@@ -112,15 +121,22 @@ BASE_STRATEGY_WEIGHTS = {
 
 @st.cache_data(ttl=3600)
 def get_latest_price_date() -> str | None:
-    """개별 종목 주가가 충분히 들어온 최신 거래일을 반환."""
-    conn = _get_conn()
-    row = conn.execute(
-        "SELECT trade_date FROM daily_price "
-        "GROUP BY trade_date HAVING COUNT(DISTINCT stock_code) >= 100 "
-        "ORDER BY trade_date DESC LIMIT 1"
-    ).fetchone()
-    conn.close()
-    return row[0] if row and row[0] else None
+    """백테스트 캐시에서 최신 거래일을 추출. DB 연결 불필요."""
+    if _BACKTEST_CACHE.exists():
+        try:
+            data = json.loads(_BACKTEST_CACHE.read_text())
+            # 결과의 rebalance_dates 마지막 날짜 사용
+            for v in data.get("results", {}).values():
+                dates = v.get("rebalance_dates", [])
+                if dates:
+                    return dates[-1]
+            # fallback: created_at 날짜
+            created = data.get("created_at", "")
+            if created:
+                return created[:10]
+        except Exception:
+            pass
+    return None
 
 
 def _get_strategy_stocks(conn, strategy: str, calc_date: str, top_n: int = 30,
@@ -188,18 +204,9 @@ def _load_backtest_cached(start: str, end: str):
     if period_cache.exists():
         return _filter(json.loads(period_cache.read_text())["results"])
 
-    # 캐시 없으면 계산
-    from step7_backtest import run_all_backtests
-    results = run_all_backtests()
-    CACHE_DIR.mkdir(exist_ok=True)
-    from step7_backtest import _numpy_to_python
-    payload = {
-        "created_at": __import__("datetime").datetime.now().isoformat(),
-        "config": {"start": start, "end": end},
-        "results": results,
-    }
-    period_cache.write_text(json.dumps(_numpy_to_python(payload), ensure_ascii=False))
-    return results
+    # 캐시 없으면 빈 결과 반환 (Railway에서는 DB 백테스트 실행 안 함)
+    st.warning("백테스트 캐시가 없습니다. 파이프라인을 실행해 캐시를 생성하세요.")
+    return {}
 
 
 def _run_backtest_with_params(start: str, end: str, weight_cap_pct: int = None, universe: str = None):
@@ -252,26 +259,7 @@ def load_all_results(start: str = None, end: str = None,
     """
     results = dict(load_backtest_results(start, end, weight_cap_pct, universe))
 
-    # 벤치마크를 요청 유니버스에 맞게 (재)계산 — 캐시에서 잘못된 벤치마크가 올 수 있음
-    _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
-    _expected_bm = "KRX 300" if _uni == "KOSPI+KOSDAQ" else "KODEX 200"
-    _current_bm = results.get("KOSPI", {}).get("strategy", "")
-    if _current_bm != _expected_bm:
-        try:
-            from step7_backtest import get_db, get_monthly_rebalance_dates, calc_all_benchmarks
-            _orig_uni = BACKTEST_CONFIG.get("universe", "KOSPI")
-            try:
-                BACKTEST_CONFIG["universe"] = _uni
-                conn = get_db()
-                rb_dates = get_monthly_rebalance_dates(conn)
-                if len(rb_dates) >= 2:
-                    bm = calc_all_benchmarks(conn, rb_dates)
-                    results.update(bm)
-                conn.close()
-            finally:
-                BACKTEST_CONFIG["universe"] = _orig_uni
-        except Exception:
-            pass
+    # 벤치마크는 캐시에 포함된 것을 그대로 사용 (DB 재계산 안 함)
 
     # 저장된 커스텀 전략에서 백테스트 결과 병합 (항상)
     for strat in list_strategies():
