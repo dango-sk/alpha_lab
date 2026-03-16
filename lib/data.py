@@ -214,19 +214,64 @@ def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type
     def _filter(results):
         return {k: v for k, v in results.items() if k not in _REMOVED_STRATEGIES}
 
-    # 콤보별 캐시 확인
-    if start == default_start and end == default_end:
-        combo_path = _combo_backtest_path(universe, rebal_type)
-        if combo_path.exists():
-            return _filter(json.loads(combo_path.read_text())["results"])
-        # fallback: 기존 단일 캐시 (KOSPI/monthly)
-        if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
-            if _BACKTEST_CACHE.exists():
-                return _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
+    def _slice_period(results, s, e):
+        """캐시 결과를 지정 기간으로 슬라이싱."""
+        if s == default_start and e == default_end:
+            return results
+        sliced = {}
+        for key, val in results.items():
+            if not isinstance(val, dict):
+                continue
+            v = dict(val)
+            # cumulative_returns 슬라이싱
+            cum = v.get("cumulative_returns", {})
+            if cum:
+                filtered_cum = {d: r for d, r in cum.items() if s <= d <= e}
+                if filtered_cum:
+                    # 시작점 기준으로 재정규화
+                    dates_sorted = sorted(filtered_cum.keys())
+                    base = filtered_cum[dates_sorted[0]]
+                    if base != 0:
+                        filtered_cum = {d: (1 + r) / (1 + base) - 1 for d, r in filtered_cum.items()}
+                    v["cumulative_returns"] = filtered_cum
+            # rebalance_dates 슬라이싱
+            rb = v.get("rebalance_dates", [])
+            if rb:
+                v["rebalance_dates"] = [d for d in rb if s <= d <= e]
+            # monthly_returns 슬라이싱 (rebalance_dates 기반)
+            mr = v.get("monthly_returns", [])
+            orig_rb = val.get("rebalance_dates", [])
+            if mr and orig_rb and len(mr) <= len(orig_rb):
+                pairs = list(zip(orig_rb[:len(mr)], mr))
+                filtered_mr = [r for d, r in pairs if s <= d <= e]
+                v["monthly_returns"] = filtered_mr
+            # 통계 재계산
+            if v.get("cumulative_returns"):
+                cum_vals = list(v["cumulative_returns"].values())
+                v["total_return"] = cum_vals[-1] if cum_vals else 0
+                n_years = max(len(v.get("rebalance_dates", [])) / 12, 0.5)
+                v["cagr"] = (1 + v["total_return"]) ** (1 / n_years) - 1 if v["total_return"] > -1 else 0
+                if v.get("monthly_returns"):
+                    mr_arr = np.array(v["monthly_returns"])
+                    v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 0 else 0
+                    # MDD 재계산
+                    cum_arr = np.cumprod(1 + mr_arr)
+                    peak = np.maximum.accumulate(cum_arr)
+                    dd = (cum_arr - peak) / peak
+                    v["mdd"] = float(np.min(dd))
+            sliced[key] = v
+        return sliced
 
-    period_cache = _period_cache_path(start, end)
-    if period_cache.exists():
-        return _filter(json.loads(period_cache.read_text())["results"])
+    # 콤보별 캐시 확인
+    combo_path = _combo_backtest_path(universe, rebal_type)
+    if combo_path.exists():
+        full_results = _filter(json.loads(combo_path.read_text())["results"])
+        return _slice_period(full_results, start, end)
+    # fallback: 기존 단일 캐시 (KOSPI/monthly)
+    if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
+        if _BACKTEST_CACHE.exists():
+            full_results = _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
+            return _slice_period(full_results, start, end)
 
     st.warning("백테스트 캐시가 없습니다. 파이프라인을 실행해 캐시를 생성하세요.")
     return {}
@@ -291,7 +336,7 @@ def load_all_results(start: str = None, end: str = None,
     # 벤치마크는 캐시에 포함된 것을 그대로 사용 (DB 재계산 안 함)
 
     # 저장된 커스텀 전략에서 백테스트 결과 병합 (항상)
-    for strat in list_strategies():
+    for strat in list_strategies(universe=universe, rebal_type=rebal_type):
         name = strat["name"]
         if name in BASE_STRATEGY_KEYS or name == "KOSPI":
             continue
@@ -836,6 +881,8 @@ def save_strategy(
     code: str,
     description: str = "",
     results: dict = None,
+    universe: str = None,
+    rebal_type: str = None,
 ):
     """
     커스텀 전략 저장.
@@ -860,6 +907,8 @@ def save_strategy(
         "name": name,
         "description": description,
         "updated_at": datetime.now().isoformat(),
+        "universe": universe or "KOSPI",
+        "rebal_type": rebal_type or "monthly",
     })
     if "created_at" not in meta:
         meta["created_at"] = meta["updated_at"]
@@ -895,8 +944,8 @@ def load_strategy(name: str) -> dict:
     return result
 
 
-def list_strategies() -> list:
-    """저장된 전략 목록 반환."""
+def list_strategies(universe: str = None, rebal_type: str = None) -> list:
+    """저장된 전략 목록 반환. universe/rebal_type 지정 시 일치하는 것만."""
     if not _STRATEGIES_DIR.exists():
         return []
     items = []
@@ -914,6 +963,12 @@ def list_strategies() -> list:
                 meta = json.loads(meta_path.read_text())
             except Exception:
                 pass
+
+        # universe/rebal_type 필터
+        if universe and meta.get("universe", "KOSPI") != universe:
+            continue
+        if rebal_type and meta.get("rebal_type", "monthly") != rebal_type:
+            continue
 
         summary = {}
         r = meta.get("results", {})

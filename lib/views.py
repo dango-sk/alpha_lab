@@ -1398,11 +1398,14 @@ def render_lab_content():
             save_name = save_name or _auto_name
             if save_name:
                 custom_results = (st.session_state.lab_modified_results or {}).get("CUSTOM")
+                _ap_s = get_active_params()
                 save_strategy(
                     name=save_name,
                     code=current_code,
                     description=save_desc,
                     results=custom_results,
+                    universe=_ap_s.get("universe"),
+                    rebal_type=_ap_s.get("rebal_type", "monthly"),
                 )
                 if custom_results:
                     st.success(f"'{save_name}' 저장 완료 — 다른 탭에서도 표시됩니다.")
