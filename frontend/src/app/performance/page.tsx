@@ -115,7 +115,7 @@ function buildYearlyStats(
         const dd = v / peak - 1;
         if (dd < mdd) mdd = dd;
       }
-      return { year, ret, sharpe, mdd };
+      return { year, ret, sharpe, mdd, months: rets.length };
     });
 }
 
