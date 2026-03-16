@@ -536,16 +536,42 @@ def _attribution_cache_path(universe: str = None, rebal_type: str = None) -> Pat
 
 
 def save_backtest_cache(results, universe: str = None, rebal_type: str = None):
-    """백테스트 결과를 JSON 캐시로 저장"""
+    """백테스트 결과를 JSON 캐시 + PG backtest_cache에 저장"""
+    clean_results = _numpy_to_python(results)
+
+    # 1) JSON 캐시 (로컬 fallback용)
     CACHE_DIR.mkdir(exist_ok=True)
     payload = {
         "created_at": datetime.now().isoformat(),
         "config": dict(BACKTEST_CONFIG),
-        "results": _numpy_to_python(results),
+        "results": clean_results,
     }
     path = _backtest_cache_path(universe, rebal_type)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
-    print(f"  캐시 저장: {path}")
+    print(f"  JSON 캐시 저장: {path}")
+
+    # 2) PG backtest_cache 테이블에도 저장
+    _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
+    _rt = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    try:
+        from lib.db import get_conn as _get_pg_conn
+        pg = _get_pg_conn()
+        from psycopg2.extras import Json
+        for key, val in clean_results.items():
+            # holdings_by_date는 별도 저장하므로 제거
+            r = dict(val)
+            r.pop("holdings_by_date", None)
+            pg.execute("""
+                INSERT INTO backtest_cache (name, universe, rebal_type, results_json, updated_at)
+                VALUES (%s, %s, %s, %s, NOW())
+                ON CONFLICT (name, universe, rebal_type)
+                DO UPDATE SET results_json = EXCLUDED.results_json, updated_at = NOW()
+            """, (key, _uni, _rt, Json(r)))
+        pg.commit()
+        pg.close()
+        print(f"  PG 캐시 저장: {_uni}/{_rt} ({len(clean_results)}건)")
+    except Exception as e:
+        print(f"  PG 저장 실패 (JSON만 저장됨): {e}")
 
 
 def load_backtest_cache(universe: str = None, rebal_type: str = None):
@@ -700,17 +726,43 @@ def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
             if (idx + 1) % 20 == 0:
                 print(f"    [{idx+1}/{len(rb_dates)-1}] {key} 포트폴리오 캐시...")
 
+    clean_holdings = _numpy_to_python(holdings_all)
+    clean_attr = _numpy_to_python(attr_all)
+
+    # 1) JSON 캐시 (로컬 fallback)
     h_path = _holdings_cache_path(universe, rebal_type)
     a_path = _attribution_cache_path(universe, rebal_type)
     h_path.write_text(json.dumps(
-        _numpy_to_python({"created_at": datetime.now().isoformat(), "data": holdings_all}),
+        {"created_at": datetime.now().isoformat(), "data": clean_holdings},
         ensure_ascii=False, indent=2,
     ))
     a_path.write_text(json.dumps(
-        _numpy_to_python({"created_at": datetime.now().isoformat(), "data": attr_all}),
+        {"created_at": datetime.now().isoformat(), "data": clean_attr},
         ensure_ascii=False, indent=2,
     ))
-    print(f"  포트폴리오 캐시 저장: {h_path}, {a_path}")
+    print(f"  JSON 포트폴리오 캐시 저장: {h_path}, {a_path}")
+
+    # 2) PG backtest_cache에 holdings_json 업데이트
+    _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
+    _rt = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    try:
+        from lib.db import get_conn as _get_pg_conn
+        pg = _get_pg_conn()
+        from psycopg2.extras import Json
+        for key, h_data in clean_holdings.items():
+            a_data = clean_attr.get(key, {})
+            combined = {"holdings": h_data, "attribution": a_data}
+            pg.execute("""
+                UPDATE backtest_cache
+                SET holdings_json = %s, updated_at = NOW()
+                WHERE name = %s AND universe = %s AND rebal_type = %s
+            """, (Json(combined), key, _uni, _rt))
+        pg.commit()
+        pg.close()
+        print(f"  PG holdings/attribution 저장: {_uni}/{_rt}")
+    except Exception as e:
+        print(f"  PG holdings 저장 실패: {e}")
+
     conn.close()
 
 

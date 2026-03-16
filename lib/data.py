@@ -121,8 +121,23 @@ BASE_STRATEGY_WEIGHTS = {
 
 @st.cache_data(ttl=3600)
 def get_latest_price_date() -> str | None:
-    """백테스트 캐시에서 최신 거래일을 추출. DB 연결 불필요."""
-    # 콤보 캐시 우선, fallback으로 기존 캐시
+    """최신 거래일 추출. PG 우선 → JSON fallback."""
+    # 1) PG에서 조회
+    try:
+        conn = _get_conn_raw()
+        row = conn.execute("""
+            SELECT results_json FROM backtest_cache
+            WHERE name = 'A0' AND universe = 'KOSPI' AND rebal_type = 'monthly'
+        """, ()).fetchone()
+        conn.close()
+        if row and row[0]:
+            dates = row[0].get("rebalance_dates", [])
+            if dates:
+                return dates[-1]
+    except Exception:
+        pass
+
+    # 2) JSON fallback
     for path in [_combo_backtest_path("KOSPI", "monthly"), _BACKTEST_CACHE]:
         if path.exists():
             try:
@@ -131,9 +146,6 @@ def get_latest_price_date() -> str | None:
                     dates = v.get("rebalance_dates", [])
                     if dates:
                         return dates[-1]
-                created = data.get("created_at", "")
-                if created:
-                    return created[:10]
             except Exception:
                 pass
     return None
@@ -716,24 +728,68 @@ _ATTRIBUTION_CACHE = CACHE_DIR / "attribution_cache.json"
 
 
 def _load_holdings_cache(universe: str = None, rebal_type: str = None) -> dict:
+    _uni = universe or "KOSPI"
+    _rt = rebal_type or "monthly"
+
+    # 1) PG backtest_cache에서 holdings_json 조회
+    try:
+        conn = _get_conn_raw()
+        rows = conn.execute("""
+            SELECT name, holdings_json FROM backtest_cache
+            WHERE universe = %s AND rebal_type = %s AND holdings_json IS NOT NULL
+              AND name NOT IN ('KOSPI')
+        """, (_uni, _rt)).fetchall()
+        conn.close()
+        if rows:
+            result = {}
+            for name, hj in rows:
+                if isinstance(hj, dict) and "holdings" in hj:
+                    result[name] = hj["holdings"]
+                elif isinstance(hj, dict):
+                    result[name] = hj
+            if result:
+                return result
+    except Exception:
+        pass
+
+    # 2) fallback: JSON 캐시
     combo_path = _combo_holdings_path(universe, rebal_type)
     if combo_path.exists():
         return json.loads(combo_path.read_text()).get("data", {})
-    # fallback: 기존 단일 캐시
-    if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
-        if _HOLDINGS_CACHE.exists():
-            return json.loads(_HOLDINGS_CACHE.read_text()).get("data", {})
+    if _uni == "KOSPI" and _rt == "monthly" and _HOLDINGS_CACHE.exists():
+        return json.loads(_HOLDINGS_CACHE.read_text()).get("data", {})
     return {}
 
 
 def _load_attribution_cache(universe: str = None, rebal_type: str = None) -> dict:
+    _uni = universe or "KOSPI"
+    _rt = rebal_type or "monthly"
+
+    # 1) PG backtest_cache에서 attribution 조회
+    try:
+        conn = _get_conn_raw()
+        rows = conn.execute("""
+            SELECT name, holdings_json FROM backtest_cache
+            WHERE universe = %s AND rebal_type = %s AND holdings_json IS NOT NULL
+              AND name NOT IN ('KOSPI')
+        """, (_uni, _rt)).fetchall()
+        conn.close()
+        if rows:
+            result = {}
+            for name, hj in rows:
+                if isinstance(hj, dict) and "attribution" in hj:
+                    result[name] = hj["attribution"]
+            if result:
+                return result
+    except Exception:
+        pass
+
+    # 2) fallback: JSON 캐시
     combo_path = _combo_attribution_path(universe, rebal_type)
     if combo_path.exists():
         return json.loads(combo_path.read_text()).get("data", {})
-    # fallback: 기존 단일 캐시
-    if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
-        if _ATTRIBUTION_CACHE.exists():
-            return json.loads(_ATTRIBUTION_CACHE.read_text()).get("data", {})
+    if _uni == "KOSPI" and _rt == "monthly" and _ATTRIBUTION_CACHE.exists():
+        return json.loads(_ATTRIBUTION_CACHE.read_text()).get("data", {})
     return {}
 
 
