@@ -1,0 +1,552 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { getResults, getConfig } from '@/lib/api';
+import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
+import SectionHeader from '@/components/SectionHeader';
+import KpiCard from '@/components/KpiCard';
+import DataTable from '@/components/DataTable';
+import PlotlyChart from '@/components/PlotlyChart';
+import FilterBar from '@/components/FilterBar';
+import LoadingState from '@/components/LoadingState';
+import DateRangePanel from '@/components/DateRangePanel';
+
+// ─── Helpers ───
+
+function calcDrawdown(values: number[]): number[] {
+  const dd: number[] = [];
+  let peak = values[0];
+  for (const v of values) {
+    if (v > peak) peak = v;
+    dd.push((v / peak - 1) * 100);
+  }
+  return dd;
+}
+
+function calcSharpe(returns: number[]): number {
+  if (returns.length < 2) return 0;
+  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const variance = returns.reduce((a, b) => a + (b - mean) ** 2, 0) / (returns.length - 1);
+  const std = Math.sqrt(variance);
+  if (std === 0) return 0;
+  return (mean / std) * Math.sqrt(12);
+}
+
+function calcCumulativeReturn(returns: number[]): number {
+  return returns.reduce((acc, r) => acc * (1 + r), 1) - 1;
+}
+
+interface MonthRow {
+  year: number;
+  [key: string]: unknown;
+}
+
+function buildMonthlyTable(
+  dates: string[],
+  returns: number[]
+): MonthRow[] {
+  const byYear: Record<number, Record<number, number>> = {};
+  for (let i = 0; i < dates.length; i++) {
+    const r = returns[i];
+    if (r == null || isNaN(r) || !isFinite(r)) continue;
+    const d = new Date(dates[i]);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    if (!byYear[y]) byYear[y] = {};
+    // If multiple returns in same month, compound them
+    byYear[y][m] = byYear[y][m] !== undefined
+      ? (1 + byYear[y][m]) * (1 + r) - 1
+      : r;
+  }
+
+  return Object.keys(byYear)
+    .map(Number)
+    .sort()
+    .map((year) => {
+      const row: MonthRow = { year };
+      const monthRets: number[] = [];
+      for (let m = 1; m <= 12; m++) {
+        const v = byYear[year][m];
+        row[`m${m}`] = v !== undefined ? v : null;
+        if (v !== undefined) monthRets.push(v);
+      }
+      row.ytd = monthRets.length > 0 ? calcCumulativeReturn(monthRets) : null;
+      return row;
+    });
+}
+
+interface YearlyStatsRow {
+  year: number;
+  ret: number;
+  sharpe: number;
+  mdd: number;
+  months: number;
+}
+
+function buildYearlyStats(
+  dates: string[],
+  returns: number[],
+  values: number[]
+): YearlyStatsRow[] {
+  const byYear: Record<number, { rets: number[]; vals: number[] }> = {};
+  for (let i = 0; i < dates.length; i++) {
+    const r = returns[i];
+    const v = values[i];
+    if (r == null || isNaN(r) || !isFinite(r)) continue;
+    if (v == null || isNaN(v) || !isFinite(v)) continue;
+    const y = new Date(dates[i]).getFullYear();
+    if (!byYear[y]) byYear[y] = { rets: [], vals: [] };
+    byYear[y].rets.push(r);
+    byYear[y].vals.push(v);
+  }
+
+  return Object.keys(byYear)
+    .map(Number)
+    .sort()
+    .map((year) => {
+      const { rets, vals } = byYear[year];
+      const ret = calcCumulativeReturn(rets);
+      const sharpe = calcSharpe(rets);
+      // MDD within year
+      let peak = vals[0];
+      let mdd = 0;
+      for (const v of vals) {
+        if (v > peak) peak = v;
+        const dd = v / peak - 1;
+        if (dd < mdd) mdd = dd;
+      }
+      return { year, ret, sharpe, mdd };
+    });
+}
+
+// ─── Page Component ───
+
+export default function PerformancePage() {
+  const [universe, setUniverse] = useState<'KOSPI' | 'KOSPI+KOSDAQ'>('KOSPI');
+  const [rebalType, setRebalType] = useState<'monthly' | 'biweekly'>('monthly');
+  const [startDate, setStartDate] = useState('2018-04-01');
+  const [endDate, setEndDate] = useState('2026-04-01');
+  const [isOosSplit, setIsOosSplit] = useState('2024-07-01');
+  const [results, setResults] = useState<Record<string, StrategyResult>>({});
+  const [config, setConfig] = useState<Config | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load config first to get default dates
+  useEffect(() => {
+    getConfig().then((cfg) => {
+      setConfig(cfg);
+      const bc = cfg?.backtest_config;
+      if (bc) {
+        setStartDate(bc.start || '2018-04-01');
+        setEndDate(bc.end || '2026-04-01');
+        setIsOosSplit(bc.oos_start || '2024-07-01');
+      }
+    }).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    getResults({ start: startDate, end: endDate, universe, rebal_type: rebalType })
+      .then((res) => setResults(res))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [universe, rebalType, startDate, endDate]);
+
+  const strategyKeys = useMemo(
+    () => Object.keys(results),
+    [results]
+  );
+
+  const labels = config?.strategy_labels ?? {};
+  const colors = config?.strategy_colors ?? {};
+  const bc = config?.backtest_config;
+
+  // ─── IS/OOS split ───
+  const isOosData = useMemo(() => {
+    if (strategyKeys.length === 0) return [];
+    return strategyKeys.map((key) => {
+      const r = results[key];
+      const oosIdx = r.rebalance_dates.findIndex((d) => d >= isOosSplit);
+      const splitIdx = oosIdx > 0 ? oosIdx : r.rebalance_dates.length;
+      const isRets = r.monthly_returns.slice(0, splitIdx);
+      const oosRets = r.monthly_returns.slice(splitIdx);
+      return {
+        strategy: labels[key] || key,
+        is_return: calcCumulativeReturn(isRets),
+        is_sharpe: calcSharpe(isRets),
+        oos_return: oosRets.length > 0 ? calcCumulativeReturn(oosRets) : null,
+        oos_sharpe: oosRets.length > 0 ? calcSharpe(oosRets) : null,
+      };
+    });
+  }, [results, isOosSplit, strategyKeys, labels]);
+
+  // ─── Selected strategy for yearly detail (first strategy = A0) ───
+  const [selectedStrategy, setSelectedStrategy] = useState<string>('');
+
+  useEffect(() => {
+    if (strategyKeys.length > 0 && !strategyKeys.includes(selectedStrategy)) {
+      setSelectedStrategy(strategyKeys[0]);
+    }
+  }, [strategyKeys, selectedStrategy]);
+
+  if (loading) {
+    return <LoadingState />;
+  }
+
+  const primaryKey = strategyKeys[0] || '';
+  const primary = results[primaryKey];
+
+  // ─── Comparison table data ───
+  const comparisonData = strategyKeys.map((key) => {
+    const r = results[key];
+    return {
+      strategy: labels[key] || key,
+      total_return: r.total_return,
+      cagr: r.cagr,
+      mdd: r.mdd,
+      sharpe: r.sharpe,
+      avg_turnover: r.avg_turnover ?? 0,
+      avg_size: r.avg_portfolio_size ?? 0,
+    };
+  });
+
+  // ─── Cumulative return chart ───
+  const cumRetTraces: Plotly.Data[] = strategyKeys.map((key) => {
+    const r = results[key];
+    return {
+      x: r.rebalance_dates,
+      y: r.portfolio_values.map((v) => (v - 1) * 100),
+      name: labels[key] || key,
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      line: { color: colors[key] || '#42A5F5', width: 2 },
+      hovertemplate: '%{y:+.1f}%<extra></extra>',
+    };
+  });
+
+  const cumRetLayout: Partial<Plotly.Layout> = {
+    title: { text: '누적 수익률', font: { size: 13, color: '#e4e4e7' } },
+    yaxis: { ticksuffix: '%' },
+    shapes: [
+      {
+        type: 'line',
+        x0: isOosSplit,
+        x1: isOosSplit,
+        y0: 0,
+        y1: 1,
+        yref: 'paper',
+        line: { color: 'rgba(255,255,255,0.3)', width: 1, dash: 'dash' },
+      },
+    ],
+    annotations: [
+      {
+        x: isOosSplit,
+        y: 1,
+        yref: 'paper',
+        text: 'OOS Start',
+        showarrow: false,
+        font: { size: 9, color: '#a1a1aa' },
+        yanchor: 'bottom',
+      },
+    ],
+  };
+
+  // ─── Drawdown chart ───
+  const ddTraces: Plotly.Data[] = strategyKeys.map((key) => {
+    const r = results[key];
+    const dd = calcDrawdown(r.portfolio_values);
+    return {
+      x: r.rebalance_dates,
+      y: dd,
+      name: labels[key] || key,
+      type: 'scatter' as const,
+      mode: 'lines' as const,
+      fill: 'tozeroy' as const,
+      line: { color: colors[key] || '#42A5F5', width: 1 },
+      fillcolor: (colors[key] || '#42A5F5') + '33',
+      hovertemplate: '%{y:.1f}%<extra></extra>',
+    };
+  });
+
+  const ddLayout: Partial<Plotly.Layout> = {
+    title: { text: 'Drawdown', font: { size: 13, color: '#e4e4e7' } },
+    yaxis: { ticksuffix: '%' },
+  };
+
+  // ─── Yearly monthly return table ───
+  const selResult = results[selectedStrategy];
+  const monthlyRows = selResult
+    ? buildMonthlyTable(selResult.rebalance_dates, selResult.monthly_returns)
+    : [];
+  const yearlyStats = selResult
+    ? buildYearlyStats(
+        selResult.rebalance_dates,
+        selResult.monthly_returns,
+        selResult.portfolio_values
+      )
+    : [];
+
+  const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+  const monthlyColumns = [
+    { key: 'year', label: '연도', align: 'left' as const, width: '60px' },
+    ...monthNames.map((name, i) => ({
+      key: `m${i + 1}`,
+      label: name,
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => (v !== null && v !== undefined ? fmtPct(v as number) : ''),
+      colorFn: (v: unknown) => (v !== null && v !== undefined ? valueColor(v as number) : ''),
+    })),
+    {
+      key: 'ytd',
+      label: 'YTD',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => (v !== null && v !== undefined ? fmtPct(v as number) : ''),
+      colorFn: (v: unknown) => (v !== null && v !== undefined ? valueColor(v as number) : ''),
+    },
+  ];
+
+  const yearlyStatsColumns = [
+    { key: 'year', label: '연도', align: 'left' as const, width: '60px' },
+    {
+      key: 'ret',
+      label: '수익률',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtPct(v as number),
+      colorFn: (v: unknown) => valueColor(v as number),
+    },
+    {
+      key: 'sharpe',
+      label: 'Sharpe',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtNum(v as number),
+    },
+    {
+      key: 'mdd',
+      label: 'MDD',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtPct(v as number),
+      colorFn: () => 'text-accent-red',
+    },
+  ];
+
+  // ─── Comparison table columns ───
+  const comparisonColumns = [
+    { key: 'strategy', label: '전략', align: 'left' as const },
+    {
+      key: 'total_return',
+      label: '총수익률',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtPct(v as number),
+      colorFn: (v: unknown) => valueColor(v as number),
+    },
+    {
+      key: 'cagr',
+      label: 'CAGR',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtPct(v as number),
+      colorFn: (v: unknown) => valueColor(v as number),
+    },
+    {
+      key: 'mdd',
+      label: 'MDD',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtPct(v as number),
+      colorFn: () => 'text-accent-red',
+    },
+    {
+      key: 'sharpe',
+      label: 'Sharpe',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtNum(v as number),
+    },
+    {
+      key: 'avg_turnover',
+      label: '평균회전율',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtPct(v as number),
+    },
+    {
+      key: 'avg_size',
+      label: '평균종목수',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtNum(v as number, 0),
+    },
+  ];
+
+  // ─── IS/OOS columns ───
+  const isOosColumns = [
+    { key: 'strategy', label: '전략', align: 'left' as const },
+    {
+      key: 'is_return',
+      label: 'IS 수익률',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtPct(v as number),
+      colorFn: (v: unknown) => valueColor(v as number),
+    },
+    {
+      key: 'is_sharpe',
+      label: 'IS Sharpe',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => fmtNum(v as number),
+    },
+    {
+      key: 'oos_return',
+      label: 'OOS 수익률',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) =>
+        v !== null && v !== undefined ? fmtPct(v as number) : '-',
+      colorFn: (v: unknown) =>
+        v !== null && v !== undefined ? valueColor(v as number) : '',
+    },
+    {
+      key: 'oos_sharpe',
+      label: 'OOS Sharpe',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) =>
+        v !== null && v !== undefined ? fmtNum(v as number) : '-',
+    },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <SectionHeader title="성과 비교" subtitle="전략별 누적 수익률 및 핵심 지표" />
+
+      <DateRangePanel
+        startDate={startDate}
+        endDate={endDate}
+        isOosSplit={isOosSplit}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        onIsOosSplitChange={setIsOosSplit}
+      />
+
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <FilterBar
+          universe={universe}
+          onUniverseChange={setUniverse}
+          rebalType={rebalType}
+          onRebalTypeChange={setRebalType}
+        />
+      </div>
+
+      {bc && (
+        <p className="text-xs text-muted">
+          기간: {startDate} ~ {endDate} | 리밸런싱: {rebalType === 'monthly' ? '월간' : '격주'}, 상위 {bc.top_n_stocks}종목 | 비중: 시총비례 + {bc.weight_cap_pct}% 캡 | 거래비용: 편도 {bc.transaction_cost_bp}bp | 유니버스: {universe} (BM: KODEX 200)
+        </p>
+      )}
+
+      {/* KPI Cards */}
+      {primary && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {strategyKeys.map((key) => {
+            const r = results[key];
+            const borderColors: Record<string, string> = {
+              0: 'border-t-accent-blue',
+              1: 'border-t-[#90A4AE]',
+              2: 'border-t-accent-green',
+              3: 'border-t-accent-yellow',
+            };
+            const idx = strategyKeys.indexOf(key);
+            return (
+              <KpiCard
+                key={key}
+                label={labels[key] || key}
+                value={fmtPct(r.total_return)}
+                borderColor={borderColors[idx] || 'border-t-primary'}
+                valueColor={valueColor(r.total_return)}
+                subItems={[
+                  { label: 'MDD', value: fmtPct(r.mdd), color: 'text-accent-red' },
+                  { label: 'Sharpe', value: fmtNum(r.sharpe) },
+                ]}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Performance Comparison Table */}
+      <div>
+        <SectionHeader title="성과 요약" />
+        <DataTable
+          columns={comparisonColumns}
+          data={comparisonData}
+          maxHeight="none"
+        />
+      </div>
+
+      {/* Cumulative Return Chart */}
+      <div>
+        <SectionHeader title="누적 수익률" />
+        <PlotlyChart data={cumRetTraces} layout={cumRetLayout} height={400} />
+      </div>
+
+      {/* Drawdown Chart */}
+      <div>
+        <SectionHeader title="Drawdown" />
+        <PlotlyChart data={ddTraces} layout={ddLayout} height={300} />
+      </div>
+
+      {/* Yearly Performance */}
+      <div>
+        <SectionHeader title="연도별 성과">
+          <select
+            value={selectedStrategy}
+            onChange={(e) => setSelectedStrategy(e.target.value)}
+            className="px-3 py-1.5 text-xs bg-surface border border-border rounded-lg text-foreground"
+          >
+            {strategyKeys.map((key) => (
+              <option key={key} value={key}>
+                {labels[key] || key}
+              </option>
+            ))}
+          </select>
+        </SectionHeader>
+
+        <div className="space-y-4">
+          <DataTable
+            columns={monthlyColumns}
+            data={monthlyRows}
+            maxHeight="none"
+          />
+          <DataTable
+            columns={yearlyStatsColumns}
+            data={yearlyStats}
+            maxHeight="none"
+          />
+        </div>
+      </div>
+
+      {/* IS/OOS Comparison */}
+      {(
+        <div>
+          <SectionHeader
+            title="In-Sample / Out-of-Sample 비교"
+            subtitle={`IS: ${startDate} ~ ${isOosSplit} | OOS: ${isOosSplit} ~ ${endDate}`}
+          />
+          <DataTable
+            columns={isOosColumns}
+            data={isOosData}
+            maxHeight="none"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+

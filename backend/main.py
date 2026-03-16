@@ -1,0 +1,534 @@
+"""
+Alpha Lab Quant Dashboard — FastAPI Backend
+
+Wraps the existing Streamlit-based data layer (lib/) and exposes it as REST API.
+"""
+import json
+import sys
+import time
+from pathlib import Path
+from types import ModuleType
+from typing import Optional
+
+# ──────────────────────────────────────────────
+# Mock streamlit BEFORE any lib imports
+# ──────────────────────────────────────────────
+_mock_st = ModuleType("streamlit")
+
+
+def _passthrough_decorator(*args, **kwargs):
+    """Works as both @cache_data and @cache_data(ttl=...) """
+    if len(args) == 1 and callable(args[0]) and not kwargs:
+        return args[0]
+    return lambda f: f
+
+
+_mock_st.cache_data = _passthrough_decorator
+_mock_st.cache_resource = _passthrough_decorator
+_mock_st.error = lambda *a, **kw: None
+_mock_st.stop = lambda: (_ for _ in ()).throw(RuntimeError("st.stop called"))
+_mock_st.warning = lambda *a, **kw: None
+_mock_st.info = lambda *a, **kw: None
+_mock_st.session_state = {}
+_mock_st.rerun = lambda: None
+_mock_st.spinner = lambda *a, **kw: __import__("contextlib").nullcontext()
+sys.modules["streamlit"] = _mock_st
+
+# ──────────────────────────────────────────────
+# Path setup
+# ──────────────────────────────────────────────
+ALPHA_LAB_DIR = Path(__file__).parent.parent
+sys.path.insert(0, str(ALPHA_LAB_DIR))
+sys.path.insert(0, str(ALPHA_LAB_DIR / "scripts"))
+
+# ──────────────────────────────────────────────
+# Imports from existing lib
+# ──────────────────────────────────────────────
+import numpy as np
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+from config.settings import BACKTEST_CONFIG, ANTHROPIC_API_KEY
+from lib.data import (
+    load_all_results,
+    load_all_robustness_results,
+    get_holdings,
+    get_monthly_attribution,
+    get_portfolio_characteristics,
+    get_portfolio_turnover,
+    get_latest_price_date,
+    list_strategies,
+    save_strategy,
+    delete_strategy,
+    run_strategy_backtest,
+    STRATEGY_LABELS,
+    STRATEGY_COLORS,
+    ALL_KEYS,
+    BASE_STRATEGY_WEIGHTS,
+)
+from lib.ai import (
+    is_ai_available,
+    _get_client,
+    MODEL_FAST,
+    MODEL_SMART,
+    STRATEGY_TOOLS,
+    chat_strategy_modification,
+    _STRATEGY_SYSTEM_TEMPLATE,
+)
+from lib.factor_engine import DEFAULT_STRATEGY_CODE
+
+# ──────────────────────────────────────────────
+# JSON serialization helpers
+# ──────────────────────────────────────────────
+
+
+def _convert_for_json(obj):
+    """Recursively convert numpy/pandas types to JSON-serializable Python types."""
+    if isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj)):
+        return None
+    if isinstance(obj, dict):
+        return {k: _convert_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_convert_for_json(v) for v in obj]
+    if isinstance(obj, tuple):
+        return [_convert_for_json(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return _convert_for_json(obj.tolist())
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        v = float(obj)
+        return None if np.isnan(v) or np.isinf(v) else v
+    if isinstance(obj, (np.bool_,)):
+        return bool(obj)
+    if isinstance(obj, pd.DataFrame):
+        return _convert_for_json(obj.to_dict(orient="records"))
+    if isinstance(obj, pd.Timestamp):
+        return str(obj)
+    if hasattr(obj, "isoformat"):
+        return obj.isoformat()
+    return obj
+
+
+# ──────────────────────────────────────────────
+# Simple TTL cache
+# ──────────────────────────────────────────────
+_cache: dict[str, tuple[float, object]] = {}
+_DEFAULT_TTL = 3600  # 1 hour
+
+
+def _cached(key: str, fn, ttl: int = _DEFAULT_TTL):
+    now = time.time()
+    if key in _cache:
+        ts, val = _cache[key]
+        if now - ts < ttl:
+            return val
+    val = fn()
+    _cache[key] = (now, val)
+    return val
+
+
+# ──────────────────────────────────────────────
+# FastAPI app
+# ──────────────────────────────────────────────
+app = FastAPI(title="Alpha Lab API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ──────────────────────────────────────────────
+# Chat system prompt
+# ──────────────────────────────────────────────
+_SYSTEM_GENERAL = """당신은 이현자산운용의 시니어 퀀트 애널리스트 AI 어시스턴트입니다.
+Alpha Lab 대시보드의 모든 데이터에 접근할 수 있으며, 사용자의 질문에 답합니다.
+
+## 당신이 알고 있는 데이터
+
+### 백테스트 결과 (backtest_cache)
+- 전략별 누적수익률, CAGR, MDD, Sharpe ratio, 월별수익률, 포트폴리오 가치 추이
+- 전략: A0(기존 멀티팩터 전략), KOSPI(벤치마크), 그리고 사용자가 실험실에서 생성한 커스텀 전략
+- 유니버스: KOSPI, KOSPI+KOSDAQ | 리밸런싱: 월간, 격주
+
+### 포트폴리오 보유종목 (holdings)
+- 종목코드, 종목명, 섹터, 비중(%), 점수, PER, PBR, EV/EBITDA, 시가총액
+- HHI(허핀달지수), Top5 비중, 섹터별 비중, 시가총액 분포(초대형/대형/중형/소형)
+- 리밸런싱 변화: 신규편입/편출/유지 종목, 회전율
+
+### 일별 주가 데이터 (daily_price)
+- 전 종목의 일별 시가/고가/저가/종가/거래량/시가총액
+- 기간: 2018년~현재
+
+### 재무 데이터 (finance)
+- 연간/분기 실적: 매출액, 영업이익, 당기순이익, 자산총계, 부채총계, 자본총계
+- 밸류에이션: PER, PBR, EV/EBITDA, PCF, ROE, ROA, 배당수익률
+
+### 컨센서스 데이터 (consensus)
+- 애널리스트 추정치: Forward EPS, Forward PER, Forward EV/EBITDA, 목표주가
+- EPS 모멘텀(수정 방향), 매출성장률 추정
+
+### 통계 검증
+- IS/OOS 분할 검증, 벤치마크 대비 유의성 검정(t-test, 부트스트랩)
+- 롤링 윈도우 초과수익률, 강건성 검증 결과
+
+## 규칙
+- 한국어로 응답합니다.
+- 전문 금융 용어를 사용하되, 코드 변수명이나 프로그래밍 용어는 절대 사용하지 마세요.
+- 답변은 간결하고 핵심적으로. 수치를 근거로 들어 답변하세요.
+- 사용자가 특정 종목이나 데이터를 물어보면, 당신이 가지고 있는 컨텍스트 데이터를 기반으로 답변하세요.
+"""
+
+
+# ══════════════════════════════════════════════
+# 1. GET /api/config
+# ══════════════════════════════════════════════
+@app.get("/api/config")
+def get_config():
+    return _convert_for_json({
+        "backtest_config": BACKTEST_CONFIG,
+        "strategy_labels": STRATEGY_LABELS,
+        "strategy_colors": STRATEGY_COLORS,
+        "all_keys": list(ALL_KEYS),
+        "base_strategy_weights": BASE_STRATEGY_WEIGHTS,
+        "default_strategy_code": DEFAULT_STRATEGY_CODE,
+    })
+
+
+# ══════════════════════════════════════════════
+# 2. GET /api/latest-price-date
+# ══════════════════════════════════════════════
+@app.get("/api/latest-price-date")
+def api_latest_price_date():
+    date = _cached("latest_price_date", get_latest_price_date, ttl=600)
+    return {"date": date}
+
+
+# ══════════════════════════════════════════════
+# 3. GET /api/results
+# ══════════════════════════════════════════════
+@app.get("/api/results")
+def api_results(
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    cache_key = f"results:{start}:{end}:{universe}:{rebal_type}"
+    results = _cached(
+        cache_key,
+        lambda: load_all_results(start, end, universe=universe, rebal_type=rebal_type),
+    )
+    return _convert_for_json(results)
+
+
+# ══════════════════════════════════════════════
+# 4. GET /api/holdings
+# ══════════════════════════════════════════════
+@app.get("/api/holdings")
+def api_holdings(
+    strategy: str,
+    date: str,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    df = get_holdings(strategy, date, universe=universe, rebal_type=rebal_type)
+    return _convert_for_json(df.to_dict(orient="records") if not df.empty else [])
+
+
+# ══════════════════════════════════════════════
+# 5. GET /api/attribution
+# ══════════════════════════════════════════════
+@app.get("/api/attribution")
+def api_attribution(
+    strategy: str,
+    start_date: str,
+    end_date: str,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    df = get_monthly_attribution(strategy, start_date, end_date,
+                                 universe=universe, rebal_type=rebal_type)
+    return _convert_for_json(df.to_dict(orient="records") if not df.empty else [])
+
+
+# ══════════════════════════════════════════════
+# 6. GET /api/characteristics
+# ══════════════════════════════════════════════
+@app.get("/api/characteristics")
+def api_characteristics(
+    strategy: str,
+    date: str,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    result = get_portfolio_characteristics(strategy, date,
+                                           universe=universe, rebal_type=rebal_type)
+    return _convert_for_json(result)
+
+
+# ══════════════════════════════════════════════
+# 7. GET /api/turnover
+# ══════════════════════════════════════════════
+@app.get("/api/turnover")
+def api_turnover(
+    strategy: str,
+    date: str,
+    prev_date: str,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    result = get_portfolio_turnover(strategy, date, prev_date,
+                                    universe=universe, rebal_type=rebal_type)
+    return _convert_for_json({
+        "added": result["added"].to_dict(orient="records") if isinstance(result["added"], pd.DataFrame) and not result["added"].empty else [],
+        "removed": result["removed"].to_dict(orient="records") if isinstance(result["removed"], pd.DataFrame) and not result["removed"].empty else [],
+        "added_count": result["added_count"],
+        "removed_count": result["removed_count"],
+        "retained_count": result["retained_count"],
+        "turnover_rate": result["turnover_rate"],
+    })
+
+
+# ══════════════════════════════════════════════
+# 8. GET /api/robustness
+# ══════════════════════════════════════════════
+@app.get("/api/robustness")
+def api_robustness(
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    is_end: Optional[str] = None,
+    oos_start: Optional[str] = None,
+    universe: Optional[str] = None,
+):
+    cache_key = f"robustness:{start}:{end}:{is_end}:{oos_start}:{universe}"
+
+    def _load():
+        is_oos, stat, rolling = load_all_robustness_results(
+            start, end, is_end, oos_start, universe=universe,
+        )
+        # Remove boot_means (large array, not needed in API)
+        for sig in stat.get("bm_significance", {}).values():
+            sig.pop("boot_means", None)
+        return {"is_oos": is_oos, "stat": stat, "rolling": rolling}
+
+    result = _cached(cache_key, _load, ttl=600)
+    return _convert_for_json(result)
+
+
+# ══════════════════════════════════════════════
+# 9. GET /api/strategies
+# ══════════════════════════════════════════════
+@app.get("/api/strategies")
+def api_list_strategies(
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    return list_strategies(universe=universe, rebal_type=rebal_type)
+
+
+# ══════════════════════════════════════════════
+# 10. POST /api/strategies
+# ══════════════════════════════════════════════
+class SaveStrategyRequest(BaseModel):
+    name: str
+    code: str
+    description: str = ""
+    results: Optional[dict] = None
+    universe: Optional[str] = None
+    rebal_type: Optional[str] = None
+
+
+@app.post("/api/strategies")
+def api_save_strategy(req: SaveStrategyRequest):
+    try:
+        save_strategy(
+            name=req.name,
+            code=req.code,
+            description=req.description,
+            results=req.results,
+            universe=req.universe,
+            rebal_type=req.rebal_type,
+        )
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════
+# 11. DELETE /api/strategies/{name}
+# ══════════════════════════════════════════════
+@app.delete("/api/strategies/{name}")
+def api_delete_strategy(name: str):
+    try:
+        delete_strategy(name)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════
+# 12. POST /api/backtest
+# ══════════════════════════════════════════════
+class BacktestRequest(BaseModel):
+    strategy_code: str
+    universe: Optional[str] = None
+    rebal_type: Optional[str] = None
+    weight_cap_pct: Optional[int] = None
+    tx_cost_bp: Optional[int] = None
+
+
+@app.post("/api/backtest")
+def api_run_backtest(req: BacktestRequest):
+    result = run_strategy_backtest(
+        strategy_code=req.strategy_code,
+        universe=req.universe,
+        rebal_type=req.rebal_type,
+        weight_cap_pct_override=req.weight_cap_pct,
+        tx_cost_bp_override=req.tx_cost_bp,
+    )
+    if result is None:
+        raise HTTPException(status_code=500, detail="Backtest returned no results")
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return _convert_for_json(result)
+
+
+# ══════════════════════════════════════════════
+# 13. POST /api/chat  — General Q&A with SSE streaming
+# ══════════════════════════════════════════════
+class ChatRequest(BaseModel):
+    messages: list[dict]  # [{role, content}, ...]
+    context: Optional[dict] = None  # dashboard context
+
+
+def _build_chat_context() -> str:
+    """Build auto-context from current cached data for AI chat."""
+    try:
+        results = load_all_results(universe="KOSPI", rebal_type="monthly")
+        summary_parts = ["\n\n## 현재 전략 성과 요약 (KOSPI, 월간)"]
+        for key, r in results.items():
+            if isinstance(r, dict) and "cagr" in r:
+                cagr = r.get("cagr", 0)
+                mdd = r.get("mdd", 0)
+                sharpe = r.get("sharpe", 0)
+                total = r.get("total_return", 0)
+                label = STRATEGY_LABELS.get(key, key)
+                cagr_s = f"{cagr*100:.1f}%" if cagr else "-"
+                mdd_s = f"{mdd*100:.1f}%" if mdd else "-"
+                summary_parts.append(
+                    f"- {label}: 총수익률 {total*100:.1f}%, CAGR {cagr_s}, MDD {mdd_s}, Sharpe {sharpe:.2f}"
+                )
+        return "\n".join(summary_parts)
+    except Exception:
+        return ""
+
+
+@app.post("/api/chat")
+def api_chat(req: ChatRequest):
+    if not is_ai_available():
+        raise HTTPException(status_code=503, detail="AI not available (no API key)")
+
+    client = _get_client()
+    context_str = _build_chat_context()
+    if req.context:
+        context_str += f"\n\n추가 컨텍스트:\n{json.dumps(req.context, ensure_ascii=False, default=str)}"
+
+    api_messages = [{"role": m["role"], "content": m["content"]} for m in req.messages]
+
+    def event_generator():
+        try:
+            with client.messages.stream(
+                model=MODEL_FAST,
+                max_tokens=2000,
+                system=_SYSTEM_GENERAL + context_str,
+                messages=api_messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    # SSE format
+                    yield f"data: {json.dumps({'text': text}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ══════════════════════════════════════════════
+# 14. POST /api/chat/strategy — Strategy modification (tool use)
+# ══════════════════════════════════════════════
+class StrategyChatRequest(BaseModel):
+    messages: list[dict]  # [{role, content}, ...]
+    current_code: Optional[str] = None
+
+
+@app.post("/api/chat/strategy")
+def api_chat_strategy(req: StrategyChatRequest):
+    if not is_ai_available():
+        raise HTTPException(status_code=503, detail="AI not available (no API key)")
+
+    current_code = req.current_code or DEFAULT_STRATEGY_CODE
+
+    try:
+        response_text, updated_code, changes_summary = chat_strategy_modification(
+            req.messages,
+            current_code,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {
+        "response": response_text or "",
+        "updated_code": updated_code,
+        "changes_summary": changes_summary,
+    }
+
+
+# ══════════════════════════════════════════════
+# Health check
+# ══════════════════════════════════════════════
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "ai_available": is_ai_available()}
+
+
+@app.on_event("startup")
+def _warmup_cache():
+    """Pre-load results for all universe/rebal combos on startup."""
+    import threading
+
+    def _warm():
+        combos = [
+            ("KOSPI", "monthly"),
+            ("KOSPI", "biweekly"),
+            ("KOSPI+KOSDAQ", "monthly"),
+            ("KOSPI+KOSDAQ", "biweekly"),
+        ]
+        for uni, rt in combos:
+            key = f"results:None:None:{uni}:{rt}"
+            try:
+                _cached(key, lambda u=uni, r=rt: load_all_results(None, None, universe=u, rebal_type=r))
+                print(f"  [warmup] {uni}/{rt} cached")
+            except Exception as e:
+                print(f"  [warmup] {uni}/{rt} failed: {e}")
+
+    threading.Thread(target=_warm, daemon=True).start()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

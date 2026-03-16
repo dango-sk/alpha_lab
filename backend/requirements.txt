@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scipy
+psycopg2-binary
+python-dotenv
+anthropic
+sse-starlette
