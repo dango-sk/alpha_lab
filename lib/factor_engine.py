@@ -240,8 +240,16 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
             conn, params=(price_date_3m,),
         )
 
+    # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
+    _snap_month = calc_date[:7]  # "2026-03-03" → "2026-03"
+    _snap_date = conn.execute(
+        "SELECT MAX(snapshot_date) FROM fnspace_master WHERE snapshot_date <= ?",
+        (_snap_month,),
+    ).fetchone()[0] or _snap_month
     master_df = read_sql(
-        "SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ FROM fnspace_master", conn,
+        "SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ "
+        "FROM fnspace_master WHERE snapshot_date = ?",
+        conn, params=(_snap_date,),
     )
 
     # ─── 병합 ───

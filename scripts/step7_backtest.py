@@ -537,19 +537,28 @@ def save_portfolio_cache(results):
         top_n = BACKTEST_CONFIG.get("top_n_stocks", 30)
         cap = BACKTEST_CONFIG.get("weight_cap_pct", 10) / 100
 
-        # 마스터 데이터 한 번만 로드
+        # 마스터 데이터: snapshot_date별로 로드
         from lib.db import read_sql
-        master_df = read_sql(
-            "SELECT stock_code, stock_name, COALESCE(sec_cd_nm, '기타') as sector FROM fnspace_master",
+        master_all = read_sql(
+            "SELECT stock_code, stock_name, COALESCE(sec_cd_nm, '기타') as sector, "
+            "snapshot_date FROM fnspace_master",
             conn,
         )
-        name_map = {r.stock_code: (r.stock_name, r.sector) for r in master_df.itertuples()}
+        # snapshot_date → {stock_code: (name, sector)} 맵
+        _master_by_snap = {}
+        for r in master_all.itertuples():
+            _master_by_snap.setdefault(r.snapshot_date, {})[r.stock_code] = (r.stock_name, r.sector)
 
         holdings_all[key] = {}
         attr_all[key] = {}
 
         for idx in range(len(rb_dates) - 1):
             calc_date = rb_dates[idx]
+
+            # 해당 월 마스터 선택
+            _snap = calc_date[:7]
+            _snaps = sorted(s for s in _master_by_snap if s <= _snap)
+            name_map = _master_by_snap.get(_snaps[-1], {}) if _snaps else {}
 
             # 종목 선정
             universe_set = get_universe_stocks(conn, calc_date, rebal_type, min_mcap)

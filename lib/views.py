@@ -115,14 +115,6 @@ def _init_params():
 
 def get_active_params() -> dict:
     """현재 활성화된 파라미터를 반환."""
-    if not IS_DEV:
-        return {
-            "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 10),
-            "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
-            "top_n": BACKTEST_CONFIG.get("top_n_stocks", 30),
-            "min_market_cap": BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000),
-            "rebal_type": BACKTEST_CONFIG.get("rebal_type", "monthly"),
-        }
     _init_params()
     return {
         "weight_cap_pct": st.session_state.param_weight_cap,
@@ -136,17 +128,19 @@ def get_active_params() -> dict:
 def render_param_panel():
     """파라미터 조절 패널."""
     _init_params()
-    with st.expander("파라미터 조절", expanded=True):
+    with st.expander("파라미터 조절", expanded=False):
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.number_input(
                 "비중캡 (%)", min_value=0, max_value=30, step=1,
+                value=st.session_state.param_weight_cap,
                 key="param_weight_cap",
                 help="0% = 캡 없음 (시총비례 그대로), 10% = 개별종목 최대 10%",
             )
         with c2:
             st.number_input(
                 "시총하한 (억원)", min_value=0, max_value=20000, step=500,
+                value=st.session_state.param_min_mcap,
                 key="param_min_mcap",
                 help="유니버스 시총 하한 필터 (0 = 필터 없음)",
             )
@@ -329,8 +323,7 @@ def _render_yearly_performance(results: dict, kpi_keys: list):
 # ═══════════════════════════════════════════════════════
 def render_performance():
     render_period_selector()
-    if IS_DEV:
-        render_param_panel()
+    render_param_panel()
 
     params = get_active_params()
     universe = params["universe"]
