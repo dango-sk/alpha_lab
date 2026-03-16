@@ -215,7 +215,10 @@ def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type
         return {k: v for k, v in results.items() if k not in _REMOVED_STRATEGIES}
 
     def _slice_period(results, s, e):
-        """캐시 결과를 지정 기간으로 슬라이싱."""
+        """캐시 결과를 지정 기간으로 슬라이싱.
+        데이터 구조: rebalance_dates(list), portfolio_values(list, 1:1),
+                     monthly_returns(list, len=dates-1)
+        """
         if s == default_start and e == default_end:
             return results
         sliced = {}
@@ -223,42 +226,58 @@ def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type
             if not isinstance(val, dict):
                 continue
             v = dict(val)
-            # cumulative_returns 슬라이싱
-            cum = v.get("cumulative_returns", {})
-            if cum:
-                filtered_cum = {d: r for d, r in cum.items() if s <= d <= e}
-                if filtered_cum:
-                    # 시작점 기준으로 재정규화
-                    dates_sorted = sorted(filtered_cum.keys())
-                    base = filtered_cum[dates_sorted[0]]
-                    if base != 0:
-                        filtered_cum = {d: (1 + r) / (1 + base) - 1 for d, r in filtered_cum.items()}
-                    v["cumulative_returns"] = filtered_cum
+            rb = val.get("rebalance_dates", [])
+            pv = val.get("portfolio_values", [])
+            mr = val.get("monthly_returns", [])
+            if not rb:
+                sliced[key] = v
+                continue
+
+            # 기간 내 인덱스 찾기
+            indices = [i for i, d in enumerate(rb) if s <= d <= e]
+            if not indices:
+                continue
+
             # rebalance_dates 슬라이싱
-            rb = v.get("rebalance_dates", [])
-            if rb:
-                v["rebalance_dates"] = [d for d in rb if s <= d <= e]
-            # monthly_returns 슬라이싱 (rebalance_dates 기반)
-            mr = v.get("monthly_returns", [])
-            orig_rb = val.get("rebalance_dates", [])
-            if mr and orig_rb and len(mr) <= len(orig_rb):
-                pairs = list(zip(orig_rb[:len(mr)], mr))
-                filtered_mr = [r for d, r in pairs if s <= d <= e]
-                v["monthly_returns"] = filtered_mr
+            v["rebalance_dates"] = [rb[i] for i in indices]
+
+            # portfolio_values 슬라이싱 + 재정규화 (시작=1.0)
+            if pv and len(pv) == len(rb):
+                sliced_pv = [pv[i] for i in indices]
+                base = sliced_pv[0] if sliced_pv[0] != 0 else 1.0
+                v["portfolio_values"] = [p / base for p in sliced_pv]
+
+            # monthly_returns 슬라이싱 (i번째 return = rb[i]→rb[i+1])
+            if mr and len(mr) == len(rb) - 1:
+                # indices 중 마지막 제외 (return은 구간 사이)
+                mr_indices = [i for i in indices if i < len(mr)]
+                v["monthly_returns"] = [mr[i] for i in mr_indices]
+
+            # portfolio_sizes 슬라이싱
+            ps = val.get("portfolio_sizes", [])
+            if ps and len(ps) == len(rb):
+                v["portfolio_sizes"] = [ps[i] for i in indices]
+
             # 통계 재계산
-            if v.get("cumulative_returns"):
-                cum_vals = list(v["cumulative_returns"].values())
-                v["total_return"] = cum_vals[-1] if cum_vals else 0
-                n_years = max(len(v.get("rebalance_dates", [])) / 12, 0.5)
-                v["cagr"] = (1 + v["total_return"]) ** (1 / n_years) - 1 if v["total_return"] > -1 else 0
-                if v.get("monthly_returns"):
-                    mr_arr = np.array(v["monthly_returns"])
-                    v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 0 else 0
-                    # MDD 재계산
-                    cum_arr = np.cumprod(1 + mr_arr)
-                    peak = np.maximum.accumulate(cum_arr)
-                    dd = (cum_arr - peak) / peak
-                    v["mdd"] = float(np.min(dd))
+            new_pv = v.get("portfolio_values", [])
+            new_mr = v.get("monthly_returns", [])
+            if new_pv and len(new_pv) >= 2:
+                v["total_return"] = new_pv[-1] / new_pv[0] - 1
+                n_years = max(len(v["rebalance_dates"]) / 12, 0.5)
+                tr = v["total_return"]
+                v["cagr"] = (1 + tr) ** (1 / n_years) - 1 if tr > -1 else 0
+            if new_mr:
+                mr_arr = np.array(new_mr)
+                v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 0 else 0
+                v["months"] = len(new_mr)
+                v["avg_monthly_return"] = float(np.mean(mr_arr))
+                v["monthly_std"] = float(np.std(mr_arr))
+                # MDD 재계산
+                cum_arr = np.cumprod(1 + mr_arr)
+                peak = np.maximum.accumulate(cum_arr)
+                dd = (cum_arr - peak) / peak
+                v["mdd"] = float(np.min(dd))
+
             sliced[key] = v
         return sliced
 
