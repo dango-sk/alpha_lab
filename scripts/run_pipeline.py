@@ -207,8 +207,8 @@ def step_sync_to_sqlite():
 
 
 def step_backtest():
-    """step7_backtest 실행 + 캐시 저장 (로컬 SQLite, 4 콤보)"""
-    os.environ["DATABASE_URL"] = ""  # 로컬 SQLite 강제
+    """step7_backtest 실행 + 캐시 저장 (PG 직접, 4 콤보)"""
+    os.environ["DATABASE_URL"] = PG_URL  # PG 직접 사용
     from step7_backtest import run_all_backtests, save_backtest_cache, \
         save_portfolio_cache, show_comparison
     from config.settings import BACKTEST_CONFIG as _BC
@@ -265,25 +265,11 @@ def step_robustness():
 # ═══════════════════════════════════════════════════════════
 
 def step_deploy_railway():
-    """git commit + railway up으로 대시보드 배포"""
+    """railway up으로 대시보드 배포 (캐시는 PG에 저장되므로 git commit 불필요)"""
     import subprocess
 
     project_dir = Path(__file__).parent.parent
 
-    # 캐시 파일 커밋
-    subprocess.run(["git", "add", "cache/"], cwd=str(project_dir), capture_output=True)
-    result = subprocess.run(
-        ["git", "diff", "--cached", "--quiet"],
-        cwd=str(project_dir), capture_output=True,
-    )
-    if result.returncode != 0:
-        subprocess.run(
-            ["git", "commit", "-m", f"파이프라인: 캐시 갱신 ({datetime.now():%Y-%m-%d})"],
-            cwd=str(project_dir), capture_output=True,
-        )
-        print("  캐시 커밋 완료")
-
-    # railway up
     print("  railway up 실행 중...")
     result = subprocess.run(
         ["railway", "up"],
@@ -559,8 +545,7 @@ def main():
     # ── 매일 (주가/시총은 LG 그램에서 PG로 별도 업로드) ──
     run("Forward/Consensus 수집", step_collect_consensus)
 
-    # ── PG → 로컬 SQLite 동기화 ──
-    run("PG→SQLite 동기화", step_sync_to_sqlite)
+    # PG → SQLite 동기화 제거 (모든 데이터를 PG에서 직접 읽음)
 
     if not args.skip_backtest:
         run("백테스트", step_backtest)

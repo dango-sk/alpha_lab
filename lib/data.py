@@ -416,8 +416,25 @@ def load_robustness_results(start: str = None, end: str = None,
     use_is_end = is_end or BACKTEST_CONFIG.get("insample_end", "2024-06-30")
     use_oos_start = oos_start or BACKTEST_CONFIG.get("oos_start", "2024-07-01")
 
-    # 기본 기간이면 step8 캐시 사용
+    # 기본 기간이면 캐시 사용 (PG 우선 → JSON fallback)
     if use_start == default_start and use_end == default_end:
+        # 1) PG
+        try:
+            conn = _get_conn_raw()
+            row = conn.execute("""
+                SELECT results_json FROM backtest_cache
+                WHERE name = '__ROBUSTNESS__' AND universe = 'ALL' AND rebal_type = 'ALL'
+            """, ()).fetchone()
+            conn.close()
+            if row and row[0]:
+                data = row[0]
+                for sig in data.get("stat", {}).get("bm_significance", {}).values():
+                    if "boot_means" in sig:
+                        sig["boot_means"] = np.array(sig["boot_means"])
+                return data["is_oos"], data["stat"], data["rolling"]
+        except Exception:
+            pass
+        # 2) JSON fallback
         if _ROBUSTNESS_CACHE.exists():
             data = json.loads(_ROBUSTNESS_CACHE.read_text())
             for sig in data["stat"].get("bm_significance", {}).values():

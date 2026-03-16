@@ -357,17 +357,40 @@ ROBUSTNESS_CACHE = CACHE_DIR / "robustness_results.json"
 
 
 def save_robustness_cache(is_oos, stat, rolling):
-    """강건성 검증 결과를 JSON 캐시로 저장"""
+    """강건성 검증 결과를 JSON + PG에 저장"""
+    clean_is_oos = _numpy_to_python(is_oos)
+    clean_stat = _numpy_to_python(stat)
+    clean_rolling = _numpy_to_python(rolling)
+
+    # 1) JSON 캐시 (로컬 fallback)
     CACHE_DIR.mkdir(exist_ok=True)
     payload = {
         "created_at": datetime.now().isoformat(),
         "config": dict(BACKTEST_CONFIG),
-        "is_oos": _numpy_to_python(is_oos),
-        "stat": _numpy_to_python(stat),
-        "rolling": _numpy_to_python(rolling),
+        "is_oos": clean_is_oos,
+        "stat": clean_stat,
+        "rolling": clean_rolling,
     }
     ROBUSTNESS_CACHE.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
-    print(f"  캐시 저장: {ROBUSTNESS_CACHE}")
+    print(f"  JSON 캐시 저장: {ROBUSTNESS_CACHE}")
+
+    # 2) PG backtest_cache에 저장 (name='__ROBUSTNESS__')
+    try:
+        from lib.db import get_conn
+        from psycopg2.extras import Json
+        conn = get_conn()
+        data = {"is_oos": clean_is_oos, "stat": clean_stat, "rolling": clean_rolling}
+        conn.execute("""
+            INSERT INTO backtest_cache (name, universe, rebal_type, results_json, updated_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            ON CONFLICT (name, universe, rebal_type)
+            DO UPDATE SET results_json = EXCLUDED.results_json, updated_at = NOW()
+        """, ("__ROBUSTNESS__", "ALL", "ALL", Json(data)))
+        conn.commit()
+        conn.close()
+        print(f"  PG 강건성 캐시 저장 완료")
+    except Exception as e:
+        print(f"  PG 저장 실패: {e}")
 
 
 def load_robustness_cache():

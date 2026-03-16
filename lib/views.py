@@ -1431,7 +1431,7 @@ def render_lab_content():
                         description=save_desc, results=custom_bw,
                         universe=_uni, rebal_type="biweekly",
                     )
-                if custom_results:
+                if custom_monthly:
                     st.success(f"'{save_name}' 저장 완료 — 다른 탭에서도 표시됩니다.")
                 else:
                     st.success(f"'{save_name}' 저장 완료 — 백테스트를 실행하면 다른 탭에도 표시됩니다.")
