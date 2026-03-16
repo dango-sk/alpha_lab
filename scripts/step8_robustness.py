@@ -1,5 +1,7 @@
 """
-Step 8: 강건성 검증 (4개 밸류 전략)
+Step 8: 강건성 검증
+
+step7 백테스트 캐시 결과를 슬라이싱하여 검증 (재계산 없음, 수 초 완료).
 
 검증:
   1. In-Sample vs Out-of-Sample 분할 비교
@@ -7,10 +9,8 @@ Step 8: 강건성 검증 (4개 밸류 전략)
   3. 롤링 윈도우 (24개월) 초과수익 일관성
 """
 import json
-import sqlite3
 import sys
 import numpy as np
-from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime
 
@@ -24,12 +24,8 @@ from scipy import stats
 sys.path.append(str(Path(__file__).parent.parent))
 sys.path.append(str(Path(__file__).parent))
 
-from config.settings import DB_PATH, BACKTEST_CONFIG, CACHE_DIR
-from step7_backtest import (
-    run_backtest, get_db, get_monthly_rebalance_dates,
-    calc_etf_return, calc_etf_monthly_returns, STRATEGIES,
-    _numpy_to_python,
-)
+from config.settings import BACKTEST_CONFIG, CACHE_DIR
+from step7_backtest import STRATEGIES, _numpy_to_python
 
 # ─── 한글 폰트 ───
 for fname in fm.findSystemFonts():
@@ -43,139 +39,200 @@ N_BOOTSTRAP = 10_000
 ROLLING_WINDOW = 24
 
 
-@contextmanager
-def _patch_backtest_period(start, end):
-    original_start = BACKTEST_CONFIG["start"]
-    original_end = BACKTEST_CONFIG["end"]
+# ═══════════════════════════════════════════════════════
+# 캐시에서 결과 로드
+# ═══════════════════════════════════════════════════════
+
+def _load_cached_results():
+    """step7 백테스트 캐시 로드 (PG → JSON fallback). A0 + KOSPI(BM) 반환."""
+    # 1) PG
     try:
-        BACKTEST_CONFIG["start"] = start
-        BACKTEST_CONFIG["end"] = end
-        yield
-    finally:
-        BACKTEST_CONFIG["start"] = original_start
-        BACKTEST_CONFIG["end"] = original_end
+        from lib.db import get_conn
+        conn = get_conn()
+        results = {}
+        for name in ["A0", "KOSPI"]:
+            row = conn.execute("""
+                SELECT results_json FROM backtest_cache
+                WHERE name = ? AND universe = ? AND rebal_type = ?
+            """, (name, "KOSPI", "monthly")).fetchone()
+            if row and row[0]:
+                data = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+                results[name] = data
+        conn.close()
+        if "A0" in results:
+            return results
+    except Exception as e:
+        print(f"  PG 로드 실패 (JSON fallback): {e}")
+
+    # 2) JSON fallback
+    cache_path = CACHE_DIR / "backtest_KOSPI_monthly.json"
+    if cache_path.exists():
+        raw = json.loads(cache_path.read_text())
+        return raw.get("results", raw)
+
+    # 3) legacy
+    cache_path = CACHE_DIR / "backtest_results.json"
+    if cache_path.exists():
+        raw = json.loads(cache_path.read_text())
+        return raw.get("results", raw)
+
+    return {}
+
+
+def _slice_results(results, start, end):
+    """결과를 기간으로 슬라이싱. 통계 재계산."""
+    sliced = {}
+    for key, val in results.items():
+        rb = val.get("rebalance_dates", [])
+        mr = val.get("monthly_returns", [])
+        pv = val.get("portfolio_values", [])
+        if not rb or not mr:
+            sliced[key] = dict(val)
+            continue
+
+        indices = [i for i, d in enumerate(rb) if start <= d <= end]
+        if not indices:
+            continue
+
+        v = dict(val)
+        v["rebalance_dates"] = [rb[i] for i in indices]
+
+        if pv and len(pv) == len(rb):
+            sliced_pv = [pv[i] for i in indices]
+            base = sliced_pv[0] if sliced_pv[0] != 0 else 1.0
+            v["portfolio_values"] = [p / base for p in sliced_pv]
+
+        if mr and len(mr) == len(rb) - 1:
+            mr_indices = [i for i in indices if i < len(mr)]
+            v["monthly_returns"] = [mr[i] for i in mr_indices]
+
+        # 통계 재계산
+        new_mr = v.get("monthly_returns", [])
+        new_pv = v.get("portfolio_values", [])
+        if new_mr:
+            arr = np.array(new_mr)
+            v["total_return"] = np.prod(1 + arr) - 1
+            n_years = max(len(new_mr) / 12, 0.5)
+            tr = v["total_return"]
+            v["cagr"] = (1 + tr) ** (1 / n_years) - 1 if tr > -1 else 0
+            v["sharpe"] = float(arr.mean() / arr.std() * np.sqrt(12)) if arr.std() > 1e-8 else 0
+            v["months"] = len(new_mr)
+            v["monthly_std"] = float(arr.std())
+            cum = np.cumprod(1 + arr)
+            peak = np.maximum.accumulate(cum)
+            dd = (cum - peak) / peak
+            v["mdd"] = float(np.min(dd))
+
+        sliced[key] = v
+    return sliced
 
 
 # ═══════════════════════════════════════════════════════
-# 테스트 1: IS/OOS 분할
+# 테스트 1: IS/OOS 분할 (슬라이싱)
 # ═══════════════════════════════════════════════════════
 
-def test_is_oos_split():
+def test_is_oos_split(full_results):
     is_start = BACKTEST_CONFIG["start"]
     is_end = BACKTEST_CONFIG["insample_end"]
     oos_start = BACKTEST_CONFIG["oos_start"]
     oos_end = BACKTEST_CONFIG["end"]
 
-    is_results = {}
-    oos_results = {}
+    is_results = _slice_results(full_results, is_start, is_end)
+    oos_results = _slice_results(full_results, oos_start, oos_end)
 
-    for key, strat, desc in STRATEGIES:
-        print(f"    IS: {key}...")
-        with _patch_backtest_period(is_start, is_end):
-            r = run_backtest(strat)
-            if r:
-                r["strategy"] = key
-                is_results[key] = r
-
-        print(f"    OOS: {key}...")
-        with _patch_backtest_period(oos_start, oos_end):
-            r = run_backtest(strat)
-            if r:
-                r["strategy"] = key
-                oos_results[key] = r
-
-    # 벤치마크
+    # BM은 KOSPI 키에서 가져옴
     bm_results = {"is": {}, "oos": {}}
-    conn = get_db()
-    is_ret = calc_etf_return(conn, "KS200", is_start, is_end)
-    oos_ret = calc_etf_return(conn, "KS200", oos_start, oos_end)
-    conn.close()
-
-    is_months = len(is_results.get(BASELINE_KEY, {}).get("monthly_returns", []))
-    oos_months = len(oos_results.get(BASELINE_KEY, {}).get("monthly_returns", []))
-
-    if is_ret is not None:
+    is_bm = is_results.get("KOSPI")
+    oos_bm = oos_results.get("KOSPI")
+    if is_bm:
         bm_results["is"]["KOSPI"] = {
-            "total_return": is_ret,
-            "cagr": ((1 + is_ret) ** (12.0 / max(is_months, 1)) - 1.0),
+            "total_return": is_bm.get("total_return", 0),
+            "cagr": is_bm.get("cagr", 0),
             "name": "KOSPI 200",
         }
-    if oos_ret is not None:
+    if oos_bm:
         bm_results["oos"]["KOSPI"] = {
-            "total_return": oos_ret,
-            "cagr": ((1 + oos_ret) ** (12.0 / max(oos_months, 1)) - 1.0),
+            "total_return": oos_bm.get("total_return", 0),
+            "cagr": oos_bm.get("cagr", 0),
             "name": "KOSPI 200",
         }
 
-    return {"is_results": is_results, "oos_results": oos_results, "benchmarks": bm_results}
+    # 전략 결과에서 BM 제외
+    is_strat = {k: v for k, v in is_results.items() if k != "KOSPI"}
+    oos_strat = {k: v for k, v in oos_results.items() if k != "KOSPI"}
+
+    return {"is_results": is_strat, "oos_results": oos_strat, "benchmarks": bm_results}
 
 
 # ═══════════════════════════════════════════════════════
-# 테스트 2: 통계적 유의성
+# 테스트 2: 통계적 유의성 (슬라이싱)
 # ═══════════════════════════════════════════════════════
 
-def test_statistical_significance():
-    full_results = {}
-    for key, strat, desc in STRATEGIES:
-        print(f"    전체기간: {key}...")
-        r = run_backtest(strat)
-        if r:
-            r["strategy"] = key
-            full_results[key] = r
+def test_statistical_significance(full_results):
+    a0 = full_results.get(BASELINE_KEY)
+    bm = full_results.get("KOSPI")
+    if not a0 or not bm:
+        print("  A0 또는 KOSPI 결과 없음")
+        return {"full_results": full_results, "bm_significance": {}}
 
-    # vs 벤치마크
-    conn = get_db()
-    rebalance_dates = full_results[BASELINE_KEY]["rebalance_dates"]
-    bm_monthly = np.array(calc_etf_monthly_returns(conn, "KS200", rebalance_dates))
-    conn.close()
+    strat_rets = np.array(a0["monthly_returns"])
+    bm_rets = np.array(bm.get("monthly_returns", []))
+    n = min(len(strat_rets), len(bm_rets))
+    if n < 3:
+        print("  데이터 부족")
+        return {"full_results": full_results, "bm_significance": {}}
+
+    diff = strat_rets[:n] - bm_rets[:n]
+    t_stat, p_value = stats.ttest_rel(strat_rets[:n], bm_rets[:n])
+
+    rng = np.random.default_rng(42)
+    boot_means = np.array([
+        rng.choice(diff, size=len(diff), replace=True).mean()
+        for _ in range(N_BOOTSTRAP)
+    ])
+    ci_lower = np.percentile(boot_means, 2.5)
+    ci_upper = np.percentile(boot_means, 97.5)
 
     bm_significance = {}
-    rng = np.random.default_rng(42)
-
     for key, _, desc in STRATEGIES:
-        if key not in full_results:
+        if key not in full_results or key == "KOSPI":
             continue
-        strat_rets = np.array(full_results[key]["monthly_returns"])
-        n = min(len(strat_rets), len(bm_monthly))
-        diff = strat_rets[:n] - bm_monthly[:n]
-
-        t_stat, p_value = stats.ttest_rel(strat_rets[:n], bm_monthly[:n])
-        boot_means = np.array([
-            rng.choice(diff, size=len(diff), replace=True).mean()
-            for _ in range(N_BOOTSTRAP)
-        ])
-        ci_lower = np.percentile(boot_means, 2.5)
-        ci_upper = np.percentile(boot_means, 97.5)
-
+        s_rets = np.array(full_results[key]["monthly_returns"])
+        nn = min(len(s_rets), len(bm_rets))
+        d = s_rets[:nn] - bm_rets[:nn]
+        t, p = stats.ttest_rel(s_rets[:nn], bm_rets[:nn])
+        bm = np.array([rng.choice(d, size=len(d), replace=True).mean() for _ in range(N_BOOTSTRAP)])
         bm_significance[key] = {
-            "n_months": n,
-            "mean_diff": diff.mean(),
-            "t_stat": t_stat,
-            "p_value": p_value,
-            "ci_lower": ci_lower,
-            "ci_upper": ci_upper,
-            "significant": ci_lower > 0,
-            "boot_means": boot_means,
-            "win_rate": (boot_means > 0).mean(),
+            "n_months": nn,
+            "mean_diff": d.mean(),
+            "t_stat": t,
+            "p_value": p,
+            "ci_lower": np.percentile(bm, 2.5),
+            "ci_upper": np.percentile(bm, 97.5),
+            "significant": np.percentile(bm, 2.5) > 0,
+            "boot_means": bm,
+            "win_rate": (bm > 0).mean(),
         }
 
     return {"full_results": full_results, "bm_significance": bm_significance}
 
 
 # ═══════════════════════════════════════════════════════
-# 테스트 3: 롤링 윈도우
+# 테스트 3: 롤링 윈도우 (슬라이싱)
 # ═══════════════════════════════════════════════════════
 
 def test_rolling_window(full_results):
     """24개월 슬라이딩 윈도우: 각 전략 vs KOSPI 200"""
-    conn = get_db()
-    rebalance_dates = full_results[BASELINE_KEY]["rebalance_dates"]
-    bm_monthly = np.array(calc_etf_monthly_returns(conn, "KS200", rebalance_dates))
-    conn.close()
+    bm_data = full_results.get("KOSPI")
+    if not bm_data:
+        return {}
+
+    bm_monthly = np.array(bm_data.get("monthly_returns", []))
+    rebalance_dates = bm_data.get("rebalance_dates", [])
 
     rolling_all = {}
     for key, _, desc in STRATEGIES:
-        if key not in full_results:
+        if key not in full_results or key == "KOSPI":
             continue
         strat_monthly = np.array(full_results[key]["monthly_returns"])
         n = min(len(strat_monthly), len(bm_monthly))
@@ -215,8 +272,6 @@ def test_rolling_window(full_results):
 # ═══════════════════════════════════════════════════════
 
 def show_results(is_oos_data, stat_data, rolling_all):
-    strategy_descs = {k: d for k, _, d in STRATEGIES}
-
     # ── IS/OOS ──
     print("\n" + "=" * 80)
     print("테스트 1: In-Sample vs Out-of-Sample")
@@ -362,7 +417,7 @@ def save_robustness_cache(is_oos, stat, rolling):
     clean_stat = _numpy_to_python(stat)
     clean_rolling = _numpy_to_python(rolling)
 
-    # 1) JSON 캐시 (로컬 fallback)
+    # 1) JSON 캐시
     CACHE_DIR.mkdir(exist_ok=True)
     payload = {
         "created_at": datetime.now().isoformat(),
@@ -374,7 +429,7 @@ def save_robustness_cache(is_oos, stat, rolling):
     ROBUSTNESS_CACHE.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
     print(f"  JSON 캐시 저장: {ROBUSTNESS_CACHE}")
 
-    # 2) PG backtest_cache에 저장 (name='__ROBUSTNESS__')
+    # 2) PG backtest_cache
     try:
         from lib.db import get_conn
         from psycopg2.extras import Json
@@ -394,11 +449,10 @@ def save_robustness_cache(is_oos, stat, rolling):
 
 
 def load_robustness_cache():
-    """JSON 캐시에서 강건성 결과 로드 (없으면 None)"""
+    """JSON 캐시에서 강건성 결과 로드"""
     if not ROBUSTNESS_CACHE.exists():
         return None
     data = json.loads(ROBUSTNESS_CACHE.read_text())
-    # boot_means를 numpy array로 복원 (차트에서 사용)
     for key, sig in data["stat"].get("bm_significance", {}).items():
         if "boot_means" in sig:
             sig["boot_means"] = np.array(sig["boot_means"])
@@ -411,18 +465,33 @@ def load_robustness_cache():
 
 def main():
     print("\n" + "=" * 70)
-    print("Step 8: 강건성 검증")
+    print("Step 8: 강건성 검증 (캐시 슬라이싱)")
     print(f"   기간: {BACKTEST_CONFIG['start']} ~ {BACKTEST_CONFIG['end']}")
     print("=" * 70)
 
+    print("\n  캐시 로드...")
+    full_results = _load_cached_results()
+    if not full_results or "A0" not in full_results:
+        print("  ✗ 백테스트 캐시가 없습니다. step7을 먼저 실행하세요.")
+        return
+
+    a0 = full_results["A0"]
+    print(f"  A0: {len(a0.get('monthly_returns',[]))}개월, "
+          f"총수익률 {a0.get('total_return',0):+.1%}, "
+          f"CAGR {a0.get('cagr',0):+.1%}")
+    if "KOSPI" in full_results:
+        bm = full_results["KOSPI"]
+        print(f"  KOSPI: {len(bm.get('monthly_returns',[]))}개월, "
+              f"총수익률 {bm.get('total_return',0):+.1%}")
+
     print("\n  [1/3] IS/OOS 분할 검증...")
-    is_oos_data = test_is_oos_split()
+    is_oos_data = test_is_oos_split(full_results)
 
-    print("\n  [2/3] Bootstrap 95% CI 검증...")
-    stat_data = test_statistical_significance()
+    print("  [2/3] Bootstrap 95% CI 검증...")
+    stat_data = test_statistical_significance(full_results)
 
-    print("\n  [3/3] 롤링 윈도우 검증...")
-    rolling_all = test_rolling_window(stat_data["full_results"])
+    print("  [3/3] 롤링 윈도우 검증...")
+    rolling_all = test_rolling_window(full_results)
 
     show_results(is_oos_data, stat_data, rolling_all)
     generate_chart(stat_data, rolling_all)

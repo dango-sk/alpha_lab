@@ -261,7 +261,7 @@ def _slice_period_single(val: dict, s: str, e: str) -> dict | None:
         v["cagr"] = (1 + tr) ** (1 / n_years) - 1 if tr > -1 else 0
     if new_mr:
         mr_arr = np.array(new_mr)
-        v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 0 else 0
+        v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 1e-8 else 0
         v["months"] = len(new_mr)
         v["avg_monthly_return"] = float(np.mean(mr_arr))
         v["monthly_std"] = float(np.std(mr_arr))
@@ -294,16 +294,25 @@ def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type
     def _filter(results):
         return {k: v for k, v in results.items() if k not in _REMOVED_STRATEGIES}
 
-    # 1) PG에서 A0 캐시 조회
+    # 1) PG에서 results_json만 조회 (holdings_json 제외 → 속도 개선)
     try:
-        data = load_strategy("A0", rebal_type=_rt, universe=_uni)
-        if data and data.get("results"):
-            # A0 결과 + KOSPI(BM) 결과를 합침
-            full_results = {"A0": data["results"]}
-            bm_data = load_strategy("KOSPI", rebal_type=_rt, universe=_uni)
-            if bm_data and bm_data.get("results"):
-                full_results["KOSPI"] = bm_data["results"]
-            return _slice_period_multi(_filter(full_results), start, end)
+        conn = _get_conn_raw()
+        rows = conn.execute("""
+            SELECT name, results_json FROM backtest_cache
+            WHERE universe = %s AND rebal_type = %s
+              AND results_json IS NOT NULL
+              AND name NOT IN ('__ROBUSTNESS__')
+        """, (_uni, _rt)).fetchall()
+        conn.close()
+        if rows:
+            full_results = {}
+            for name, rj in rows:
+                if isinstance(rj, dict):
+                    rj.pop("holdings", None)
+                    rj.pop("attribution", None)
+                    full_results[name] = rj
+            if full_results:
+                return _slice_period_multi(_filter(full_results), start, end)
     except Exception:
         pass
 
@@ -375,32 +384,8 @@ def load_all_results(start: str = None, end: str = None,
     병합 후 STRATEGY_KEYS/ALL_KEYS/LABELS/COLORS를 동적으로 갱신한다.
     """
     results = dict(load_backtest_results(start, end, weight_cap_pct, universe, rebal_type))
-
-    # 벤치마크는 캐시에 포함된 것을 그대로 사용 (DB 재계산 안 함)
-
-    # 저장된 커스텀 전략에서 백테스트 결과 병합
-    use_start = start or BACKTEST_CONFIG["start"]
-    use_end = end or BACKTEST_CONFIG["end"]
-    default_start = BACKTEST_CONFIG["start"]
-    default_end = BACKTEST_CONFIG["end"]
-
-    for strat in list_strategies(universe=universe, rebal_type=rebal_type):
-        name = strat["name"]
-        if name in BASE_STRATEGY_KEYS or name == "KOSPI":
-            continue
-        data = load_strategy(name, rebal_type=rebal_type)
-        if not data or not data.get("results"):
-            continue
-
-        r = data["results"]
-
-        # 기간 슬라이싱 적용
-        sliced = _slice_period_single(r, use_start, use_end)
-        if sliced:
-            r = sliced
-
-        results[name] = r
-
+    # _load_backtest_cached already loads ALL strategies from backtest_cache
+    # (including custom ones), so no need to loop list_strategies separately.
     _update_strategy_registry(results)
     return results
 

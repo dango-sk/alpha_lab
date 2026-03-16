@@ -252,7 +252,7 @@ def calc_all_benchmarks(conn, rebalance_dates):
                 mdd = drawdown
 
         sharpe = 0
-        if returns_array.std() > 0:
+        if returns_array.std() > 1e-8:
             sharpe = (returns_array.mean() / returns_array.std()) * np.sqrt(12)
 
         results[key] = {
@@ -393,7 +393,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         if drawdown > mdd:
             mdd = drawdown
 
-    sharpe = (returns_array.mean() / returns_array.std()) * np.sqrt(12) if returns_array.std() > 0 else 0
+    sharpe = (returns_array.mean() / returns_array.std()) * np.sqrt(12) if returns_array.std() > 1e-8 else 0
 
     return {
         "strategy": strategy_name,
@@ -661,7 +661,9 @@ def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
             raw_mcaps = [start_map.get(c, (0, 0))[0] or 0 for c in codes]
             weights = _apply_mcap_cap(raw_mcaps, cap=cap)
 
-            # 밸류에이션
+            # 밸류에이션 (look-ahead bias 방지: calc_date 기준 사용 가능 fiscal_year만)
+            dt = datetime.strptime(calc_date, "%Y-%m-%d")
+            max_fy = dt.year - 1 if dt.month >= 4 else dt.year - 2
             fin_rows = conn.execute(f"""
                 SELECT ff.stock_code, ff.per, ff.pbr, ff.ev_ebitda
                 FROM fnspace_finance ff
@@ -669,11 +671,12 @@ def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
                     SELECT stock_code, MAX(fiscal_year) as my
                     FROM fnspace_finance
                     WHERE fiscal_quarter='Annual'
+                      AND fiscal_year <= ?
                       AND stock_code IN ({','.join(['?']*len(codes))})
                     GROUP BY stock_code
                 ) t ON ff.stock_code = t.stock_code AND ff.fiscal_year = t.my
                     AND ff.fiscal_quarter = 'Annual'
-            """, tuple(f"A{c}" for c in codes)).fetchall()
+            """, (max_fy, *tuple(f"A{c}" for c in codes))).fetchall()
             fin_map = {r[0]: (r[1], r[2], r[3]) for r in fin_rows}
 
             # Holdings 생성
