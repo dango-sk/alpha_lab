@@ -115,6 +115,14 @@ def _init_params():
 
 def get_active_params() -> dict:
     """현재 활성화된 파라미터를 반환."""
+    if not IS_DEV:
+        return {
+            "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 10),
+            "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
+            "top_n": BACKTEST_CONFIG.get("top_n_stocks", 30),
+            "min_market_cap": BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000),
+            "rebal_type": BACKTEST_CONFIG.get("rebal_type", "monthly"),
+        }
     _init_params()
     return {
         "weight_cap_pct": st.session_state.param_weight_cap,
@@ -321,7 +329,8 @@ def _render_yearly_performance(results: dict, kpi_keys: list):
 # ═══════════════════════════════════════════════════════
 def render_performance():
     render_period_selector()
-    render_param_panel()
+    if IS_DEV:
+        render_param_panel()
 
     params = get_active_params()
     universe = params["universe"]
