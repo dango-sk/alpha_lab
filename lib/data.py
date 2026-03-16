@@ -943,7 +943,7 @@ def save_strategy(
     """커스텀 전략을 PG backtest_cache 테이블에 저장 (UPSERT)."""
     _uni = universe or "KOSPI"
     _rt = rebal_type or "monthly"
-    conn = get_conn()
+    conn = _get_conn_raw()
 
     results_json = None
     holdings_json = None
@@ -976,7 +976,7 @@ def load_strategy(name: str, rebal_type: str = None, universe: str = None) -> di
     """PG에서 저장된 전략 불러오기."""
     _rt = rebal_type or "monthly"
     _uni = universe or "KOSPI"
-    conn = get_conn()
+    conn = _get_conn_raw()
     try:
         row = conn.execute("""
             SELECT name, strategy_code, description, results_json, holdings_json,
@@ -1006,7 +1006,7 @@ def load_strategy(name: str, rebal_type: str = None, universe: str = None) -> di
 
 def list_strategies(universe: str = None, rebal_type: str = None) -> list:
     """PG에서 저장된 전략 목록 반환."""
-    conn = get_conn()
+    conn = _get_conn_raw()
     try:
         conditions = ["name NOT IN ('A0', 'KOSPI')"]
         params = []
@@ -1047,7 +1047,7 @@ def list_strategies(universe: str = None, rebal_type: str = None) -> list:
 
 def delete_strategy(name: str):
     """PG에서 전략 삭제."""
-    conn = get_conn()
+    conn = _get_conn_raw()
     try:
         conn.execute("DELETE FROM backtest_cache WHERE name = %s", (name,))
         conn.commit()
