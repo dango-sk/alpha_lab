@@ -1206,9 +1206,11 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
                     _snaps = sorted(s for s in _master_by_snap if s <= _snap)
                     name_map = _master_by_snap.get(_snaps[-1], {}) if _snaps else {}
 
-                    # 밸류에이션 조회
+                    # 밸류에이션 조회 (look-ahead bias 방지)
                     codes = [c for c, _, _, _ in items]
                     if codes:
+                        _dt = datetime.strptime(date, "%Y-%m-%d")
+                        _max_fy = _dt.year - 1 if _dt.month >= 4 else _dt.year - 2
                         fin_rows = conn2.execute(f"""
                             SELECT ff.stock_code, ff.per, ff.pbr, ff.ev_ebitda
                             FROM fnspace_finance ff
@@ -1216,11 +1218,12 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
                                 SELECT stock_code, MAX(fiscal_year) as my
                                 FROM fnspace_finance
                                 WHERE fiscal_quarter='Annual'
+                                  AND fiscal_year <= ?
                                   AND stock_code IN ({','.join(['?']*len(codes))})
                                 GROUP BY stock_code
                             ) t ON ff.stock_code = t.stock_code AND ff.fiscal_year = t.my
                                 AND ff.fiscal_quarter = 'Annual'
-                        """, tuple(f"A{c}" for c in codes)).fetchall()
+                        """, (_max_fy, *tuple(f"A{c}" for c in codes))).fetchall()
                         fin_map = {r[0]: (r[1], r[2], r[3]) for r in fin_rows}
                     else:
                         fin_map = {}
