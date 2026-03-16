@@ -42,7 +42,7 @@ QUALITY_FILTER = {
 
 # ─── 백테스트 설정 ───
 BACKTEST_CONFIG = {
-    "start": "2018-01-01",
+    "start": "2018-04-01",
     "end": "2026-04-01",
     "insample_end": "2024-06-30",
     "oos_start": "2024-07-01",

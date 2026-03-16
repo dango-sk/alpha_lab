@@ -1081,7 +1081,7 @@ def list_strategies(universe: str = None, rebal_type: str = None) -> list:
     """PG에서 저장된 전략 목록 반환."""
     conn = _get_conn_raw()
     try:
-        conditions = ["name NOT IN ('A0', 'KOSPI')"]
+        conditions = ["name NOT IN ('A0', 'KOSPI', '__ROBUSTNESS__')"]
         params = []
         if universe:
             conditions.append("universe = %s")
