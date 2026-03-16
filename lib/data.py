@@ -757,12 +757,19 @@ def _load_attribution_cache(universe: str = None, rebal_type: str = None) -> dic
 @st.cache_data(ttl=3600)
 def get_holdings(strategy: str, calc_date: str, top_n: int = 30,
                  universe: str = None, rebal_type: str = None) -> pd.DataFrame:
-    """캐시에서 보유종목 데이터를 읽음."""
+    """캐시에서 보유종목 데이터를 읽음. 저장 전략은 meta.json에서 로드."""
+    # 기본 전략: holdings 캐시에서
     cache = _load_holdings_cache(universe, rebal_type)
     rows = cache.get(strategy, {}).get(calc_date, [])
-    if not rows:
-        return pd.DataFrame()
-    return pd.DataFrame(rows)
+    if rows:
+        return pd.DataFrame(rows)
+    # 저장 전략: meta.json의 holdings에서
+    data = load_strategy(strategy)
+    if data:
+        rows = data.get("results", {}).get("holdings", {}).get(calc_date, [])
+        if rows:
+            return pd.DataFrame(rows)
+    return pd.DataFrame()
 
 
 @st.cache_data(ttl=3600)
@@ -1125,6 +1132,63 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
 
         results = {}
         if result:
+            # holdings_by_date → 포트폴리오 데이터 변환
+            hbd = result.pop("holdings_by_date", {})
+            if hbd:
+                conn2 = get_db()
+                from lib.db import read_sql
+                master_all = read_sql(
+                    "SELECT stock_code, stock_name, COALESCE(sec_cd_nm, '기타') as sector, "
+                    "snapshot_date FROM fnspace_master", conn2,
+                )
+                _master_by_snap = {}
+                for r in master_all.itertuples():
+                    _master_by_snap.setdefault(r.snapshot_date, {})[r.stock_code] = (r.stock_name, r.sector)
+
+                holdings_dict = {}
+                for date, items in hbd.items():
+                    _snap = date[:7]
+                    _snaps = sorted(s for s in _master_by_snap if s <= _snap)
+                    name_map = _master_by_snap.get(_snaps[-1], {}) if _snaps else {}
+
+                    # 밸류에이션 조회
+                    codes = [c for c, _, _, _ in items]
+                    if codes:
+                        fin_rows = conn2.execute(f"""
+                            SELECT ff.stock_code, ff.per, ff.pbr, ff.ev_ebitda
+                            FROM fnspace_finance ff
+                            INNER JOIN (
+                                SELECT stock_code, MAX(fiscal_year) as my
+                                FROM fnspace_finance
+                                WHERE fiscal_quarter='Annual'
+                                  AND stock_code IN ({','.join(['?']*len(codes))})
+                                GROUP BY stock_code
+                            ) t ON ff.stock_code = t.stock_code AND ff.fiscal_year = t.my
+                                AND ff.fiscal_quarter = 'Annual'
+                        """, tuple(f"A{c}" for c in codes)).fetchall()
+                        fin_map = {r[0]: (r[1], r[2], r[3]) for r in fin_rows}
+                    else:
+                        fin_map = {}
+
+                    h_rows = []
+                    for code, score, weight, mcap in items:
+                        acode = f"A{code}"
+                        nm = name_map.get(acode, (code, "기타"))
+                        fin = fin_map.get(acode, (None, None, None))
+                        h_rows.append({
+                            "종목코드": code, "종목명": nm[0], "섹터": nm[1],
+                            "비중(%)": round(weight * 100, 2),
+                            "점수": round(score, 1), "value_score": round(score, 1),
+                            "PER": round(fin[0], 1) if fin[0] else None,
+                            "PBR": round(fin[1], 2) if fin[1] else None,
+                            "EV/EBITDA": round(fin[2], 1) if fin[2] else None,
+                            "시가총액": mcap,
+                        })
+                    holdings_dict[date] = h_rows
+
+                result["holdings"] = holdings_dict
+                conn2.close()
+
             result["strategy"] = "CUSTOM"
             results["CUSTOM"] = result
 

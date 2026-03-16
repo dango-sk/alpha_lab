@@ -297,6 +297,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     prev_stocks = set()
     portfolio_sizes = []
     prev_stocks_list = []
+    holdings_by_date = {}  # {date: [(code, score, weight, mcap), ...]}
 
     total_periods = len(rebalance_dates) - 1
     for i in range(total_periods):
@@ -316,6 +317,28 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
 
         current_codes = set(code for code, _ in stocks)
         portfolio_sizes.append(len(stocks))
+
+        # holdings 수집 (비중 계산용 시총 조회)
+        if stocks:
+            _h_codes = [c for c, _ in stocks]
+            _h_ph = ",".join(["?"] * len(_h_codes))
+            _h_rows = conn.execute(f"""
+                SELECT dp.stock_code, dp.market_cap
+                FROM daily_price dp
+                INNER JOIN (
+                    SELECT stock_code, MIN(trade_date) as d
+                    FROM daily_price WHERE stock_code IN ({_h_ph}) AND trade_date >= ?
+                    GROUP BY stock_code
+                ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.d
+            """, (*_h_codes, start)).fetchall()
+            _h_mcap = {r[0]: r[1] or 0 for r in _h_rows}
+            _h_raw = [_h_mcap.get(c, 0) for c in _h_codes]
+            _cap = BACKTEST_CONFIG.get("weight_cap_pct", 10) / 100
+            _h_weights = _apply_mcap_cap(_h_raw, cap=_cap)
+            holdings_by_date[start] = [
+                (code, score, _h_weights[j], _h_raw[j])
+                for j, (code, score) in enumerate(stocks)
+            ]
 
         # 턴오버
         if prev_stocks:
@@ -387,6 +410,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         "portfolio_values": portfolio_values,
         "portfolio_sizes": portfolio_sizes,
         "rebalance_dates": list(rebalance_dates),
+        "holdings_by_date": holdings_by_date,
     }
 
 
