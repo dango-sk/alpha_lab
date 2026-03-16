@@ -1376,6 +1376,8 @@ def render_lab_content():
     # 자동 이름 생성: 파라미터 정보 포함
     _ap_save = get_active_params()
     _auto_parts = []
+    _u = _ap_save.get("universe", "KOSPI")
+    _auto_parts.append("코스피" if _u == "KOSPI" else "코스피코스닥")
     _auto_parts.append(f"cap{_ap_save['weight_cap_pct']}%")
     _auto_parts.append(f"top{_ap_save['top_n']}")
     _auto_parts.append(f"tx{_ap_save['tx_cost_bp']}bp")
