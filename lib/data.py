@@ -1075,7 +1075,7 @@ def list_strategies(universe: str = None, rebal_type: str = None) -> list:
 
         where = " AND ".join(conditions)
         rows = conn.execute(f"""
-            SELECT DISTINCT name, description, created_at, results_json
+            SELECT name, description, created_at, results_json
             FROM backtest_cache
             WHERE {where}
             ORDER BY updated_at DESC
