@@ -22,7 +22,7 @@ inject_css()
 # ─── 상단 네비게이션 ───
 NAV_ITEMS = ["성과 비교", "월별 분석", "포트폴리오", "통계 검증", "전략 실험실"]
 page = st.radio(
-    "", NAV_ITEMS,
+    "nav", NAV_ITEMS,
     horizontal=True, label_visibility="collapsed", key="active_page",
 )
 latest = get_latest_price_date()
