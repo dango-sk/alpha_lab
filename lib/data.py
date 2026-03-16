@@ -363,7 +363,7 @@ def load_all_results(start: str = None, end: str = None,
         name = strat["name"]
         if name in BASE_STRATEGY_KEYS or name == "KOSPI":
             continue
-        data = load_strategy(name)
+        data = load_strategy(name, rebal_type=rebal_type)
         if not data or not data.get("results"):
             continue
 
@@ -926,6 +926,7 @@ def save_strategy(
     """
     커스텀 전략 저장.
     cache/strategies/{name}/strategy.py + meta.json 형태.
+    results는 rebal_type별로 meta.json 안에 results_monthly, results_biweekly 키로 저장.
     """
     strat_dir = _STRATEGIES_DIR / name
     strat_dir.mkdir(parents=True, exist_ok=True)
@@ -942,27 +943,29 @@ def save_strategy(
         except Exception:
             pass
 
+    _rt = rebal_type or "monthly"
     meta.update({
         "name": name,
         "description": description,
         "updated_at": datetime.now().isoformat(),
         "universe": universe or "KOSPI",
-        "rebal_type": rebal_type or "monthly",
     })
     if "created_at" not in meta:
         meta["created_at"] = meta["updated_at"]
     if results is not None:
-        # numpy 타입 직렬화
         from step7_backtest import _numpy_to_python
-        meta["results"] = _numpy_to_python(results)
+        meta[f"results_{_rt}"] = _numpy_to_python(results)
+        # 하위 호환: 기본 results 키도 유지 (monthly)
+        if _rt == "monthly":
+            meta["results"] = meta[f"results_{_rt}"]
 
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
 
 
-def load_strategy(name: str) -> dict:
+def load_strategy(name: str, rebal_type: str = None) -> dict:
     """
     저장된 전략 불러오기.
-    Returns: {"name", "code", "description", "created_at", "results", ...}
+    rebal_type 지정 시 해당 rebal_type의 results를 "results" 키로 반환.
     """
     strat_dir = _STRATEGIES_DIR / name
     code_path = strat_dir / "strategy.py"
@@ -979,6 +982,12 @@ def load_strategy(name: str) -> dict:
             result.update(meta)
         except Exception:
             pass
+
+    # rebal_type에 맞는 결과를 "results" 키로 설정
+    _rt = rebal_type or "monthly"
+    rt_key = f"results_{_rt}"
+    if rt_key in result:
+        result["results"] = result[rt_key]
 
     return result
 
@@ -1003,14 +1012,18 @@ def list_strategies(universe: str = None, rebal_type: str = None) -> list:
             except Exception:
                 pass
 
-        # universe/rebal_type 필터
+        # universe 필터
         if universe and meta.get("universe", "KOSPI") != universe:
             continue
-        if rebal_type and meta.get("rebal_type", "monthly") != rebal_type:
-            continue
+        # rebal_type 필터: 해당 rebal_type의 결과가 있는지 확인
+        if rebal_type and f"results_{rebal_type}" not in meta:
+            # 하위 호환: 기존 "results" + "rebal_type" 키로도 확인
+            if not (meta.get("rebal_type", "monthly") == rebal_type and "results" in meta):
+                continue
 
         summary = {}
-        r = meta.get("results", {})
+        _rt_key = f"results_{rebal_type}" if rebal_type else "results"
+        r = meta.get(_rt_key, meta.get("results", {}))
         if r:
             summary = {
                 "CAGR": f"{r.get('cagr', 0):+.1%}",
@@ -1038,7 +1051,8 @@ def delete_strategy(name: str):
 # ═══════════════════════════════════════════════════════
 
 def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: str = None,
-                          weight_cap_pct_override: int = None, tx_cost_bp_override: int = None) -> dict | None:
+                          weight_cap_pct_override: int = None, tx_cost_bp_override: int = None,
+                          rebal_type: str = None) -> dict | None:
     """
     커스텀 전략 코드로 백테스트를 실행한다.
 
@@ -1081,22 +1095,26 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
     # 4. BACKTEST_CONFIG 임시 변경 후 실행
     if tx_cost_bp_override is not None:
         tx_cost_bp = tx_cost_bp_override
+    _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
     orig = {
         "top_n_stocks": BACKTEST_CONFIG["top_n_stocks"],
         "transaction_cost_bp": BACKTEST_CONFIG["transaction_cost_bp"],
         "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 15),
         "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
+        "rebal_type": BACKTEST_CONFIG.get("rebal_type", "monthly"),
     }
     try:
         BACKTEST_CONFIG["top_n_stocks"] = top_n
         BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
         BACKTEST_CONFIG["weight_cap_pct"] = weight_cap_pct
+        BACKTEST_CONFIG["rebal_type"] = _rebal
         if universe:
             BACKTEST_CONFIG["universe"] = universe
 
         result = run_backtest(
             "custom",
             stock_selector=stock_selector,
+            rebal_type=_rebal,
             progress_callback=progress_callback,
         )
 
@@ -1163,8 +1181,9 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
             results["CUSTOM"] = result
 
         # 벤치마크
+        from step7_backtest import get_rebalance_dates
         conn = get_db()
-        rb_dates = get_monthly_rebalance_dates(conn)
+        rb_dates = get_rebalance_dates(conn, _rebal)
         if len(rb_dates) >= 2:
             bm = calc_all_benchmarks(conn, rb_dates)
             results.update(bm)
@@ -1179,3 +1198,4 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         BACKTEST_CONFIG["transaction_cost_bp"] = orig["transaction_cost_bp"]
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]
         BACKTEST_CONFIG["universe"] = orig["universe"]
+        BACKTEST_CONFIG["rebal_type"] = orig["rebal_type"]

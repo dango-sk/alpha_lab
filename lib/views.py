@@ -1300,18 +1300,32 @@ def render_lab_content():
 
             try:
                 _ap = get_active_params()
+                # monthly 백테스트
                 modified = run_strategy_backtest(
                     current_code,
                     progress_callback=progress_callback,
                     universe=_ap.get("universe"),
                     weight_cap_pct_override=_ap.get("weight_cap_pct"),
                     tx_cost_bp_override=_ap.get("tx_cost_bp"),
+                    rebal_type="monthly",
                 )
-                progress_bar.empty()
                 if modified and "error" in modified:
+                    progress_bar.empty()
                     st.error(f"전략 코드 오류: {modified['error']}")
                 else:
+                    # biweekly 백테스트
+                    progress_bar.progress(0, text="격주 리밸런싱 백테스트 실행 중...")
+                    modified_bw = run_strategy_backtest(
+                        current_code,
+                        progress_callback=progress_callback,
+                        universe=_ap.get("universe"),
+                        weight_cap_pct_override=_ap.get("weight_cap_pct"),
+                        tx_cost_bp_override=_ap.get("tx_cost_bp"),
+                        rebal_type="biweekly",
+                    )
+                    progress_bar.empty()
                     st.session_state.lab_modified_results = modified
+                    st.session_state.lab_modified_results_bw = modified_bw
                     st.rerun()
             except Exception as e:
                 progress_bar.empty()
@@ -1399,16 +1413,24 @@ def render_lab_content():
         if st.button("저장", key="btn_save", use_container_width=True):
             save_name = save_name or _auto_name
             if save_name:
-                custom_results = (st.session_state.lab_modified_results or {}).get("CUSTOM")
                 _ap_s = get_active_params()
-                save_strategy(
-                    name=save_name,
-                    code=current_code,
-                    description=save_desc,
-                    results=custom_results,
-                    universe=_ap_s.get("universe"),
-                    rebal_type=_ap_s.get("rebal_type", "monthly"),
-                )
+                _uni = _ap_s.get("universe", "KOSPI")
+                # monthly 결과 저장
+                custom_monthly = (st.session_state.get("lab_modified_results") or {}).get("CUSTOM")
+                if custom_monthly:
+                    save_strategy(
+                        name=save_name, code=current_code,
+                        description=save_desc, results=custom_monthly,
+                        universe=_uni, rebal_type="monthly",
+                    )
+                # biweekly 결과 저장
+                custom_bw = (st.session_state.get("lab_modified_results_bw") or {}).get("CUSTOM")
+                if custom_bw:
+                    save_strategy(
+                        name=save_name, code=current_code,
+                        description=save_desc, results=custom_bw,
+                        universe=_uni, rebal_type="biweekly",
+                    )
                 if custom_results:
                     st.success(f"'{save_name}' 저장 완료 — 다른 탭에서도 표시됩니다.")
                 else:
