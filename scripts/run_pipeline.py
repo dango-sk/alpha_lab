@@ -5,11 +5,12 @@ Alpha Lab 일일 파이프라인 (Railway PostgreSQL)
   --daily     매일 실행 (기본)
   --monthly   월초 실행 (마스터 + 재무 + 유니버스 포함)
 
-매일 (~5분):
+매일:
   1. Forward/Consensus     FnSpace → PG (증분)
-  2. 백테스트 캐시 갱신    factor_engine → JSON
-  3. 강건성 검증           IS/OOS + bootstrap + 롤링윈도우 → JSON
-  4. Railway 배포          git commit + railway up
+  2. PG → SQLite 동기화    증분 sync
+  3. 백테스트 캐시 갱신    4콤보 (KOSPI×월간, KOSPI×격주, KOSPI+KOSDAQ×월간, KOSPI+KOSDAQ×격주)
+  4. 강건성 검증           IS/OOS + bootstrap + 롤링윈도우 → JSON
+  5. Railway 배포          git commit + railway up
 
 ※ 주가(daily_price) + 시총은 LG 그램에서 Railway PG로 별도 업로드
 
@@ -77,159 +78,16 @@ def timeit(label):
 
 
 # ═══════════════════════════════════════════════════════════
-# 1. 주가 업데이트 (pykrx → PG)
+# 주가/시총은 LG 그램에서 PG에 별도 업로드 (step_update_prices, step_update_marketcap 제거)
 # ═══════════════════════════════════════════════════════════
-
-def step_update_prices():
-    """최근 15일 주가를 pykrx에서 가져와 PG daily_price에 upsert"""
-    from pykrx import stock as pykrx
-    from psycopg2.extras import execute_values
-
-    conn = get_pg()
-    cur = conn.cursor()
-
-    today = datetime.now()
-    start = (today - timedelta(days=20)).strftime("%Y%m%d")
-    end = today.strftime("%Y%m%d")
-
-    # 대상 종목: PG fnspace_master (최신 스냅샷)
-    cur.execute("""
-        SELECT DISTINCT SUBSTRING(stock_code FROM 2)
-        FROM alpha_lab.fnspace_master
-        WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM alpha_lab.fnspace_master)
-    """)
-    stocks = [r[0] for r in cur.fetchall()]
-
-    # 벤치마크 ETF 추가
-    for etf in BENCHMARK_ETFS:
-        if etf not in stocks:
-            stocks.append(etf)
-
-    print(f"  대상: {len(stocks)}종목, 기간: {start}~{end}")
-
-    # 이미 있는 최신 날짜 확인
-    cur.execute("SELECT MAX(trade_date) FROM alpha_lab.daily_price")
-    last_date = cur.fetchone()[0]
-    print(f"  PG 마지막 주가: {last_date}")
-
-    total_new = 0
-    errors = 0
-
-    for i, ticker in enumerate(stocks):
-        try:
-            df = pykrx.get_market_ohlcv(start, end, ticker)
-            if df.empty:
-                time.sleep(0.15)
-                continue
-        except Exception:
-            errors += 1
-            time.sleep(0.15)
-            continue
-
-        rows = []
-        for idx, row in df.iterrows():
-            trade_date = idx.strftime("%Y-%m-%d")
-            close = int(row.get("종가", 0))
-            if close == 0:
-                continue
-            volume = int(row.get("거래량", 0))
-            trade_amount = int(row.get("거래대금", 0))
-            if trade_amount == 0:
-                trade_amount = close * volume
-
-            rows.append((
-                ticker, trade_date,
-                int(row.get("시가", 0)), int(row.get("고가", 0)),
-                int(row.get("저가", 0)), close,
-                volume, trade_amount,
-            ))
-
-        if rows:
-            execute_values(cur, """
-                INSERT INTO alpha_lab.daily_price
-                    (stock_code, trade_date, open, high, low, close, volume, trade_amount)
-                VALUES %s
-                ON CONFLICT (stock_code, trade_date) DO UPDATE SET
-                    open=EXCLUDED.open, high=EXCLUDED.high, low=EXCLUDED.low,
-                    close=EXCLUDED.close, volume=EXCLUDED.volume,
-                    trade_amount=EXCLUDED.trade_amount
-            """, rows)
-            total_new += len(rows)
-
-        time.sleep(0.15)
-
-        if (i + 1) % 100 == 0:
-            conn.commit()
-            print(f"    [{i+1}/{len(stocks)}] 누적 {total_new:,}건, 에러 {errors}")
-
-    conn.commit()
-
-    # 최신 거래일 확인
-    cur.execute("SELECT MAX(trade_date) FROM alpha_lab.daily_price")
-    new_last = cur.fetchone()[0]
-    cur.execute("""
-        SELECT COUNT(DISTINCT stock_code) FROM alpha_lab.daily_price
-        WHERE trade_date = %s
-    """, (new_last,))
-    cnt = cur.fetchone()[0]
-    print(f"  upsert: {total_new:,}건, 에러: {errors}")
-    print(f"  최신 주가: {new_last} ({cnt}종목)")
-
-    conn.close()
 
 
 # ═══════════════════════════════════════════════════════════
-# 2. 시총 갱신 (전일 시총 기반 추정)
-# ═══════════════════════════════════════════════════════════
-
-def step_update_marketcap():
-    """market_cap이 0이거나 NULL인 최근 행을 전일 시총×(종가비율)로 채움"""
-    conn = get_pg()
-    cur = conn.cursor()
-
-    # 최신 거래일
-    cur.execute("SELECT MAX(trade_date) FROM alpha_lab.daily_price")
-    latest = cur.fetchone()[0]
-    if not latest:
-        print("  daily_price 비어있음")
-        conn.close()
-        return
-
-    cutoff = (datetime.strptime(latest, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
-
-    # market_cap이 비어있는 최근 30일 행을 직전 시총 데이터로 채움
-    cur.execute("""
-        WITH prev AS (
-            SELECT DISTINCT ON (d.stock_code)
-                d.stock_code,
-                d.close AS prev_close,
-                d.market_cap AS prev_mcap
-            FROM alpha_lab.daily_price d
-            WHERE d.market_cap > 0 AND d.close > 0
-              AND d.trade_date >= %s
-            ORDER BY d.stock_code, d.trade_date DESC
-        )
-        UPDATE alpha_lab.daily_price dp
-        SET market_cap = ROUND(p.prev_mcap * (dp.close::FLOAT / p.prev_close))
-        FROM prev p
-        WHERE dp.stock_code = p.stock_code
-          AND dp.trade_date >= %s
-          AND (dp.market_cap IS NULL OR dp.market_cap = 0)
-          AND dp.close > 0
-    """, (cutoff, cutoff))
-
-    updated = cur.rowcount
-    conn.commit()
-    print(f"  시총 갱신: {updated:,}건")
-    conn.close()
-
-
-# ═══════════════════════════════════════════════════════════
-# 3. Forward / Consensus 수집 (증분)
+# Forward / Consensus 수집 (PG 증분)
 # ═══════════════════════════════════════════════════════════
 
 def step_collect_consensus():
-    """step7_collect_consensus의 증분 모드 호출"""
+    """step7_collect_consensus의 증분 모드 호출 → PG에 저장"""
     from step7_collect_consensus import (
         get_pg_conn, create_tables, get_universe_stocks,
         collect_forward, collect_consensus_daily,
@@ -349,18 +207,37 @@ def step_sync_to_sqlite():
 
 
 def step_backtest():
-    """step7_backtest 실행 + 캐시 저장 (로컬 SQLite 사용)"""
+    """step7_backtest 실행 + 캐시 저장 (로컬 SQLite, 4 콤보)"""
     os.environ["DATABASE_URL"] = ""  # 로컬 SQLite 강제
     from step7_backtest import run_all_backtests, save_backtest_cache, \
         save_portfolio_cache, show_comparison
+    from config.settings import BACKTEST_CONFIG as _BC
+    from lib.factor_engine import clear_factor_cache
 
-    results = run_all_backtests()
-    if results:
-        show_comparison(results)
-        save_backtest_cache(results)
-        save_portfolio_cache(results)
-    else:
-        print("  백테스트 결과 없음")
+    combos = [
+        ("KOSPI", "monthly"),
+        ("KOSPI", "biweekly"),
+        ("KOSPI+KOSDAQ", "monthly"),
+        ("KOSPI+KOSDAQ", "biweekly"),
+    ]
+
+    for universe, rebal_type in combos:
+        print(f"\n  ── {universe} / {rebal_type} ──")
+        orig_u, orig_r = _BC.get("universe"), _BC.get("rebal_type")
+        _BC["universe"] = universe
+        _BC["rebal_type"] = rebal_type
+        try:
+            clear_factor_cache()
+            results = run_all_backtests(rebal_type=rebal_type)
+            if results:
+                show_comparison(results)
+                save_backtest_cache(results, universe=universe, rebal_type=rebal_type)
+                save_portfolio_cache(results, universe=universe, rebal_type=rebal_type)
+            else:
+                print(f"  {universe}/{rebal_type} 백테스트 결과 없음")
+        finally:
+            _BC["universe"] = orig_u
+            _BC["rebal_type"] = orig_r
 
 
 # ═══════════════════════════════════════════════════════════

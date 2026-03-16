@@ -122,20 +122,20 @@ BASE_STRATEGY_WEIGHTS = {
 @st.cache_data(ttl=3600)
 def get_latest_price_date() -> str | None:
     """백테스트 캐시에서 최신 거래일을 추출. DB 연결 불필요."""
-    if _BACKTEST_CACHE.exists():
-        try:
-            data = json.loads(_BACKTEST_CACHE.read_text())
-            # 결과의 rebalance_dates 마지막 날짜 사용
-            for v in data.get("results", {}).values():
-                dates = v.get("rebalance_dates", [])
-                if dates:
-                    return dates[-1]
-            # fallback: created_at 날짜
-            created = data.get("created_at", "")
-            if created:
-                return created[:10]
-        except Exception:
-            pass
+    # 콤보 캐시 우선, fallback으로 기존 캐시
+    for path in [_combo_backtest_path("KOSPI", "monthly"), _BACKTEST_CACHE]:
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                for v in data.get("results", {}).values():
+                    dates = v.get("rebalance_dates", [])
+                    if dates:
+                        return dates[-1]
+                created = data.get("created_at", "")
+                if created:
+                    return created[:10]
+            except Exception:
+                pass
     return None
 
 
@@ -175,6 +175,24 @@ _BACKTEST_CACHE = CACHE_DIR / "backtest_results.json"
 _ROBUSTNESS_CACHE = CACHE_DIR / "robustness_results.json"
 
 
+def _combo_cache_key(universe: str = None, rebal_type: str = None) -> str:
+    u = (universe or "KOSPI").replace("+", "_")
+    r = rebal_type or "monthly"
+    return f"{u}_{r}"
+
+
+def _combo_backtest_path(universe: str = None, rebal_type: str = None) -> Path:
+    return CACHE_DIR / f"backtest_{_combo_cache_key(universe, rebal_type)}.json"
+
+
+def _combo_holdings_path(universe: str = None, rebal_type: str = None) -> Path:
+    return CACHE_DIR / f"holdings_{_combo_cache_key(universe, rebal_type)}.json"
+
+
+def _combo_attribution_path(universe: str = None, rebal_type: str = None) -> Path:
+    return CACHE_DIR / f"attribution_{_combo_cache_key(universe, rebal_type)}.json"
+
+
 def _period_cache_path(start: str, end: str) -> Path:
     """기간별 캐시 파일 경로"""
     return CACHE_DIR / f"backtest_{start}_{end}.json"
@@ -188,23 +206,28 @@ def _is_default_params(weight_cap_pct: int = None, universe: str = None) -> bool
 
 
 @st.cache_data(show_spinner=False)
-def _load_backtest_cached(start: str, end: str):
-    """기본 파라미터 전용 캐시 로더."""
+def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type: str = None):
+    """기본 파라미터 전용 캐시 로더. 유니버스/리밸런싱 조합별 캐시 파일 사용."""
     default_start = BACKTEST_CONFIG["start"]
     default_end = BACKTEST_CONFIG["end"]
 
     def _filter(results):
         return {k: v for k, v in results.items() if k not in _REMOVED_STRATEGIES}
 
-    # 파일 캐시 확인
+    # 콤보별 캐시 확인
     if start == default_start and end == default_end:
-        if _BACKTEST_CACHE.exists():
-            return _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
+        combo_path = _combo_backtest_path(universe, rebal_type)
+        if combo_path.exists():
+            return _filter(json.loads(combo_path.read_text())["results"])
+        # fallback: 기존 단일 캐시 (KOSPI/monthly)
+        if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
+            if _BACKTEST_CACHE.exists():
+                return _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
+
     period_cache = _period_cache_path(start, end)
     if period_cache.exists():
         return _filter(json.loads(period_cache.read_text())["results"])
 
-    # 캐시 없으면 빈 결과 반환 (Railway에서는 DB 백테스트 실행 안 함)
     st.warning("백테스트 캐시가 없습니다. 파이프라인을 실행해 캐시를 생성하세요.")
     return {}
 
@@ -239,25 +262,31 @@ def _run_backtest_with_params(start: str, end: str, weight_cap_pct: int = None, 
 
 
 def load_backtest_results(start: str = None, end: str = None,
-                          weight_cap_pct: int = None, universe: str = None):
-    """백테스트 결과 로딩. 기본 파라미터면 캐시, 아니면 실시간 계산."""
+                          weight_cap_pct: int = None, universe: str = None,
+                          rebal_type: str = None):
+    """백테스트 결과 로딩. 캐시가 있으면 캐시, 아니면 실시간 계산."""
     use_start = start or BACKTEST_CONFIG["start"]
     use_end = end or BACKTEST_CONFIG["end"]
+    use_universe = universe or "KOSPI"
+    use_rebal = rebal_type or "monthly"
 
-    if _is_default_params(weight_cap_pct, universe):
-        return _load_backtest_cached(use_start, use_end)
+    # 캐시 있으면 캐시 사용 (weight_cap_pct가 기본값이면)
+    default_cap = BACKTEST_CONFIG.get("weight_cap_pct", 10)
+    if weight_cap_pct is None or weight_cap_pct == default_cap:
+        return _load_backtest_cached(use_start, use_end, use_universe, use_rebal)
     else:
         return _run_backtest_with_params(use_start, use_end, weight_cap_pct, universe)
 
 
 def load_all_results(start: str = None, end: str = None,
-                     weight_cap_pct: int = None, universe: str = None) -> dict:
+                     weight_cap_pct: int = None, universe: str = None,
+                     rebal_type: str = None) -> dict:
     """기본 백테스트(A0, KOSPI) + 저장된 커스텀 전략 결과를 병합하여 반환.
 
     저장된 전략 중 백테스트 결과가 있는 것만 포함한다.
     병합 후 STRATEGY_KEYS/ALL_KEYS/LABELS/COLORS를 동적으로 갱신한다.
     """
-    results = dict(load_backtest_results(start, end, weight_cap_pct, universe))
+    results = dict(load_backtest_results(start, end, weight_cap_pct, universe, rebal_type))
 
     # 벤치마크는 캐시에 포함된 것을 그대로 사용 (DB 재계산 안 함)
 
@@ -596,22 +625,33 @@ _HOLDINGS_CACHE = CACHE_DIR / "holdings_cache.json"
 _ATTRIBUTION_CACHE = CACHE_DIR / "attribution_cache.json"
 
 
-def _load_holdings_cache() -> dict:
-    if _HOLDINGS_CACHE.exists():
-        return json.loads(_HOLDINGS_CACHE.read_text()).get("data", {})
+def _load_holdings_cache(universe: str = None, rebal_type: str = None) -> dict:
+    combo_path = _combo_holdings_path(universe, rebal_type)
+    if combo_path.exists():
+        return json.loads(combo_path.read_text()).get("data", {})
+    # fallback: 기존 단일 캐시
+    if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
+        if _HOLDINGS_CACHE.exists():
+            return json.loads(_HOLDINGS_CACHE.read_text()).get("data", {})
     return {}
 
 
-def _load_attribution_cache() -> dict:
-    if _ATTRIBUTION_CACHE.exists():
-        return json.loads(_ATTRIBUTION_CACHE.read_text()).get("data", {})
+def _load_attribution_cache(universe: str = None, rebal_type: str = None) -> dict:
+    combo_path = _combo_attribution_path(universe, rebal_type)
+    if combo_path.exists():
+        return json.loads(combo_path.read_text()).get("data", {})
+    # fallback: 기존 단일 캐시
+    if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
+        if _ATTRIBUTION_CACHE.exists():
+            return json.loads(_ATTRIBUTION_CACHE.read_text()).get("data", {})
     return {}
 
 
 @st.cache_data(ttl=3600)
-def get_holdings(strategy: str, calc_date: str, top_n: int = 30) -> pd.DataFrame:
+def get_holdings(strategy: str, calc_date: str, top_n: int = 30,
+                 universe: str = None, rebal_type: str = None) -> pd.DataFrame:
     """캐시에서 보유종목 데이터를 읽음."""
-    cache = _load_holdings_cache()
+    cache = _load_holdings_cache(universe, rebal_type)
     rows = cache.get(strategy, {}).get(calc_date, [])
     if not rows:
         return pd.DataFrame()
@@ -619,9 +659,10 @@ def get_holdings(strategy: str, calc_date: str, top_n: int = 30) -> pd.DataFrame
 
 
 @st.cache_data(ttl=3600)
-def get_portfolio_characteristics(strategy: str, calc_date: str) -> dict:
+def get_portfolio_characteristics(strategy: str, calc_date: str,
+                                  universe: str = None, rebal_type: str = None) -> dict:
     """전략 포트폴리오의 가중평균 + 단순평균 밸류에이션 지표 계산."""
-    df = get_holdings(strategy, calc_date)
+    df = get_holdings(strategy, calc_date, universe=universe, rebal_type=rebal_type)
     if df.empty:
         return {}
     result = {}
@@ -640,10 +681,11 @@ def get_portfolio_characteristics(strategy: str, calc_date: str) -> dict:
 
 
 @st.cache_data(ttl=3600)
-def get_portfolio_turnover(strategy: str, current_date: str, prev_date: str) -> dict:
+def get_portfolio_turnover(strategy: str, current_date: str, prev_date: str,
+                           universe: str = None, rebal_type: str = None) -> dict:
     """이전 리밸런싱 대비 편입/편출/유지 종목 비교."""
-    curr_df = get_holdings(strategy, current_date)
-    prev_df = get_holdings(strategy, prev_date)
+    curr_df = get_holdings(strategy, current_date, universe=universe, rebal_type=rebal_type)
+    prev_df = get_holdings(strategy, prev_date, universe=universe, rebal_type=rebal_type)
 
     curr_codes = set(curr_df["종목코드"]) if not curr_df.empty else set()
     prev_codes = set(prev_df["종목코드"]) if not prev_df.empty else set()
@@ -669,9 +711,10 @@ def get_portfolio_turnover(strategy: str, current_date: str, prev_date: str) -> 
 
 
 @st.cache_data(ttl=3600)
-def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd.DataFrame:
+def get_monthly_attribution(strategy: str, start_date: str, end_date: str,
+                            universe: str = None, rebal_type: str = None) -> pd.DataFrame:
     """캐시에서 월별 기여도 데이터를 읽음."""
-    cache = _load_attribution_cache()
+    cache = _load_attribution_cache(universe, rebal_type)
     key = f"{start_date}_{end_date}"
     rows = cache.get(strategy, {}).get(key, [])
     if not rows:
@@ -683,9 +726,10 @@ def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd
 
 
 @st.cache_data(ttl=3600)
-def get_overlap_matrix(calc_date: str, top_n: int = 30) -> pd.DataFrame:
+def get_overlap_matrix(calc_date: str, top_n: int = 30,
+                       universe: str = None, rebal_type: str = None) -> pd.DataFrame:
     """캐시에서 종목 오버랩 계산."""
-    cache = _load_holdings_cache()
+    cache = _load_holdings_cache(universe, rebal_type)
     sets = {}
     for label in _STRAT_CODE:
         rows = cache.get(label, {}).get(calc_date, [])
@@ -899,7 +943,8 @@ def delete_strategy(name: str):
 # Strategy backtest (factor_engine 기반)
 # ═══════════════════════════════════════════════════════
 
-def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: str = None, weight_cap_pct_override: int = None) -> dict | None:
+def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: str = None,
+                          weight_cap_pct_override: int = None, tx_cost_bp_override: int = None) -> dict | None:
     """
     커스텀 전략 코드로 백테스트를 실행한다.
 
@@ -940,6 +985,8 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         return filtered
 
     # 4. BACKTEST_CONFIG 임시 변경 후 실행
+    if tx_cost_bp_override is not None:
+        tx_cost_bp = tx_cost_bp_override
     orig = {
         "top_n_stocks": BACKTEST_CONFIG["top_n_stocks"],
         "transaction_cost_bp": BACKTEST_CONFIG["transaction_cost_bp"],

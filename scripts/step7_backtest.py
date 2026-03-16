@@ -489,7 +489,29 @@ def _numpy_to_python(obj):
 BACKTEST_CACHE = CACHE_DIR / "backtest_results.json"
 
 
-def save_backtest_cache(results):
+def _cache_key(universe: str = None, rebal_type: str = None) -> str:
+    """유니버스/리밸런싱 조합의 캐시 키 생성."""
+    u = (universe or BACKTEST_CONFIG.get("universe", "KOSPI")).replace("+", "_")
+    r = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    return f"{u}_{r}"
+
+
+def _backtest_cache_path(universe: str = None, rebal_type: str = None) -> Path:
+    key = _cache_key(universe, rebal_type)
+    return CACHE_DIR / f"backtest_{key}.json"
+
+
+def _holdings_cache_path(universe: str = None, rebal_type: str = None) -> Path:
+    key = _cache_key(universe, rebal_type)
+    return CACHE_DIR / f"holdings_{key}.json"
+
+
+def _attribution_cache_path(universe: str = None, rebal_type: str = None) -> Path:
+    key = _cache_key(universe, rebal_type)
+    return CACHE_DIR / f"attribution_{key}.json"
+
+
+def save_backtest_cache(results, universe: str = None, rebal_type: str = None):
     """백테스트 결과를 JSON 캐시로 저장"""
     CACHE_DIR.mkdir(exist_ok=True)
     payload = {
@@ -497,15 +519,17 @@ def save_backtest_cache(results):
         "config": dict(BACKTEST_CONFIG),
         "results": _numpy_to_python(results),
     }
-    BACKTEST_CACHE.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
-    print(f"  캐시 저장: {BACKTEST_CACHE}")
+    path = _backtest_cache_path(universe, rebal_type)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
+    print(f"  캐시 저장: {path}")
 
 
-def load_backtest_cache():
+def load_backtest_cache(universe: str = None, rebal_type: str = None):
     """JSON 캐시에서 백테스트 결과 로드 (없으면 None)"""
-    if not BACKTEST_CACHE.exists():
+    path = _backtest_cache_path(universe, rebal_type)
+    if not path.exists():
         return None
-    data = json.loads(BACKTEST_CACHE.read_text())
+    data = json.loads(path.read_text())
     return data["results"]
 
 
@@ -513,7 +537,7 @@ HOLDINGS_CACHE = CACHE_DIR / "holdings_cache.json"
 ATTRIBUTION_CACHE = CACHE_DIR / "attribution_cache.json"
 
 
-def save_portfolio_cache(results):
+def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
     """모든 리밸런싱 날짜의 보유종목 + 기여도를 JSON 캐시로 저장."""
     conn = get_db()
     CACHE_DIR.mkdir(exist_ok=True)
@@ -532,7 +556,7 @@ def save_portfolio_cache(results):
         if not code:
             continue
         strategy_module = code_to_module(code)
-        rebal_type = BACKTEST_CONFIG.get("rebal_type", "monthly")
+        _rebal_type = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
         min_mcap = BACKTEST_CONFIG.get("min_market_cap", 0)
         top_n = BACKTEST_CONFIG.get("top_n_stocks", 30)
         cap = BACKTEST_CONFIG.get("weight_cap_pct", 10) / 100
@@ -561,7 +585,7 @@ def save_portfolio_cache(results):
             name_map = _master_by_snap.get(_snaps[-1], {}) if _snaps else {}
 
             # 종목 선정
-            universe_set = get_universe_stocks(conn, calc_date, rebal_type, min_mcap)
+            universe_set = get_universe_stocks(conn, calc_date, _rebal_type, min_mcap)
             if not universe_set:
                 continue
             candidates = score_stocks_from_strategy(conn, calc_date, strategy_module)
@@ -652,15 +676,17 @@ def save_portfolio_cache(results):
             if (idx + 1) % 20 == 0:
                 print(f"    [{idx+1}/{len(rb_dates)-1}] {key} 포트폴리오 캐시...")
 
-    HOLDINGS_CACHE.write_text(json.dumps(
+    h_path = _holdings_cache_path(universe, rebal_type)
+    a_path = _attribution_cache_path(universe, rebal_type)
+    h_path.write_text(json.dumps(
         _numpy_to_python({"created_at": datetime.now().isoformat(), "data": holdings_all}),
         ensure_ascii=False, indent=2,
     ))
-    ATTRIBUTION_CACHE.write_text(json.dumps(
+    a_path.write_text(json.dumps(
         _numpy_to_python({"created_at": datetime.now().isoformat(), "data": attr_all}),
         ensure_ascii=False, indent=2,
     ))
-    print(f"  포트폴리오 캐시 저장: {HOLDINGS_CACHE}, {ATTRIBUTION_CACHE}")
+    print(f"  포트폴리오 캐시 저장: {h_path}, {a_path}")
     conn.close()
 
 

@@ -122,6 +122,8 @@ def get_active_params() -> dict:
         "top_n": st.session_state.get("param_top_n", BACKTEST_CONFIG.get("top_n_stocks", 30)),
         "min_market_cap": st.session_state.param_min_mcap * 1e8,
         "rebal_type": st.session_state.param_rebal_type,
+        "tx_cost_bp": st.session_state.get("param_tx_cost_bp", BACKTEST_CONFIG.get("transaction_cost_bp", 30)),
+        "scoring": st.session_state.get("param_scoring", "quartile"),
     }
 
 
@@ -171,22 +173,33 @@ def _sync_labels(universe: str, weight_cap_pct: int = None):
     STRATEGY_LABELS["A0"] = "기존전략" + cap_suffix
 
 
-def _render_universe_selector(key: str) -> str:
-    """페이지별 유니버스 선택 라디오."""
+def _render_universe_rebal_selector(key_prefix: str) -> tuple[str, str]:
+    """페이지별 유니버스 + 리밸런싱 선택 UI. (universe, rebal_type) 반환."""
     _init_params()
-    default = st.session_state.get("param_universe", "KOSPI")
-    options = ["KOSPI", "KOSPI+KOSDAQ"]
-    selected = st.radio(
-        "유니버스",
-        options,
-        index=options.index(default) if default in options else 0,
-        horizontal=True,
-        key=key,
-        label_visibility="collapsed",
-    )
-    st.session_state["_active_universe"] = selected
-    _sync_labels(selected)
-    return selected
+    c1, c2 = st.columns(2)
+    with c1:
+        default_u = st.session_state.get("param_universe", "KOSPI")
+        options_u = ["KOSPI", "KOSPI+KOSDAQ"]
+        universe = st.radio(
+            "유니버스", options_u,
+            index=options_u.index(default_u) if default_u in options_u else 0,
+            horizontal=True, key=f"{key_prefix}_universe",
+            label_visibility="collapsed",
+        )
+    with c2:
+        default_r = st.session_state.get("param_rebal_type", "monthly")
+        options_r = ["monthly", "biweekly"]
+        rebal_type = st.radio(
+            "리밸런싱", options_r,
+            index=options_r.index(default_r) if default_r in options_r else 0,
+            horizontal=True, key=f"{key_prefix}_rebal",
+            format_func=lambda x: "월간" if x == "monthly" else "격주",
+            label_visibility="collapsed",
+        )
+    st.session_state["_active_universe"] = universe
+    st.session_state["_active_rebal_type"] = rebal_type
+    _sync_labels(universe)
+    return universe, rebal_type
 
 
 def render_strategy_filter(results: dict) -> dict:
@@ -323,25 +336,17 @@ def _render_yearly_performance(results: dict, kpi_keys: list):
 # ═══════════════════════════════════════════════════════
 def render_performance():
     render_period_selector()
-    render_param_panel()
-
-    params = get_active_params()
-    universe = params["universe"]
-    rebal_type = params["rebal_type"]
-    weight_cap_pct = params["weight_cap_pct"]
-    min_market_cap = params["min_market_cap"]
+    universe, rebal_type = _render_universe_rebal_selector("performance")
 
     start_str, end_str, is_end, oos_start = _get_period()
-    _sync_labels(universe, weight_cap_pct)
-    cap_label = f"{weight_cap_pct}% 캡" if weight_cap_pct > 0 else "캡 없음"
+    _sync_labels(universe)
     bm_label = "KRX 300" if universe == "KOSPI+KOSDAQ" else "KODEX 200"
     rebal_label = "격주" if rebal_type == "biweekly" else "월간"
 
     st.caption(
         f"기간: {start_str} ~ {end_str}  |  "
         f"리밸런싱: {rebal_label}, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목  |  "
-        f"비중: 시총비례 + {cap_label}  |  "
-        f"시총하한: {min_market_cap/1e8:,.0f}억  |  "
+        f"비중: 시총비례 + {BACKTEST_CONFIG.get('weight_cap_pct', 10)}% 캡  |  "
         f"거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp  |  "
         f"유니버스: {universe} (BM: {bm_label})"
     )
@@ -350,8 +355,7 @@ def render_performance():
     show_loading(loading, "백테스트 결과를 불러오는 중")
     all_results = load_all_results(
         start_str, end_str,
-        weight_cap_pct=weight_cap_pct,
-        universe=universe,
+        universe=universe, rebal_type=rebal_type,
     )
     loading.empty()
 
@@ -454,7 +458,7 @@ def render_performance():
 # ═══════════════════════════════════════════════════════
 def render_monthly():
     render_period_selector()
-    universe = _render_universe_selector("monthly_universe")
+    universe, rebal_type = _render_universe_rebal_selector("monthly")
     start_str, end_str, _, _ = _get_period()
     _sync_labels(universe)
 
@@ -462,7 +466,7 @@ def render_monthly():
     show_loading(loading, "월별 분석 데이터를 불러오는 중")
     all_results = load_all_results(
         start_str, end_str,
-        universe=universe,
+        universe=universe, rebal_type=rebal_type,
     )
     loading.empty()
 
@@ -500,7 +504,8 @@ def render_monthly():
             month_label = sel_start[:7]
 
             section_header(f"종목별 기여도: {sel_label} · {month_label}")
-            attr_df = get_monthly_attribution(sel_key, sel_start, sel_end)
+            attr_df = get_monthly_attribution(sel_key, sel_start, sel_end,
+                                                universe=universe, rebal_type=rebal_type)
             if not attr_df.empty:
                 c1, c2 = st.columns([3, 2])
                 with c1:
@@ -535,7 +540,7 @@ def render_monthly():
 # 3. 포트폴리오 구성
 # ═══════════════════════════════════════════════════════
 def render_portfolio():
-    universe = _render_universe_selector("portfolio_universe")
+    universe, rebal_type = _render_universe_rebal_selector("portfolio")
     start_str, end_str, _, _ = _get_period()
     _sync_labels(universe)
 
@@ -543,7 +548,7 @@ def render_portfolio():
     show_loading(loading, "포트폴리오 데이터를 불러오는 중")
     all_results = load_all_results(
         start_str, end_str,
-        universe=universe,
+        universe=universe, rebal_type=rebal_type,
     )
     loading.empty()
 
@@ -563,7 +568,7 @@ def render_portfolio():
     # 각 전략별 보유 종목 로딩
     holdings = {}
     for key in strat_keys:
-        h = get_holdings(key, selected_date)
+        h = get_holdings(key, selected_date, universe=universe, rebal_type=rebal_type)
         if not h.empty:
             holdings[key] = h
 
@@ -573,7 +578,7 @@ def render_portfolio():
 
     chars = {}
     for key in holdings:
-        c = get_portfolio_characteristics(key, selected_date)
+        c = get_portfolio_characteristics(key, selected_date, universe=universe, rebal_type=rebal_type)
         if c:
             chars[key] = c
 
@@ -712,7 +717,8 @@ def render_portfolio():
         for i, key in enumerate(active_keys):
             with turn_cols[i % len(turn_cols)]:
                 st.markdown(f"**{STRATEGY_LABELS.get(key, key)}**")
-                to = get_portfolio_turnover(key, selected_date, prev_date)
+                to = get_portfolio_turnover(key, selected_date, prev_date,
+                                           universe=universe, rebal_type=rebal_type)
                 tc1, tc2, tc3, tc4 = st.columns(4)
                 with tc1:
                     st.metric("신규 편입", f"{to['added_count']}")
@@ -752,13 +758,13 @@ def render_portfolio():
 # ═══════════════════════════════════════════════════════
 def render_statistics():
     render_period_selector()
-    universe = _render_universe_selector("statistics_universe")
+    universe, rebal_type = _render_universe_rebal_selector("statistics")
     start_str, end_str, is_end, oos_start = _get_period()
     _sync_labels(universe)
 
     all_results = load_all_results(
         start_str, end_str,
-        universe=universe,
+        universe=universe, rebal_type=rebal_type,
     )
     results = render_strategy_filter(all_results)
     selected_keys = [k for k in STRATEGY_KEYS if k in results]
@@ -1168,7 +1174,7 @@ def render_lab_content():
     _sync_labels(_ap_lab["universe"], _ap_lab["weight_cap_pct"])
 
     _init_params()
-    pc1, pc2, pc3 = st.columns(3)
+    pc1, pc2, pc3, pc4, pc5 = st.columns(5)
     with pc1:
         st.selectbox(
             "유니버스",
@@ -1188,6 +1194,25 @@ def render_lab_content():
             value=_ap_lab.get("top_n", 30),
             key="param_top_n",
             help="리밸런싱 시 편입할 상위 종목 수",
+        )
+    with pc4:
+        if "param_tx_cost_bp" not in st.session_state:
+            st.session_state.param_tx_cost_bp = BACKTEST_CONFIG.get("transaction_cost_bp", 30)
+        st.number_input(
+            "거래비용 (bp)", min_value=0, max_value=100, step=5,
+            key="param_tx_cost_bp",
+            help="편도 거래비용 (bp). 30bp = 0.3%",
+        )
+    with pc5:
+        scoring_options = ["quartile", "decile"]
+        if "param_scoring" not in st.session_state:
+            st.session_state.param_scoring = "quartile"
+        st.selectbox(
+            "채점방식",
+            options=scoring_options,
+            format_func=lambda x: "사분위" if x == "quartile" else "십분위",
+            key="param_scoring",
+            help="사분위(0-4점) 또는 십분위(0-10점)",
         )
 
     if IS_DEV:
@@ -1280,6 +1305,7 @@ def render_lab_content():
                     progress_callback=progress_callback,
                     universe=_ap.get("universe"),
                     weight_cap_pct_override=_ap.get("weight_cap_pct"),
+                    tx_cost_bp_override=_ap.get("tx_cost_bp"),
                 )
                 progress_bar.empty()
                 if modified and "error" in modified:
@@ -1347,15 +1373,29 @@ def render_lab_content():
     section_header("전략 저장")
     st.caption("백테스트 결과가 있으면 저장 후 성과 비교, 월별 분석 등 다른 탭에서도 표시됩니다.")
 
+    # 자동 이름 생성: 파라미터 정보 포함
+    _ap_save = get_active_params()
+    _auto_parts = []
+    _auto_parts.append(f"cap{_ap_save['weight_cap_pct']}%")
+    _auto_parts.append(f"top{_ap_save['top_n']}")
+    _auto_parts.append(f"tx{_ap_save['tx_cost_bp']}bp")
+    _auto_parts.append("사분위" if _ap_save.get("scoring", "quartile") == "quartile" else "십분위")
+    _auto_name = f"수정전략_{'_'.join(_auto_parts)}"
+
+    # 세션에 자동 이름이 없으면 설정
+    if "strat_save_name" not in st.session_state:
+        st.session_state.strat_save_name = _auto_name
+
     save_cols = st.columns([3, 3, 1])
     with save_cols[0]:
         save_name = st.text_input("전략 이름", key="strat_save_name", label_visibility="collapsed",
-                                   placeholder="전략 이름")
+                                   placeholder=_auto_name)
     with save_cols[1]:
         save_desc = st.text_input("설명", key="strat_save_desc", label_visibility="collapsed",
                                    placeholder="설명 (선택)")
     with save_cols[2]:
         if st.button("저장", key="btn_save", use_container_width=True):
+            save_name = save_name or _auto_name
             if save_name:
                 custom_results = (st.session_state.lab_modified_results or {}).get("CUSTOM")
                 save_strategy(
