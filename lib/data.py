@@ -273,23 +273,36 @@ def _slice_period_multi(results: dict, s: str, e: str) -> dict:
     return sliced
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=3600)
 def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type: str = None):
-    """기본 파라미터 전용 캐시 로더. 유니버스/리밸런싱 조합별 캐시 파일 사용."""
+    """기본 백테스트 캐시 로더. PG backtest_cache 테이블 → JSON 파일 fallback."""
+    _uni = universe or "KOSPI"
+    _rt = rebal_type or "monthly"
 
     def _filter(results):
         return {k: v for k, v in results.items() if k not in _REMOVED_STRATEGIES}
 
-    # 콤보별 캐시 확인
+    # 1) PG에서 A0 캐시 조회
+    try:
+        data = load_strategy("A0", rebal_type=_rt, universe=_uni)
+        if data and data.get("results"):
+            # A0 결과 + KOSPI(BM) 결과를 합침
+            full_results = {"A0": data["results"]}
+            bm_data = load_strategy("KOSPI", rebal_type=_rt, universe=_uni)
+            if bm_data and bm_data.get("results"):
+                full_results["KOSPI"] = bm_data["results"]
+            return _slice_period_multi(_filter(full_results), start, end)
+    except Exception:
+        pass
+
+    # 2) fallback: JSON 캐시 파일
     combo_path = _combo_backtest_path(universe, rebal_type)
     if combo_path.exists():
         full_results = _filter(json.loads(combo_path.read_text())["results"])
         return _slice_period_multi(full_results, start, end)
-    # fallback: 기존 단일 캐시 (KOSPI/monthly)
-    if (universe or "KOSPI") == "KOSPI" and (rebal_type or "monthly") == "monthly":
-        if _BACKTEST_CACHE.exists():
-            full_results = _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
-            return _slice_period_multi(full_results, start, end)
+    if (_uni == "KOSPI") and (_rt == "monthly") and _BACKTEST_CACHE.exists():
+        full_results = _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
+        return _slice_period_multi(full_results, start, end)
 
     st.warning("백테스트 캐시가 없습니다. 파이프라인을 실행해 캐시를 생성하세요.")
     return {}
@@ -909,10 +922,14 @@ def run_custom_backtest(top_n: int = 30, tx_cost_bp: int = 30, weight_cap: int =
 
 
 # ═══════════════════════════════════════════════════════
-# Strategy save / load  (strategy.py + meta.json 기반)
+# Strategy save / load  (PG backtest_cache 테이블 기반)
 # ═══════════════════════════════════════════════════════
 
-_STRATEGIES_DIR = CACHE_DIR / "strategies"
+
+def _pg_json(data):
+    """psycopg2 Json 어댑터. PG JSONB 컬럼에 dict 저장용."""
+    from psycopg2.extras import Json
+    return Json(data)
 
 
 def save_strategy(
@@ -923,127 +940,119 @@ def save_strategy(
     universe: str = None,
     rebal_type: str = None,
 ):
-    """
-    커스텀 전략 저장.
-    cache/strategies/{name}/strategy.py + meta.json 형태.
-    results는 rebal_type별로 meta.json 안에 results_monthly, results_biweekly 키로 저장.
-    """
-    strat_dir = _STRATEGIES_DIR / name
-    strat_dir.mkdir(parents=True, exist_ok=True)
-
-    # strategy.py 저장
-    (strat_dir / "strategy.py").write_text(code, encoding="utf-8")
-
-    # meta.json 저장 (기존 메타 있으면 병합)
-    meta_path = strat_dir / "meta.json"
-    meta = {}
-    if meta_path.exists():
-        try:
-            meta = json.loads(meta_path.read_text())
-        except Exception:
-            pass
-
+    """커스텀 전략을 PG backtest_cache 테이블에 저장 (UPSERT)."""
+    _uni = universe or "KOSPI"
     _rt = rebal_type or "monthly"
-    meta.update({
-        "name": name,
-        "description": description,
-        "updated_at": datetime.now().isoformat(),
-        "universe": universe or "KOSPI",
-    })
-    if "created_at" not in meta:
-        meta["created_at"] = meta["updated_at"]
+    conn = get_conn()
+
+    results_json = None
+    holdings_json = None
     if results is not None:
         from step7_backtest import _numpy_to_python
-        meta[f"results_{_rt}"] = _numpy_to_python(results)
-        # 하위 호환: 기본 results 키도 유지 (monthly)
-        if _rt == "monthly":
-            meta["results"] = meta[f"results_{_rt}"]
+        clean = _numpy_to_python(results)
+        holdings_json = clean.pop("holdings", None)
+        results_json = clean
 
-    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+    try:
+        conn.execute("""
+            INSERT INTO backtest_cache (name, universe, rebal_type, strategy_code, description, results_json, holdings_json, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (name, universe, rebal_type)
+            DO UPDATE SET
+                strategy_code = EXCLUDED.strategy_code,
+                description = EXCLUDED.description,
+                results_json = COALESCE(EXCLUDED.results_json, backtest_cache.results_json),
+                holdings_json = COALESCE(EXCLUDED.holdings_json, backtest_cache.holdings_json),
+                updated_at = NOW()
+        """, (name, _uni, _rt, code, description,
+              _pg_json(results_json) if results_json else None,
+              _pg_json(holdings_json) if holdings_json else None))
+        conn.commit()
+    finally:
+        conn.close()
 
 
-def load_strategy(name: str, rebal_type: str = None) -> dict:
-    """
-    저장된 전략 불러오기.
-    rebal_type 지정 시 해당 rebal_type의 results를 "results" 키로 반환.
-    """
-    strat_dir = _STRATEGIES_DIR / name
-    code_path = strat_dir / "strategy.py"
-    meta_path = strat_dir / "meta.json"
-
-    if not code_path.exists():
-        return {}
-
-    result = {"name": name, "code": code_path.read_text(encoding="utf-8")}
-
-    if meta_path.exists():
-        try:
-            meta = json.loads(meta_path.read_text())
-            result.update(meta)
-        except Exception:
-            pass
-
-    # rebal_type에 맞는 결과를 "results" 키로 설정
+def load_strategy(name: str, rebal_type: str = None, universe: str = None) -> dict:
+    """PG에서 저장된 전략 불러오기."""
     _rt = rebal_type or "monthly"
-    rt_key = f"results_{_rt}"
-    if rt_key in result:
-        result["results"] = result[rt_key]
-
-    return result
+    _uni = universe or "KOSPI"
+    conn = get_conn()
+    try:
+        row = conn.execute("""
+            SELECT name, strategy_code, description, results_json, holdings_json,
+                   universe, rebal_type, created_at
+            FROM backtest_cache
+            WHERE name = %s AND universe = %s AND rebal_type = %s
+        """, (name, _uni, _rt)).fetchone()
+        if not row:
+            return {}
+        result = {
+            "name": row[0],
+            "code": row[1] or "",
+            "description": row[2] or "",
+            "results": row[3] or {},
+            "holdings": row[4],
+            "universe": row[5],
+            "rebal_type": row[6],
+            "created_at": str(row[7]) if row[7] else "",
+        }
+        # holdings를 results 안에 넣기 (get_holdings 호환)
+        if result["holdings"] and isinstance(result["results"], dict):
+            result["results"]["holdings"] = result["holdings"]
+        return result
+    finally:
+        conn.close()
 
 
 def list_strategies(universe: str = None, rebal_type: str = None) -> list:
-    """저장된 전략 목록 반환. universe/rebal_type 지정 시 일치하는 것만."""
-    if not _STRATEGIES_DIR.exists():
-        return []
-    items = []
-    for d in sorted(_STRATEGIES_DIR.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
-        if not d.is_dir():
-            continue
-        meta_path = d / "meta.json"
-        code_path = d / "strategy.py"
-        if not code_path.exists():
-            continue
+    """PG에서 저장된 전략 목록 반환."""
+    conn = get_conn()
+    try:
+        conditions = ["name NOT IN ('A0', 'KOSPI')"]
+        params = []
+        if universe:
+            conditions.append("universe = %s")
+            params.append(universe)
+        if rebal_type:
+            conditions.append("rebal_type = %s")
+            params.append(rebal_type)
 
-        meta = {"name": d.name}
-        if meta_path.exists():
-            try:
-                meta = json.loads(meta_path.read_text())
-            except Exception:
-                pass
+        where = " AND ".join(conditions)
+        rows = conn.execute(f"""
+            SELECT DISTINCT name, description, created_at, results_json
+            FROM backtest_cache
+            WHERE {where}
+            ORDER BY updated_at DESC
+        """, tuple(params)).fetchall()
 
-        # universe 필터
-        if universe and meta.get("universe", "KOSPI") != universe:
-            continue
-        # rebal_type 필터: 해당 rebal_type의 결과가 있는지 확인
-        if rebal_type and f"results_{rebal_type}" not in meta:
-            # 하위 호환: 기존 "results" + "rebal_type" 키로도 확인
-            if not (meta.get("rebal_type", "monthly") == rebal_type and "results" in meta):
-                continue
-
-        summary = {}
-        _rt_key = f"results_{rebal_type}" if rebal_type else "results"
-        r = meta.get(_rt_key, meta.get("results", {}))
-        if r:
-            summary = {
-                "CAGR": f"{r.get('cagr', 0):+.1%}",
-                "Sharpe": f"{r.get('sharpe', 0):.2f}",
-            }
-
-        items.append({
-            "name": meta.get("name", d.name),
-            "created_at": meta.get("created_at", ""),
-            "description": meta.get("description", ""),
-            "summary": summary,
-        })
-    return items
+        items = []
+        for row in rows:
+            r = row[3] or {}
+            summary = {}
+            if r:
+                summary = {
+                    "CAGR": f"{r.get('cagr', 0):+.1%}",
+                    "Sharpe": f"{r.get('sharpe', 0):.2f}",
+                }
+            items.append({
+                "name": row[0],
+                "description": row[1] or "",
+                "created_at": str(row[2]) if row[2] else "",
+                "summary": summary,
+            })
+        return items
+    finally:
+        conn.close()
 
 
 def delete_strategy(name: str):
-    """저장된 전략 삭제."""
-    strat_dir = _STRATEGIES_DIR / name
-    if strat_dir.exists():
-        shutil.rmtree(strat_dir)
+    """PG에서 전략 삭제."""
+    conn = get_conn()
+    try:
+        conn.execute("DELETE FROM backtest_cache WHERE name = %s", (name,))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 # ═══════════════════════════════════════════════════════
