@@ -9,13 +9,19 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
+# ─── 앱 모드 ───
+# "dev": 파라미터 조절 UI 표시 (개인 실험용)
+# "production": 고정 설정만 표시 (직원 공유용)
+APP_MODE = os.environ.get("APP_MODE", "production")
+IS_DEV = APP_MODE == "dev"
+
 # ─── API 키 ───
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # ─── 경로 ───
 BASE_DIR = Path(__file__).parent.parent
 ALPHA_RADAR_DIR = Path.home() / "Downloads" / "alpha_radar"
-DB_PATH = Path(os.environ.get("DB_PATH", str(ALPHA_RADAR_DIR / "db" / "alpha_radar.db")))
+DB_PATH = Path(os.environ.get("DB_PATH", str(BASE_DIR / "data" / "alpha_lab.db")))
 CACHE_DIR = Path(os.environ.get("CACHE_DIR", str(BASE_DIR / "cache")))
 
 # ─── Railway: gz 압축 해제 (PostgreSQL 미사용 시 fallback) ───
@@ -36,13 +42,15 @@ QUALITY_FILTER = {
 
 # ─── 백테스트 설정 ───
 BACKTEST_CONFIG = {
-    "start": "2021-01-01",
+    "start": "2018-01-01",
     "end": "2026-04-01",
     "insample_end": "2024-06-30",
     "oos_start": "2024-07-01",
     "rebalance_freq": "monthly",
+    "rebal_type": "monthly",
     "transaction_cost_bp": 30,       # 편도 30bp
     "top_n_stocks": 30,
     "weight_cap_pct": 10,            # 개별종목 비중상한 (%)
     "min_market_cap": 500_000_000_000,  # 유니버스 시총 하한: 5천억원
+    "universe": "KOSPI",                # "KOSPI" or "KOSPI+KOSDAQ"
 }

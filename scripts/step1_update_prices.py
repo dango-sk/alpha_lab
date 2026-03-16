@@ -40,17 +40,16 @@ def get_db():
 
 
 def get_recent_trade_date():
-    """최근 거래일 찾기"""
+    """최근 거래일 찾기 (삼성전자 OHLCV 기준)"""
     today = datetime.now()
-    for i in range(10):
-        date = today - timedelta(days=i)
-        date_str = date.strftime("%Y%m%d")
-        try:
-            df = pykrx.get_market_cap(date_str, market="KOSPI")
-            if len(df) > 0 and df["시가총액"].sum() > 0:
-                return date_str
-        except Exception:
-            continue
+    start = (today - timedelta(days=15)).strftime("%Y%m%d")
+    end = today.strftime("%Y%m%d")
+    try:
+        df = pykrx.get_market_ohlcv(start, end, "005930")  # 삼성전자
+        if not df.empty:
+            return df.index[-1].strftime("%Y%m%d")
+    except Exception:
+        pass
     return (today - timedelta(days=3)).strftime("%Y%m%d")
 
 
@@ -84,17 +83,61 @@ def update_prices():
         conn.close()
         return
 
-    # 대상 종목
+    # 대상 종목 (stock_master + fnspace_master KOSDAQ)
     stocks = conn.execute("""
         SELECT stock_code, stock_name FROM stock_master
         WHERE market_cap >= ?
     """, (MIN_MARKET_CAP,)).fetchall()
-    print(f"  대상: {len(stocks)}종목")
+
+    # KOSDAQ 종목 추가 (fnspace_master에만 있는 종목)
+    existing_codes = set(s[0] for s in stocks)
+    kosdaq_stocks = conn.execute("""
+        SELECT stock_code, stock_name FROM fnspace_master
+        WHERE market = 'KOSDAQ'
+    """).fetchall()
+    # fnspace_master는 A접두사 (A060310) → 제거해서 pykrx 형식으로
+    kosdaq_added = 0
+    for code, name in kosdaq_stocks:
+        clean_code = code.lstrip("A")
+        if clean_code not in existing_codes:
+            stocks.append((clean_code, name))
+            existing_codes.add(clean_code)
+            kosdaq_added += 1
+    print(f"  대상: {len(stocks)}종목 (KOSPI {len(stocks)-kosdaq_added} + KOSDAQ {kosdaq_added})")
 
     # 최근 10일 수집 (빠진 날 보완)
     today = datetime.now()
     start_date = (today - timedelta(days=15)).strftime("%Y%m%d")
     end_date = trade_date
+
+    # 기존 시총 데이터 로드 (시총 추정용)
+    last_caps = {}
+    if last_date:
+        rows = conn.execute("""
+            SELECT stock_code, close, market_cap FROM daily_price
+            WHERE trade_date = ? AND market_cap > 0 AND close > 0
+        """, (last_date,)).fetchall()
+        for sc, cl, mc in rows:
+            last_caps[sc] = (cl, mc)
+
+    # 시총 일괄 조회 (기존 시총이 없는 종목용 — 주로 KOSDAQ 신규)
+    _market_cap_cache = {}
+    new_codes = set(c for c, _ in stocks if c not in last_caps)
+    if new_codes:
+        print(f"  신규 종목 시총 조회: {len(new_codes)}종목...")
+        try:
+            # pykrx 전체 시총 조회 (KOSPI+KOSDAQ)
+            for mkt in ["KOSPI", "KOSDAQ"]:
+                cap_df = pykrx.get_market_cap(end_date, market=mkt)
+                if cap_df.empty:
+                    continue
+                trade_date_fmt_cap = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:]}"
+                for ticker in cap_df.index:
+                    if ticker in new_codes:
+                        _market_cap_cache[(ticker, trade_date_fmt_cap)] = int(cap_df.loc[ticker, "시가총액"])
+            print(f"    {len(_market_cap_cache)}종목 시총 확보")
+        except Exception as e:
+            print(f"    시총 조회 실패: {e}")
 
     success, fail = 0, 0
     for code, name in tqdm(stocks, desc="  주가 수집"):
@@ -104,24 +147,30 @@ def update_prices():
                 fail += 1
                 continue
 
-            cap_df = pykrx.get_market_cap(start_date, end_date, code)
-
             records = []
             for date_idx in df.index:
                 date_str = date_idx.strftime("%Y-%m-%d")
                 row = df.loc[date_idx]
+                close = int(row["종가"])
+                volume = int(row["거래량"])
 
-                trade_amount = 0
+                # 시총 추정: 기존시총 × (신규종가/기존종가)
                 mkt_cap = 0
-                if date_idx in cap_df.index:
-                    trade_amount = int(cap_df.loc[date_idx, "거래대금"])
-                    mkt_cap = int(cap_df.loc[date_idx, "시가총액"])
+                if code in last_caps and last_caps[code][0] > 0 and close > 0:
+                    prev_close, prev_cap = last_caps[code]
+                    mkt_cap = int(prev_cap * (close / prev_close))
+
+                # 시총 없으면 일괄 조회 캐시에서 가져오기
+                if mkt_cap == 0 and close > 0:
+                    mkt_cap = _market_cap_cache.get((code, date_str), 0)
+
+                trade_amount = close * volume
 
                 records.append((
                     code, date_str,
                     int(row["시가"]), int(row["고가"]),
-                    int(row["저가"]), int(row["종가"]),
-                    int(row["거래량"]),
+                    int(row["저가"]), close,
+                    volume,
                     trade_amount, mkt_cap,
                 ))
 

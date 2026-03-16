@@ -52,8 +52,10 @@ def render_chat_column(active_page: str):
             if is_lab:
                 st.caption("예시:")
                 st.caption("&bull; 밸류 비중을 50%로 올려줘")
+                st.caption("&bull; 유니버스를 KOSPI+KOSDAQ으로 바꿔줘")
+                st.caption("&bull; 비중캡 5%로 낮추고 종목수 50개로 늘려줘")
+                st.caption("&bull; 성장성 팩터를 전부 제거해줘")
                 st.caption("&bull; PBR vs 매출성장 커스텀 회귀 추가")
-                st.caption("&bull; Forward EPS 모멘텀 팩터 제거")
             else:
                 st.caption("무엇이든 물어보세요:")
                 st.caption("&bull; 두 전략 중 어느 게 더 나아?")
@@ -64,36 +66,44 @@ def render_chat_column(active_page: str):
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
-    # 입력 폼
-    with st.form(f"chat_form_{history_key}", clear_on_submit=True):
-        user_input = st.text_input(
-            "",
-            placeholder="전략 수정 요청..." if is_lab else "질문하기...",
-            label_visibility="collapsed",
-            key=f"input_{history_key}",
-        )
-        submitted = st.form_submit_button("전송", use_container_width=True)
+        # 스트리밍 중이면 실시간 출력
+        if st.session_state.get(f"{history_key}_streaming"):
+            _run_streaming_response(messages, history_key, is_lab)
 
-    if submitted and user_input:
+    # chat_input (form 대신 — 엔터로 바로 전송, 페이지 하단 고정 안 됨)
+    user_input = st.chat_input(
+        "전략 수정 요청..." if is_lab else "질문하기...",
+        key=f"input_{history_key}",
+    )
+
+    if user_input:
         messages.append({"role": "user", "content": user_input})
-
-        if is_lab:
-            _handle_lab_message(messages)
-        else:
-            _handle_general_message(messages)
-
+        # 스트리밍 플래그 설정 후 rerun → 컨테이너 안에서 스트리밍 실행
+        st.session_state[f"{history_key}_streaming"] = True
         st.rerun()
 
     # 대화 초기화 버튼
     if messages:
         if st.button("대화 초기화", key=f"clear_{history_key}", use_container_width=True):
             st.session_state[history_key] = []
+            st.session_state.pop(f"{history_key}_streaming", None)
             st.rerun()
 
 
-def _handle_general_message(messages: list):
-    """일반 Q&A 메시지 처리"""
-    # 기본 성과 요약 (항상 포함) + 현재 페이지 상세 컨텍스트
+def _run_streaming_response(messages: list, history_key: str, is_lab: bool):
+    """컨테이너 안에서 스트리밍 응답을 실행"""
+    # 사용자 메시지 표시는 이미 위 for loop에서 완료됨
+    # 스트리밍 플래그 해제
+    st.session_state[f"{history_key}_streaming"] = False
+
+    if is_lab:
+        _handle_lab_message(messages)
+    else:
+        _handle_general_message_streaming(messages)
+
+
+def _handle_general_message_streaming(messages: list):
+    """일반 Q&A 메시지 처리 — 스트리밍"""
     base = st.session_state.get("base_context", {})
     page = st.session_state.get("page_context", {})
     combined = {}
@@ -109,48 +119,53 @@ def _handle_general_message(messages: list):
     api_messages = [{"role": m["role"], "content": m["content"]} for m in messages]
 
     try:
-        response = client.messages.create(
-            model=MODEL_FAST,
-            max_tokens=1000,
-            system=_SYSTEM_GENERAL + context_str,
-            messages=api_messages,
-        )
-        reply = response.content[0].text
+        with st.chat_message("assistant"):
+            with client.messages.stream(
+                model=MODEL_FAST,
+                max_tokens=1000,
+                system=_SYSTEM_GENERAL + context_str,
+                messages=api_messages,
+            ) as stream:
+                reply = st.write_stream(stream.text_stream)
     except Exception as e:
         reply = f"오류가 발생했습니다: {e}"
+        with st.chat_message("assistant"):
+            st.markdown(reply)
 
     messages.append({"role": "assistant", "content": reply})
 
 
 def _handle_lab_message(messages: list):
-    """전략 수정 메시지 처리 (코드 생성 방식)"""
-    # 현재 전략 코드 가져오기
+    """전략 수정 메시지 처리 (코드 생성 방식) — tool use라 스트리밍 불가, spinner 표시"""
     current_code = st.session_state.get("lab_strategy_code", DEFAULT_STRATEGY_CODE)
 
-    try:
-        response_text, updated_code, changes_summary = chat_strategy_modification(
-            messages,
-            current_code,
-        )
-    except Exception as e:
-        messages.append({"role": "assistant", "content": f"오류: {e}"})
-        return
+    with st.chat_message("assistant"):
+        with st.spinner("전략 수정 중..."):
+            try:
+                response_text, updated_code, changes_summary = chat_strategy_modification(
+                    messages,
+                    current_code,
+                )
+            except Exception as e:
+                response_text = f"오류: {e}"
+                updated_code = None
+                changes_summary = []
 
-    display_text = response_text or ""
+        display_text = response_text or ""
 
-    if updated_code:
-        # 전략 코드 업데이트
-        st.session_state.lab_strategy_code = updated_code
-        # 이전 백테스트 결과 초기화
-        st.session_state.lab_modified_results = None
+        if updated_code:
+            st.session_state.lab_strategy_code = updated_code
+            st.session_state.lab_modified_results = None
 
-        if changes_summary:
-            if display_text:
-                display_text += "\n\n"
-            display_text += "**적용된 변경:**\n" + "\n".join(f"- {c}" for c in changes_summary)
+            if changes_summary:
+                if display_text:
+                    display_text += "\n\n"
+                display_text += "**적용된 변경:**\n" + "\n".join(f"- {c}" for c in changes_summary)
 
-    if not display_text:
-        display_text = "요청을 처리했습니다."
+        if not display_text:
+            display_text = "요청을 처리했습니다."
+
+        st.markdown(display_text)
 
     messages.append({"role": "assistant", "content": display_text})
 

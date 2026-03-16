@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 from datetime import date
 
+from config.settings import IS_DEV
 from lib.data import (
     load_backtest_results, load_all_results, load_robustness_results,
     load_all_robustness_results,
@@ -75,7 +76,7 @@ def render_period_selector():
         with c1:
             st.date_input(
                 "시작일", value=st.session_state.bt_start,
-                min_value=date(2019, 1, 1), max_value=st.session_state.bt_end,
+                min_value=date(2018, 1, 1), max_value=st.session_state.bt_end,
                 key="bt_start", on_change=_clamp_split,
             )
         with c2:
@@ -96,31 +97,118 @@ def render_period_selector():
             )
 
 
+# ═══════════════════════════════════════════════════════
+# Dev 모드: 파라미터 조절 패널
+# ═══════════════════════════════════════════════════════
+
+def _init_params():
+    """session_state에 조절 가능한 파라미터 기본값 설정"""
+    if "param_weight_cap" not in st.session_state:
+        st.session_state.param_weight_cap = BACKTEST_CONFIG.get("weight_cap_pct", 10)
+    if "param_universe" not in st.session_state:
+        st.session_state.param_universe = "KOSPI"
+    if "param_min_mcap" not in st.session_state:
+        st.session_state.param_min_mcap = int(BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000) / 1e8)
+    if "param_rebal_type" not in st.session_state:
+        st.session_state.param_rebal_type = BACKTEST_CONFIG.get("rebal_type", "monthly")
+
+
+def get_active_params() -> dict:
+    """현재 활성화된 파라미터를 반환."""
+    _init_params()
+    return {
+        "weight_cap_pct": st.session_state.param_weight_cap,
+        "universe": st.session_state.param_universe,
+        "top_n": st.session_state.get("param_top_n", BACKTEST_CONFIG.get("top_n_stocks", 30)),
+        "min_market_cap": st.session_state.param_min_mcap * 1e8,
+        "rebal_type": st.session_state.param_rebal_type,
+    }
+
+
+def render_param_panel():
+    """파라미터 조절 패널."""
+    _init_params()
+    with st.expander("파라미터 조절", expanded=True):
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.number_input(
+                "비중캡 (%)", min_value=0, max_value=30, step=1,
+                key="param_weight_cap",
+                help="0% = 캡 없음 (시총비례 그대로), 10% = 개별종목 최대 10%",
+            )
+        with c2:
+            st.number_input(
+                "시총하한 (억원)", min_value=0, max_value=20000, step=500,
+                key="param_min_mcap",
+                help="유니버스 시총 하한 필터 (0 = 필터 없음)",
+            )
+        with c3:
+            st.selectbox(
+                "유니버스",
+                options=["KOSPI", "KOSPI+KOSDAQ"],
+                key="param_universe",
+                help="KOSPI: 벤치마크 KODEX200 / KOSPI+KOSDAQ: 벤치마크 KRX300",
+            )
+        with c4:
+            st.selectbox(
+                "리밸런싱",
+                options=["monthly", "biweekly"],
+                format_func=lambda x: "월간" if x == "monthly" else "격주",
+                key="param_rebal_type",
+                help="월간: 매월 1회 / 격주: 월 2회",
+            )
+
+
+def _sync_labels(universe: str, weight_cap_pct: int = None):
+    """유니버스·캡에 따라 전략 라벨을 동적으로 갱신."""
+    STRATEGY_LABELS["KOSPI"] = "KRX 300" if universe == "KOSPI+KOSDAQ" else "KODEX 200"
+
+    # 기존전략(A0)은 항상 디폴트 캡 표시
+    default_cap = BACKTEST_CONFIG.get("weight_cap_pct", 10)
+    cap_suffix = f" ({default_cap}%캡)" if default_cap > 0 else " (캡없음)"
+    STRATEGY_LABELS["A0"] = "기존전략" + cap_suffix
+
+
+def _render_universe_selector(key: str) -> str:
+    """페이지별 유니버스 선택 라디오."""
+    _init_params()
+    default = st.session_state.get("param_universe", "KOSPI")
+    options = ["KOSPI", "KOSPI+KOSDAQ"]
+    selected = st.radio(
+        "유니버스",
+        options,
+        index=options.index(default) if default in options else 0,
+        horizontal=True,
+        key=key,
+        label_visibility="collapsed",
+    )
+    st.session_state["_active_universe"] = selected
+    _sync_labels(selected)
+    return selected
+
+
 def render_strategy_filter(results: dict) -> dict:
     """전략 선택 필터 UI (멀티셀렉트). 선택된 전략만 포함된 results를 반환.
 
     위젯 key 기반으로 탭 간 선택 상태를 자동 공유한다.
     """
     available = [k for k in ALL_KEYS if k in results]
+    # results에 있지만 ALL_KEYS에 없는 키도 포함 (유니버스 전환 시 벤치마크 등)
+    for k in results:
+        if k not in available:
+            available.append(k)
     labels = {k: STRATEGY_LABELS.get(k, k) for k in available}
 
-    widget_key = "strategy_filter"
+    _uni_suffix = st.session_state.get("_active_universe", "KOSPI")
+    widget_key = f"strategy_filter_{_uni_suffix}"
     tracking_key = "_available_strategies"
 
-    # 새로 추가된 전략 감지 → 자동 선택에 포함
-    prev_available = set(st.session_state.get(tracking_key, []))
-    new_strategies = set(available) - prev_available
+    # available 전략이 바뀌면 widget 상태를 리셋하여 default가 적용되도록 함
+    prev_available = sorted(st.session_state.get(tracking_key, []))
+    curr_available = sorted(available)
+    if prev_available != curr_available:
+        st.session_state.pop(widget_key, None)
     st.session_state[tracking_key] = list(available)
-
-    if widget_key in st.session_state:
-        current = list(st.session_state[widget_key])
-        # 더 이상 없는 전략 제거
-        current = [k for k in current if k in available]
-        # 새로 추가된 전략 자동 포함
-        for k in available:
-            if k in new_strategies and k not in current:
-                current.append(k)
-        st.session_state[widget_key] = current
 
     selected = st.multiselect(
         "전략 선택",
@@ -233,20 +321,36 @@ def _render_yearly_performance(results: dict, kpi_keys: list):
 # ═══════════════════════════════════════════════════════
 def render_performance():
     render_period_selector()
+    render_param_panel()
+
+    params = get_active_params()
+    universe = params["universe"]
+    rebal_type = params["rebal_type"]
+    weight_cap_pct = params["weight_cap_pct"]
+    min_market_cap = params["min_market_cap"]
 
     start_str, end_str, is_end, oos_start = _get_period()
+    _sync_labels(universe, weight_cap_pct)
+    cap_label = f"{weight_cap_pct}% 캡" if weight_cap_pct > 0 else "캡 없음"
+    bm_label = "KRX 300" if universe == "KOSPI+KOSDAQ" else "KODEX 200"
+    rebal_label = "격주" if rebal_type == "biweekly" else "월간"
 
     st.caption(
         f"기간: {start_str} ~ {end_str}  |  "
-        f"리밸런싱: 월 1회, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목  |  "
-        f"비중: 시총비례 + {BACKTEST_CONFIG.get('weight_cap_pct', 10)}% 캡  |  "
+        f"리밸런싱: {rebal_label}, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목  |  "
+        f"비중: 시총비례 + {cap_label}  |  "
+        f"시총하한: {min_market_cap/1e8:,.0f}억  |  "
         f"거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp  |  "
-        f"유니버스: 시총 약 {BACKTEST_CONFIG.get('min_market_cap', 500_000_000_000) / 1_000_000_000_000:.1f}조 ~ 500조"
+        f"유니버스: {universe} (BM: {bm_label})"
     )
 
     loading = st.empty()
     show_loading(loading, "백테스트 결과를 불러오는 중")
-    all_results = load_all_results(start_str, end_str)
+    all_results = load_all_results(
+        start_str, end_str,
+        weight_cap_pct=weight_cap_pct,
+        universe=universe,
+    )
     loading.empty()
 
     results = render_strategy_filter(all_results)
@@ -264,7 +368,7 @@ def render_performance():
         with cols[i]:
             kpi_card(
                 label=STRATEGY_LABELS[key],
-                value=f"{r['cagr']:+.1%}",
+                value=f"{r['total_return']:+.1%}",
                 sub_items=[("MDD", f"{r['mdd']:.1%}"), ("Sharpe", f"{r['sharpe']:.3f}")],
                 color=STRATEGY_COLORS.get(key, "#757575"),
             )
@@ -348,11 +452,16 @@ def render_performance():
 # ═══════════════════════════════════════════════════════
 def render_monthly():
     render_period_selector()
+    universe = _render_universe_selector("monthly_universe")
     start_str, end_str, _, _ = _get_period()
+    _sync_labels(universe)
 
     loading = st.empty()
     show_loading(loading, "월별 분석 데이터를 불러오는 중")
-    all_results = load_all_results(start_str, end_str)
+    all_results = load_all_results(
+        start_str, end_str,
+        universe=universe,
+    )
     loading.empty()
 
     results = render_strategy_filter(all_results)
@@ -415,19 +524,25 @@ def render_monthly():
             else:
                 st.info("해당 월의 종목 데이터를 찾을 수 없습니다.")
 
-    section_header("롤링 12개월 누적 초과수익률 vs KOSPI 200")
-    st.plotly_chart(rolling_excess_chart(results, window=12), width="stretch")
+    _bm = "KRX 300" if universe == "KOSPI+KOSDAQ" else "KOSPI 200"
+    section_header(f"롤링 12개월 누적 초과수익률 vs {_bm}")
+    st.plotly_chart(rolling_excess_chart(results, window=12, bm_name=_bm), width="stretch")
 
 
 # ═══════════════════════════════════════════════════════
 # 3. 포트폴리오 구성
 # ═══════════════════════════════════════════════════════
 def render_portfolio():
+    universe = _render_universe_selector("portfolio_universe")
     start_str, end_str, _, _ = _get_period()
+    _sync_labels(universe)
 
     loading = st.empty()
     show_loading(loading, "포트폴리오 데이터를 불러오는 중")
-    all_results = load_all_results(start_str, end_str)
+    all_results = load_all_results(
+        start_str, end_str,
+        universe=universe,
+    )
     loading.empty()
 
     results = render_strategy_filter(all_results)
@@ -635,9 +750,14 @@ def render_portfolio():
 # ═══════════════════════════════════════════════════════
 def render_statistics():
     render_period_selector()
+    universe = _render_universe_selector("statistics_universe")
     start_str, end_str, is_end, oos_start = _get_period()
+    _sync_labels(universe)
 
-    all_results = load_all_results(start_str, end_str)
+    all_results = load_all_results(
+        start_str, end_str,
+        universe=universe,
+    )
     results = render_strategy_filter(all_results)
     selected_keys = [k for k in STRATEGY_KEYS if k in results]
 
@@ -645,6 +765,7 @@ def render_statistics():
     show_loading(loading, "통계 검증 결과를 불러오는 중")
     is_oos_data, stat_data, rolling_all = load_all_robustness_results(
         start_str, end_str, is_end, oos_start,
+        universe=universe,
     )
     loading.empty()
 
@@ -822,8 +943,145 @@ def _extract_strategy_info(strategy_code: str) -> dict:
         return {"params": {}, "weights_large": {}, "weights_small": {}, "regression_models": []}
 
 
+def _render_weight_editor_inline(strategy_code: str, weights_data: list):
+    """Dev 모드: 가중치 테이블에서 직접 % 수정. 바 + number_input 인라인."""
+    if not weights_data:
+        return
+
+    cat_groups = {}
+    for row in weights_data:
+        cat_groups.setdefault(row["카테고리"], []).append(row)
+
+    max_w = max((r["_wl"] for r in weights_data), default=0.01)
+    edited_weights = {}
+
+    for cat, rows in cat_groups.items():
+        color = _CAT_COLORS.get(cat, "#999")
+        cat_total = sum(r["_wl"] for r in rows)
+
+        # 카테고리 헤더
+        st.markdown(
+            f'<div style="display:flex;justify-content:space-between;align-items:center;'
+            f'border-left:3px solid {color};padding:4px 8px;margin-top:12px;">'
+            f'<b>{cat}</b>'
+            f'<span style="color:{color};font-weight:700;font-size:1.1rem;">{cat_total*100:.0f}%</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        for row in rows:
+            wl_w = (row["_wl"] / max_w) * 100 if row["_wl"] > 0 else 0
+            c1, c2, c3 = st.columns([3, 5, 1.5])
+            with c1:
+                st.markdown(
+                    f'<div style="padding:8px 0;font-size:0.85rem;">{row["팩터"]}</div>',
+                    unsafe_allow_html=True,
+                )
+            with c2:
+                st.markdown(
+                    f'<div style="padding:10px 0;">'
+                    f'<div style="background:#333;border-radius:4px;height:8px;width:100%;">'
+                    f'<div style="background:{color};border-radius:4px;height:8px;width:{wl_w}%;"></div>'
+                    f'</div></div>',
+                    unsafe_allow_html=True,
+                )
+            with c3:
+                val = st.number_input(
+                    row["팩터"], min_value=0, max_value=50, step=1,
+                    value=int(round(row["_wl"] * 100)),
+                    key=f"wei_{row['_code']}",
+                    label_visibility="collapsed",
+                )
+                edited_weights[row["_code"]] = val / 100
+
+    # 합계
+    total_pct = sum(edited_weights.values()) * 100
+    if abs(total_pct - 100) < 0.5:
+        st.success(f"합계: {total_pct:.0f}%")
+    else:
+        st.warning(f"합계: {total_pct:.0f}% (100%가 되어야 합니다)")
+
+    # 적용 버튼
+    if st.button("가중치 적용", key="btn_apply_weights_inline", type="primary", use_container_width=True):
+        if abs(total_pct - 100) >= 1:
+            st.error(f"합계가 {total_pct:.0f}%입니다. 100%로 맞춰주세요.")
+        else:
+            new_code = _update_weights_in_code(strategy_code, edited_weights)
+            st.session_state.lab_strategy_code = new_code
+            st.session_state.lab_modified_results = None
+            st.rerun()
+
+
+def _render_weight_editor(strategy_code: str):
+    """Dev 모드: 팩터 가중치를 직접 숫자로 편집하는 UI (별도 탭용, 미사용)."""
+    weights_data = format_weights_for_display(strategy_code)
+    if not weights_data:
+        st.info("가중치 데이터를 추출할 수 없습니다.")
+        return
+
+    st.caption("팩터별 비중(%)을 직접 수정하세요. 합계가 100%가 되어야 합니다.")
+
+    # 카테고리별 그룹핑
+    cat_groups = {}
+    for row in weights_data:
+        cat_groups.setdefault(row["카테고리"], []).append(row)
+
+    edited_weights = {}
+    for cat, rows in cat_groups.items():
+        color = _CAT_COLORS.get(cat, "#999")
+        st.markdown(f"**<span style='color:{color}'>{cat}</span>**", unsafe_allow_html=True)
+        cols = st.columns(min(len(rows), 4))
+        for i, row in enumerate(rows):
+            with cols[i % min(len(rows), 4)]:
+                val = st.number_input(
+                    row["팩터"],
+                    min_value=0, max_value=50, step=1,
+                    value=int(round(row["_wl"] * 100)),
+                    key=f"we_{row['_code']}",
+                )
+                edited_weights[row["_code"]] = val / 100
+
+    # 합계 표시
+    total = sum(edited_weights.values())
+    total_pct = total * 100
+    if abs(total_pct - 100) < 0.5:
+        st.success(f"합계: {total_pct:.0f}%")
+    else:
+        st.warning(f"합계: {total_pct:.0f}% (100%가 되어야 합니다)")
+
+    # 적용 버튼
+    if st.button("가중치 적용", key="btn_apply_weights", type="primary", use_container_width=True):
+        if abs(total_pct - 100) >= 1:
+            st.error(f"합계가 {total_pct:.0f}%입니다. 100%로 맞춰주세요.")
+        else:
+            # 현재 전략 코드에서 WEIGHTS_LARGE만 교체
+            new_code = _update_weights_in_code(strategy_code, edited_weights)
+            st.session_state.lab_strategy_code = new_code
+            st.session_state.lab_modified_results = None
+            st.rerun()
+
+
+def _update_weights_in_code(strategy_code: str, new_weights: dict) -> str:
+    """전략 코드의 WEIGHTS_LARGE를 새 가중치로 교체."""
+    import re
+    # WEIGHTS_LARGE = { ... } 패턴을 찾아서 교체
+    new_dict_str = "WEIGHTS_LARGE = {\n"
+    for key, val in new_weights.items():
+        if val > 0:
+            new_dict_str += f'    "{key}": {val:.2f},\n'
+    new_dict_str += "}"
+
+    # 기존 WEIGHTS_LARGE 블록을 교체
+    pattern = r'WEIGHTS_LARGE\s*=\s*\{[^}]*\}'
+    if re.search(pattern, strategy_code):
+        return re.sub(pattern, new_dict_str, strategy_code)
+    else:
+        return strategy_code
+
+
 def render_lab_content():
     """전략 실험실 콘텐츠 (우측 패널). 채팅은 render_chat_column에서 처리."""
+
     # Session state init
     if "lab_strategy_code" not in st.session_state:
         st.session_state.lab_strategy_code = DEFAULT_STRATEGY_CODE
@@ -836,6 +1094,12 @@ def render_lab_content():
     is_modified = current_code != DEFAULT_STRATEGY_CODE
     info = _extract_strategy_info(current_code)
     params = info["params"]
+
+    # 초기 진입 시에만 기본값 설정 (저장된 전략 로드는 _on_strat_select에서 처리)
+    if "param_weight_cap" not in st.session_state:
+        st.session_state.param_weight_cap = params.get("weight_cap_pct", BACKTEST_CONFIG.get("weight_cap_pct", 10))
+    if "param_top_n" not in st.session_state:
+        st.session_state.param_top_n = params.get("top_n", BACKTEST_CONFIG.get("top_n_stocks", 30))
 
     # ─── 상단 바: 저장 전략 선택 / 삭제 / 초기화 ───
     strategies = list_strategies()
@@ -859,6 +1123,14 @@ def render_lab_content():
                     st.session_state.lab_strategy_code = data["code"]
                     st.session_state.lab_modified_results = data.get("results")
                     st.session_state.lab_messages = []
+                    # 전략의 파라미터를 UI에 반영
+                    _si = _extract_strategy_info(data["code"])
+                    if _si and _si.get("params"):
+                        _sp = _si["params"]
+                        if "weight_cap_pct" in _sp:
+                            st.session_state.param_weight_cap = _sp["weight_cap_pct"]
+                        if "top_n" in _sp:
+                            st.session_state.param_top_n = _sp["top_n"]
 
             selected_idx = st.selectbox(
                 "저장된 전략", range(len(strat_names)),
@@ -886,10 +1158,76 @@ def render_lab_content():
 
     st.markdown("---")
 
-    # ─── 1. 전략 구성 ───
-    section_header("전략 구성")
+    # ═══════════════════════════════════════════════════════
+    # 통합 전략 설정 카드 (Dev 모드에서만 편집 가능)
+    # ═══════════════════════════════════════════════════════
+    section_header("전략 설정")
+    _ap_lab = get_active_params()
+    _sync_labels(_ap_lab["universe"], _ap_lab["weight_cap_pct"])
 
-    # 전략 선택 필터 구성
+    _init_params()
+    pc1, pc2, pc3 = st.columns(3)
+    with pc1:
+        st.selectbox(
+            "유니버스",
+            options=["KOSPI", "KOSPI+KOSDAQ"],
+            key="param_universe",
+            help="KOSPI → 벤치마크 KODEX200 / KOSPI+KOSDAQ → 벤치마크 KRX300",
+        )
+    with pc2:
+        st.number_input(
+            "비중캡 (%)", min_value=0, max_value=30, step=1,
+            key="param_weight_cap",
+            help="0% = 캡 없음 (시총비례), 10% = 개별종목 최대 10%",
+        )
+    with pc3:
+        st.number_input(
+            "편입 종목수", min_value=10, max_value=100, step=5,
+            value=_ap_lab.get("top_n", 30),
+            key="param_top_n",
+            help="리밸런싱 시 편입할 상위 종목 수",
+        )
+
+    if IS_DEV:
+        # ── 팩터 가중치 편집 ──
+        st.markdown("")
+        weights_data = format_weights_for_display(current_code)
+        if weights_data:
+            _render_weight_editor_inline(current_code, weights_data)
+    else:
+        # Production 모드: 읽기 전용 요약
+        _view_code = current_code
+        _view_info = _extract_strategy_info(_view_code) if _view_code else None
+        _view_params = _view_info["params"] if _view_info else {}
+        strat_summary = extract_strategy_summary(_view_code) if _view_code else {}
+        scoring_mode = strat_summary.get("scoring_mode", {})
+        large_mode_label = "사분위(0-4점)" if scoring_mode.get("large") == "quartile" else "십분위(0-10점)"
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("유니버스", "KOSPI")
+        with col2:
+            st.metric("비중상한", f"{_view_params.get('weight_cap_pct', 10)}%")
+        with col3:
+            st.metric("편입 종목수", f"{_view_params.get('top_n', 30)}개")
+        with col4:
+            n_l = strat_summary.get("n_factors_large", 0)
+            st.metric("팩터 수", f"{n_l}개")
+        with col5:
+            st.metric("채점방식", large_mode_label)
+
+        # 읽기 전용 가중치 테이블
+        if _view_code:
+            weights_data = format_weights_for_display(_view_code)
+            if weights_data:
+                large_only_set = set(strat_summary.get("large_only", []))
+                small_only_set = set(strat_summary.get("small_only", []))
+                with st.expander("팩터 가중치", expanded=False):
+                    html = _build_weights_html(weights_data, large_only_set, small_only_set)
+                    st.markdown(html, unsafe_allow_html=True)
+
+    # ── 전략 선택 필터 (비교용) ──
+    st.markdown("---")
     _VIEW_EXPERIMENT = "__experiment__"
     view_options = [
         ("A0", STRATEGY_LABELS["A0"]),
@@ -902,83 +1240,28 @@ def render_lab_content():
     view_keys = [k for k, _ in view_options]
     view_labels = [v for _, v in view_options]
 
-    # 수정 발생 시 자동으로 수정 전략 선택
     if is_modified and st.session_state.get("lab_view_strategy") != _VIEW_EXPERIMENT:
         st.session_state.lab_view_strategy = _VIEW_EXPERIMENT
-    # 수정 전략이 사라졌는데 선택값이 남아있으면 A0로 복귀
     if not is_modified and st.session_state.get("lab_view_strategy") == _VIEW_EXPERIMENT:
         st.session_state.lab_view_strategy = "A0"
 
-    selected_view = st.selectbox(
-        "전략 선택", view_keys,
-        format_func=lambda k: view_labels[view_keys.index(k)],
-        key="lab_view_strategy",
-    )
-
-    # 선택된 전략의 코드 · 정보 준비
-    if selected_view == _VIEW_EXPERIMENT:
-        _view_code = current_code
-    elif selected_view in BASE_STRATEGY_WEIGHTS:
-        # 기존 전략 → 가상 코드 문자열 생성 (format_weights_for_display 호환)
-        bw = BASE_STRATEGY_WEIGHTS[selected_view]
-        _view_code = (
-            f"WEIGHTS_LARGE = {bw['weights_large']!r}\n"
-            f"WEIGHTS_SMALL = {{}}\n"
-            f"REGRESSION_MODELS = {bw['regression_models']!r}\n"
-            f"SCORING_MODE = {bw['scoring']!r}\n"
-            f"PARAMS = {{'top_n': 30, 'tx_cost_bp': 30, 'weight_cap_pct': {BACKTEST_CONFIG.get('weight_cap_pct', 10)}}}\n"
-            f"OUTLIER_FILTERS = {{}}\nSCORE_MAP = {{}}\nSCORING_RULES = {{}}\nQUALITY_FILTER = {{}}\n"
-        )
-    else:
-        _loaded = load_strategy(selected_view)
-        _view_code = _loaded["code"] if _loaded and "code" in _loaded else None
-
-    _view_info = _extract_strategy_info(_view_code) if _view_code else None
-    _view_params = _view_info["params"] if _view_info else {}
-
-    # ── KPI ──
-    strat_summary = extract_strategy_summary(_view_code) if _view_code else {}
-    scoring_mode = strat_summary.get("scoring_mode", {})
-    large_mode_label = "사분위(0-4점)" if scoring_mode.get("large") == "quartile" else "십분위(0-10점)"
-
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("편입 종목수", f"{_view_params.get('top_n', 30)}개")
-    with col2:
-        st.metric("편도 거래비용", f"{_view_params.get('tx_cost_bp', 30)}bp")
-    with col3:
-        st.metric("개별종목 비중상한", f"{_view_params.get('weight_cap_pct', 15)}%")
-    with col4:
-        n_reg = len(_view_info["regression_models"]) if _view_info else 0
-        st.metric("회귀 모델 수", f"{n_reg}개")
-    with col5:
-        n_l = strat_summary.get("n_factors_large", 0)
-        st.metric("팩터 수", f"{n_l}개")
-
-    # ── 탭: 가중치 테이블 | 가중치 차트 | 전략 코드 ──
-    tab1, tab2, tab3 = st.tabs(["가중치 테이블", "가중치 차트", "전략 코드"])
-    with tab1:
-        st.markdown(
-            f"**채점**: 대형주 {large_mode_label} (시총 상위 200)"
-        )
-        if _view_code:
-            weights_data = format_weights_for_display(_view_code)
-            if weights_data:
-                large_only_set = set(strat_summary.get("large_only", []))
-                small_only_set = set(strat_summary.get("small_only", []))
-                html = _build_weights_html(weights_data, large_only_set, small_only_set)
-                st.markdown(html, unsafe_allow_html=True)
-    with tab2:
-        if _view_info:
-            st.plotly_chart(strategy_weight_chart(_view_info["weights_large"]), width="stretch")
-    with tab3:
-        if _view_code:
-            st.code(_view_code, language="python")
+    # ── 가중치 차트 & 전략 코드 (접기) ──
+    _view_code_sel = current_code if (is_modified or not strategies) else None
+    if _view_code_sel:
+        _vi = _extract_strategy_info(_view_code_sel)
+        with st.expander("가중치 차트 / 전략 코드", expanded=False):
+            tc1, tc2 = st.tabs(["가중치 차트", "전략 코드"])
+            with tc1:
+                if _vi:
+                    st.plotly_chart(strategy_weight_chart(_vi["weights_large"]), width="stretch")
+            with tc2:
+                st.code(_view_code_sel, language="python")
 
     # ─── 2. 백테스트 ───
     st.markdown("---")
     section_header("백테스트")
-    st.caption("저장하지 않아도 바로 실행할 수 있습니다. 수정 전략 vs 기존전략 vs KOSPI 200 비교.")
+    _bm_lab = "KRX 300" if get_active_params().get("universe") == "KOSPI+KOSDAQ" else "KOSPI 200"
+    st.caption(f"저장하지 않아도 바로 실행할 수 있습니다. 수정 전략 vs 기존전략 vs {_bm_lab} 비교.")
 
     if not st.session_state.lab_modified_results:
         if st.button("백테스트 실행", type="primary", key="btn_backtest", use_container_width=True):
@@ -989,9 +1272,12 @@ def render_lab_content():
                 progress_bar.progress(pct, text=f"백테스트 실행 중... ({current}/{total})")
 
             try:
+                _ap = get_active_params()
                 modified = run_strategy_backtest(
                     current_code,
                     progress_callback=progress_callback,
+                    universe=_ap.get("universe"),
+                    weight_cap_pct_override=_ap.get("weight_cap_pct"),
                 )
                 progress_bar.empty()
                 if modified and "error" in modified:
@@ -1003,24 +1289,36 @@ def render_lab_content():
                 progress_bar.empty()
                 st.error(f"백테스트 실행 오류: {e}")
     else:
+        # 기존전략(A0)은 디폴트 파라미터로 로딩
         original = load_backtest_results()
         modified = st.session_state.lab_modified_results
 
+        # 벤치마크는 modified 결과(유니버스·캡 반영됨)를 우선 사용
+        _bm_source = modified if "KOSPI" in modified else original
+
         comp_data = []
+        _mod_cap = get_active_params().get("weight_cap_pct", 10)
+        _mod_cap_label = f" ({_mod_cap}%캡)" if _mod_cap > 0 else " (캡없음)"
         m = modified.get("CUSTOM", {})
         if m:
             comp_data.append({
-                "전략": "수정 전략",
+                "전략": f"수정전략{_mod_cap_label}",
                 "총수익률": f"{m.get('total_return', 0):+.1%}",
                 "CAGR": f"{m.get('cagr', 0):+.1%}",
                 "MDD": f"{m.get('mdd', 0):.1%}",
                 "Sharpe": f"{m.get('sharpe', 0):.3f}",
             })
-        for key in ["A0", "KOSPI"]:
-            r = original.get(key, {})
+        # 기존전략은 original에서, 벤치마크는 _bm_source에서
+        for key, source in [("A0", original), ("KOSPI", _bm_source)]:
+            r = source.get(key, {})
             if r:
+                # 벤치마크는 결과 데이터의 strategy 필드 우선 (유니버스 반영)
+                if key == "KOSPI":
+                    label = r.get("strategy", STRATEGY_LABELS.get(key, key))
+                else:
+                    label = STRATEGY_LABELS.get(key) or r.get("strategy", key)
                 comp_data.append({
-                    "전략": STRATEGY_LABELS.get(key, key),
+                    "전략": label,
                     "총수익률": f"{r.get('total_return', 0):+.1%}",
                     "CAGR": f"{r.get('cagr', 0):+.1%}",
                     "MDD": f"{r.get('mdd', 0):.1%}",
@@ -1036,7 +1334,7 @@ def render_lab_content():
         st.dataframe(styled_comp, width="stretch", hide_index=True)
 
         # 누적 수익률 차트
-        st.plotly_chart(comparison_cumulative_chart(original, modified), width="stretch")
+        st.plotly_chart(comparison_cumulative_chart(original, modified, mod_label=f"수정전략{_mod_cap_label}"), width="stretch")
 
         if st.button("전략 수정 후 재실행", key="btn_rerun", use_container_width=True):
             st.session_state.lab_modified_results = None

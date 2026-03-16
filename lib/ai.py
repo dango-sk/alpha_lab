@@ -9,7 +9,7 @@ import streamlit as st
 from config.settings import ANTHROPIC_API_KEY
 from lib.factor_engine import validate_strategy_code, DEFAULT_STRATEGY_CODE
 
-MODEL_FAST = "claude-sonnet-4-5-20250929"   # 코멘터리용 (빠름)
+MODEL_FAST = "claude-sonnet-4-5-20250929"   # 코멘터리/Q&A용
 MODEL_SMART = "claude-sonnet-4-5-20250929"  # 전략 수정 tool use용
 
 SYSTEM_PROMPT = """당신은 자산운용사의 시니어 퀀트 애널리스트입니다.

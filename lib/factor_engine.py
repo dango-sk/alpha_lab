@@ -25,8 +25,8 @@ from lib.db import read_sql
 LARGE_CAP_CUTOFF = 200
 FINANCE_TYPES = ["금융업", "은행업", "보험업", "증권업", "여신전문금융업", "기타금융업"]
 
-# 날짜별 factor data 캐시 (전략과 무관한 범용 데이터)
-_factor_data_cache: dict[str, pd.DataFrame] = {}
+# (날짜, 유니버스)별 factor data 캐시
+_factor_data_cache: dict[tuple[str, str], pd.DataFrame] = {}
 
 
 # ═══════════════════════════════════════════════════════
@@ -149,10 +149,13 @@ _QUARTILE_MAP = {
 def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     """
     DB에서 재무/주가/포워드 데이터를 로딩하고 모든 파생 지표를 계산한다.
-    전략과 무관한 범용 데이터이므로 날짜별로 캐시 가능.
+    유니버스 설정에 따라 필터링이 달라지므로 (날짜, 유니버스) 조합으로 캐시.
     """
-    if calc_date in _factor_data_cache:
-        return _factor_data_cache[calc_date].copy()
+    from config.settings import BACKTEST_CONFIG as _BC
+    _universe = _BC.get("universe", "KOSPI")
+    _cache_key = (calc_date, _universe)
+    if _cache_key in _factor_data_cache:
+        return _factor_data_cache[_cache_key].copy()
 
     dt = datetime.strptime(calc_date, "%Y-%m-%d")
     max_usable_year = dt.year - 1 if dt.month >= 4 else dt.year - 2
@@ -251,8 +254,8 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     if len(merged) == 0:
         return None
 
-    # KOSPI 종목만 필터링 (벤치마크 KOSPI200과 공정 비교)
-    if "market" in merged.columns:
+    # 유니버스 필터링 (_universe는 함수 상단에서 이미 읽음)
+    if "market" in merged.columns and _universe == "KOSPI":
         merged = merged[merged["market"] == "KOSPI"].copy()
     if len(merged) == 0:
         return None
@@ -393,8 +396,8 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     merged["size_group"] = "mid_small"
     merged.loc[:cutoff - 1, "size_group"] = "large"
 
-    # 캐시 저장
-    _factor_data_cache[calc_date] = merged.copy()
+    # 캐시 저장 (날짜+유니버스 조합)
+    _factor_data_cache[_cache_key] = merged.copy()
     return merged
 
 
@@ -429,6 +432,11 @@ def _run_single_regression(df, x_col, y_col, model_name, formula_type, outlier_f
     if len(valid) < 20:
         df[col_attr] = 0.0
         return df, {"model": model_name, "n": len(valid), "r2": 0, "status": "insufficient"}
+
+    # x값이 전부 같으면 회귀 불가
+    if valid[x_col].nunique() < 2:
+        df[col_attr] = 0.0
+        return df, {"model": model_name, "n": len(valid), "r2": 0, "status": "constant_x"}
 
     slope, intercept, r_value, _, _ = stats.linregress(valid[x_col].values, valid[y_col].values)
     r2 = r_value ** 2

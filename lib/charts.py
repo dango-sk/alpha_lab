@@ -191,7 +191,7 @@ def attribution_chart(attr_df, strategy_label: str, month_label: str) -> go.Figu
     return fig
 
 
-def rolling_excess_chart(results: dict, window: int = 12) -> go.Figure:
+def rolling_excess_chart(results: dict, window: int = 12, bm_name: str = "KOSPI 200") -> go.Figure:
     fig = go.Figure()
 
     bm_rets = np.array(results.get("KOSPI", {}).get("monthly_returns", []))
@@ -224,7 +224,7 @@ def rolling_excess_chart(results: dict, window: int = 12) -> go.Figure:
 
     fig.add_hline(y=0, line_color="white", opacity=0.3)
     fig.update_layout(**_base_layout(
-        title=f"롤링 {window}개월 누적 초과수익률 vs KOSPI 200 (%)",
+        title=f"롤링 {window}개월 누적 초과수익률 vs {bm_name} (%)",
         yaxis_title="초과수익률 (%)",
         height=400,
     ))
@@ -588,7 +588,7 @@ def strategy_weight_chart(weights: dict) -> go.Figure:
     return fig
 
 
-def comparison_cumulative_chart(original: dict, modified: dict) -> go.Figure:
+def comparison_cumulative_chart(original: dict, modified: dict, mod_label: str = "수정 전략") -> go.Figure:
     """기존 vs 수정 전략 누적수익률 비교 차트"""
     fig = go.Figure()
 
@@ -611,21 +611,22 @@ def comparison_cumulative_chart(original: dict, modified: dict) -> go.Figure:
         cum = [(v - 1) * 100 for v in mod_a0["portfolio_values"]]
         fig.add_trace(go.Scatter(
             x=dates, y=cum,
-            name="수정 전략",
+            name=mod_label,
             line=dict(color="#FF5722", width=2.5, dash="dash"),
-            hovertemplate="%{y:+.1f}%<extra>수정 전략</extra>",
+            hovertemplate="%{y:+.1f}%<extra>" + mod_label + "</extra>",
         ))
 
-    # BM
-    bm = original.get("KOSPI", {})
+    # BM — modified 결과에 벤치마크가 있으면 우선 사용 (유니버스 반영)
+    bm = modified.get("KOSPI", original.get("KOSPI", {}))
     if bm:
+        bm_name = bm.get("strategy", "KOSPI 200")
         dates = bm["rebalance_dates"]
         cum = [(v - 1) * 100 for v in bm["portfolio_values"]]
         fig.add_trace(go.Scatter(
             x=dates, y=cum,
-            name="KOSPI 200",
+            name=bm_name,
             line=dict(color="#7f7f7f", width=1.5, dash="dot"),
-            hovertemplate="%{y:+.1f}%<extra>KOSPI 200</extra>",
+            hovertemplate="%{y:+.1f}%<extra>" + bm_name + "</extra>",
         ))
 
     fig.update_layout(**_base_layout(

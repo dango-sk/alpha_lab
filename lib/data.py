@@ -16,7 +16,7 @@ ALPHA_LAB_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(ALPHA_LAB_DIR))
 sys.path.insert(0, str(ALPHA_LAB_DIR / "scripts"))
 
-from config.settings import DB_PATH, BACKTEST_CONFIG, CACHE_DIR
+from config.settings import BACKTEST_CONFIG, CACHE_DIR
 from lib.db import get_conn as _get_conn
 from lib.factor_engine import (
     validate_strategy_code, code_to_module, score_stocks_from_strategy,
@@ -30,7 +30,7 @@ ALL_KEYS = ["A0", "KOSPI"]  # 동적으로 갱신됨
 
 STRATEGY_LABELS = {
     "A0":    "기존전략",
-    "KOSPI": "KOSPI 200",
+    "KOSPI": "KODEX 200",
 }
 
 STRATEGY_COLORS = {
@@ -67,6 +67,11 @@ def _update_strategy_registry(results: dict):
     ALL_KEYS.extend(STRATEGY_KEYS)
     if "KOSPI" in results:
         ALL_KEYS.append("KOSPI")
+
+    # 벤치마크 라벨: 결과의 strategy 필드에서 직접 읽기 (KRX 300 / KOSPI 200)
+    bm_result = results.get("KOSPI", {})
+    if bm_result:
+        STRATEGY_LABELS["KOSPI"] = bm_result.get("strategy", "KODEX 200")
 
     for i, key in enumerate(custom_keys):
         if key not in STRATEGY_LABELS:
@@ -118,12 +123,14 @@ def get_latest_price_date() -> str | None:
     return row[0] if row and row[0] else None
 
 
-def _get_strategy_stocks(conn, strategy: str, calc_date: str, top_n: int = 30):
+def _get_strategy_stocks(conn, strategy: str, calc_date: str, top_n: int = 30,
+                         rebal_type: str = "monthly", min_market_cap: float = 0):
     """모든 전략을 factor_engine 파이프라인으로 종목 선정.
 
-    기본 전략과 커스텀 전략 모두 동일한 파이프라인을 사용:
-      load_factor_data → 대형주필터 → 퀄리티필터 → 스코어링 → 유동성필터
+    universe 테이블과 교집합하여 유동성/생존 필터를 대체한다.
     """
+    from step7_backtest import get_universe_stocks
+
     # 전략 코드 결정
     if strategy in _BASE_STRATEGY_CODES:
         code = _BASE_STRATEGY_CODES[strategy]
@@ -136,28 +143,10 @@ def _get_strategy_stocks(conn, strategy: str, calc_date: str, top_n: int = 30):
     strategy_module = code_to_module(code)
     all_stocks = score_stocks_from_strategy(conn, calc_date, strategy_module)
 
-    # 유동성 + 생존자 필터
-    filtered = []
-    for code_str, score in all_stocks:
-        if len(filtered) >= top_n:
-            break
-        price_exists = conn.execute(
-            "SELECT COUNT(*) FROM daily_price "
-            "WHERE stock_code = ? AND trade_date >= date(?, '-5 days') "
-            "  AND trade_date <= ?",
-            (code_str, calc_date, calc_date),
-        ).fetchone()[0]
-        if price_exists == 0:
-            continue
-        vol_data = conn.execute(
-            "SELECT AVG(close * volume) as avg_trade_amount "
-            "FROM daily_price "
-            "WHERE stock_code = ? AND trade_date <= ? "
-            "  AND trade_date >= date(?, '-30 days')",
-            (code_str, calc_date, calc_date),
-        ).fetchone()
-        if vol_data and vol_data[0] and vol_data[0] >= 100_000_000:
-            filtered.append((code_str, score))
+    # universe 테이블과 교집합 (유동성/생존 필터 대체)
+    universe_set = get_universe_stocks(conn, calc_date, rebal_type, min_market_cap)
+    filtered = [(code_str, score) for code_str, score in all_stocks
+                if code_str in universe_set][:top_n]
 
     return filtered
 
@@ -175,69 +164,123 @@ def _period_cache_path(start: str, end: str) -> Path:
     return CACHE_DIR / f"backtest_{start}_{end}.json"
 
 
+def _is_default_params(weight_cap_pct: int = None, universe: str = None) -> bool:
+    """파라미터가 기본값인지 확인"""
+    default_cap = BACKTEST_CONFIG.get("weight_cap_pct", 10)
+    return (weight_cap_pct is None or weight_cap_pct == default_cap) and \
+           (universe is None or universe == "KOSPI")
+
+
 @st.cache_data(show_spinner=False)
-def load_backtest_results(start: str = None, end: str = None):
-    """백테스트 결과 로딩. start/end 지정 시 해당 기간으로 계산."""
+def _load_backtest_cached(start: str, end: str):
+    """기본 파라미터 전용 캐시 로더."""
     default_start = BACKTEST_CONFIG["start"]
     default_end = BACKTEST_CONFIG["end"]
-    use_start = start or default_start
-    use_end = end or default_end
 
     def _filter(results):
         return {k: v for k, v in results.items() if k not in _REMOVED_STRATEGIES}
 
-    # 기본 기간이면 기존 캐시 사용
-    if use_start == default_start and use_end == default_end:
+    # 파일 캐시 확인
+    if start == default_start and end == default_end:
         if _BACKTEST_CACHE.exists():
             return _filter(json.loads(_BACKTEST_CACHE.read_text())["results"])
-
-    # 기간별 캐시 확인
-    period_cache = _period_cache_path(use_start, use_end)
+    period_cache = _period_cache_path(start, end)
     if period_cache.exists():
         return _filter(json.loads(period_cache.read_text())["results"])
 
-    # 캐시 없으면 실시간 계산
-    from step7_backtest import run_all_backtests, save_backtest_cache
-    from contextlib import contextmanager
+    # 캐시 없으면 계산
+    from step7_backtest import run_all_backtests
+    results = run_all_backtests()
+    CACHE_DIR.mkdir(exist_ok=True)
+    from step7_backtest import _numpy_to_python
+    payload = {
+        "created_at": __import__("datetime").datetime.now().isoformat(),
+        "config": {"start": start, "end": end},
+        "results": results,
+    }
+    period_cache.write_text(json.dumps(_numpy_to_python(payload), ensure_ascii=False))
+    return results
 
-    original_start = BACKTEST_CONFIG["start"]
-    original_end = BACKTEST_CONFIG["end"]
+
+def _run_backtest_with_params(start: str, end: str, weight_cap_pct: int = None, universe: str = None):
+    """비기본 파라미터용 실시간 계산 (캐시 없음)."""
+    from step7_backtest import run_all_backtests
+    from lib.factor_engine import clear_factor_cache
+
+    # 유니버스/파라미터가 바뀌므로 팩터 캐시를 먼저 비움
+    clear_factor_cache()
+
+    original = {
+        "start": BACKTEST_CONFIG["start"],
+        "end": BACKTEST_CONFIG["end"],
+        "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 10),
+        "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
+    }
     try:
-        BACKTEST_CONFIG["start"] = use_start
-        BACKTEST_CONFIG["end"] = use_end
-        results = run_all_backtests()
-        # 기간별 캐시 저장
-        CACHE_DIR.mkdir(exist_ok=True)
-        payload = {
-            "created_at": __import__("datetime").datetime.now().isoformat(),
-            "config": {"start": use_start, "end": use_end},
-            "results": results,
-        }
-        # numpy 변환
-        from step7_backtest import _numpy_to_python
-        period_cache.write_text(json.dumps(_numpy_to_python(payload), ensure_ascii=False))
-        return results
+        BACKTEST_CONFIG["start"] = start
+        BACKTEST_CONFIG["end"] = end
+        if weight_cap_pct is not None:
+            BACKTEST_CONFIG["weight_cap_pct"] = weight_cap_pct
+        if universe is not None:
+            BACKTEST_CONFIG["universe"] = universe
+        return run_all_backtests()
     finally:
-        BACKTEST_CONFIG["start"] = original_start
-        BACKTEST_CONFIG["end"] = original_end
+        BACKTEST_CONFIG["start"] = original["start"]
+        BACKTEST_CONFIG["end"] = original["end"]
+        BACKTEST_CONFIG["weight_cap_pct"] = original["weight_cap_pct"]
+        BACKTEST_CONFIG["universe"] = original["universe"]
 
 
-def load_all_results(start: str = None, end: str = None) -> dict:
+def load_backtest_results(start: str = None, end: str = None,
+                          weight_cap_pct: int = None, universe: str = None):
+    """백테스트 결과 로딩. 기본 파라미터면 캐시, 아니면 실시간 계산."""
+    use_start = start or BACKTEST_CONFIG["start"]
+    use_end = end or BACKTEST_CONFIG["end"]
+
+    if _is_default_params(weight_cap_pct, universe):
+        return _load_backtest_cached(use_start, use_end)
+    else:
+        return _run_backtest_with_params(use_start, use_end, weight_cap_pct, universe)
+
+
+def load_all_results(start: str = None, end: str = None,
+                     weight_cap_pct: int = None, universe: str = None) -> dict:
     """기본 백테스트(A0, KOSPI) + 저장된 커스텀 전략 결과를 병합하여 반환.
 
     저장된 전략 중 백테스트 결과가 있는 것만 포함한다.
     병합 후 STRATEGY_KEYS/ALL_KEYS/LABELS/COLORS를 동적으로 갱신한다.
     """
-    results = dict(load_backtest_results(start, end))  # 캐시 결과를 변경하지 않도록 복사
+    results = dict(load_backtest_results(start, end, weight_cap_pct, universe))
 
-    # 저장된 커스텀 전략에서 백테스트 결과 병합
+    # 벤치마크를 요청 유니버스에 맞게 (재)계산 — 캐시에서 잘못된 벤치마크가 올 수 있음
+    _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
+    _expected_bm = "KRX 300" if _uni == "KOSPI+KOSDAQ" else "KODEX 200"
+    _current_bm = results.get("KOSPI", {}).get("strategy", "")
+    if _current_bm != _expected_bm:
+        try:
+            from step7_backtest import get_db, get_monthly_rebalance_dates, calc_all_benchmarks
+            _orig_uni = BACKTEST_CONFIG.get("universe", "KOSPI")
+            try:
+                BACKTEST_CONFIG["universe"] = _uni
+                conn = get_db()
+                rb_dates = get_monthly_rebalance_dates(conn)
+                if len(rb_dates) >= 2:
+                    bm = calc_all_benchmarks(conn, rb_dates)
+                    results.update(bm)
+                conn.close()
+            finally:
+                BACKTEST_CONFIG["universe"] = _orig_uni
+        except Exception:
+            pass
+
+    # 저장된 커스텀 전략에서 백테스트 결과 병합 (항상)
     for strat in list_strategies():
         name = strat["name"]
         if name in BASE_STRATEGY_KEYS or name == "KOSPI":
-            continue  # 기본 전략과 이름 충돌 방지
+            continue
         data = load_strategy(name)
         if data and data.get("results"):
-            results[name] = data["results"]
+                results[name] = data["results"]
 
     _update_strategy_registry(results)
     return results
@@ -302,9 +345,12 @@ def _compute_robustness(start, end, is_end, oos_start):
             BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"] = original_start, original_end
 
     # 벤치마크 IS/OOS
+    _uni = BACKTEST_CONFIG.get("universe", "KOSPI")
+    _bm_code = "292150" if _uni == "KOSPI+KOSDAQ" else "069500"
+    _bm_name = "KRX 300" if _uni == "KOSPI+KOSDAQ" else "KODEX 200"
     conn = _get_conn()
-    is_ret = calc_etf_return(conn, "KS200", start, is_end)
-    oos_ret = calc_etf_return(conn, "KS200", oos_start, end)
+    is_ret = calc_etf_return(conn, _bm_code, start, is_end)
+    oos_ret = calc_etf_return(conn, _bm_code, oos_start, end)
     conn.close()
 
     baseline = next((k for k in ["A0"] if k in is_results), None)
@@ -316,13 +362,13 @@ def _compute_robustness(start, end, is_end, oos_start):
         bm_results["is"]["KOSPI"] = {
             "total_return": is_ret,
             "cagr": ((1 + is_ret) ** (12.0 / max(is_months, 1)) - 1.0),
-            "name": "KOSPI 200",
+            "name": _bm_name,
         }
     if oos_ret is not None:
         bm_results["oos"]["KOSPI"] = {
             "total_return": oos_ret,
             "cagr": ((1 + oos_ret) ** (12.0 / max(oos_months, 1)) - 1.0),
-            "name": "KOSPI 200",
+            "name": _bm_name,
         }
 
     is_oos_data = {"is_results": is_results, "oos_results": oos_results, "benchmarks": bm_results}
@@ -348,7 +394,7 @@ def _compute_robustness(start, end, is_end, oos_start):
 
     conn = _get_conn()
     rb_dates = full_results[baseline]["rebalance_dates"]
-    bm_monthly = np.array(calc_etf_monthly_returns(conn, "KS200", rb_dates))
+    bm_monthly = np.array(calc_etf_monthly_returns(conn, _bm_code, rb_dates))
     conn.close()
 
     rng = np.random.default_rng(42)
@@ -407,7 +453,8 @@ def _compute_robustness(start, end, is_end, oos_start):
 
 
 def load_all_robustness_results(start: str = None, end: str = None,
-                                 is_end: str = None, oos_start: str = None):
+                                 is_end: str = None, oos_start: str = None,
+                                 universe: str = None):
     """기본 전략 강건성 + 커스텀 전략 강건성 (저장된 백테스트 결과 기반)."""
     is_oos_data, stat_data, rolling_all = load_robustness_results(
         start, end, is_end, oos_start,
@@ -441,7 +488,9 @@ def load_all_robustness_results(start: str = None, end: str = None,
 
     from step7_backtest import calc_etf_monthly_returns
     conn = _get_conn()
-    bm_monthly = np.array(calc_etf_monthly_returns(conn, "KS200", rb_dates))
+    _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
+    _bm_code = "292150" if _uni == "KOSPI+KOSDAQ" else "069500"
+    bm_monthly = np.array(calc_etf_monthly_returns(conn, _bm_code, rb_dates))
     conn.close()
 
     from scipy import stats as sp_stats
@@ -586,17 +635,20 @@ def get_holdings(strategy: str, calc_date: str, top_n: int = 30) -> pd.DataFrame
     holdings = []
     for i, (code, score) in enumerate(stocks):
         meta = conn.execute(
-            "SELECT sm.stock_name, COALESCE(fm.sec_cd_nm, sm.sector, '기타') "
-            "FROM stock_master sm "
-            "LEFT JOIN fnspace_master fm ON 'A'||sm.stock_code = fm.stock_code "
-            "WHERE sm.stock_code=?",
+            "SELECT fm.stock_name, COALESCE(fm.sec_cd_nm, '기타') "
+            "FROM fnspace_master fm "
+            "WHERE fm.stock_code = 'A' || ? "
+            "ORDER BY fm.snapshot_date DESC LIMIT 1",
             (code,),
         ).fetchone()
 
-        vf = conn.execute(
-            "SELECT value_score, value_score_orig, per_rank, pbr_rank, per, pbr, ev_ebitda "
-            "FROM valuation_factors WHERE stock_code=? AND calc_date=?",
-            (code, calc_date),
+        # PER/PBR from fnspace_finance (latest annual)
+        fin = conn.execute(
+            "SELECT per, pbr, ev_ebitda "
+            "FROM fnspace_finance WHERE stock_code = 'A' || ? "
+            "AND (fiscal_quarter = 'Annual' OR fiscal_quarter IS NULL) "
+            "ORDER BY fiscal_year DESC LIMIT 1",
+            (code,),
         ).fetchone()
 
         holdings.append({
@@ -605,10 +657,10 @@ def get_holdings(strategy: str, calc_date: str, top_n: int = 30) -> pd.DataFrame
             "섹터": meta[1] if meta else "기타",
             "비중(%)": round(weights[i] * 100, 2),
             "점수": round(score, 1),
-            "value_score": vf[0] if vf else None,
-            "PER": round(vf[4], 1) if vf and vf[4] else None,
-            "PBR": round(vf[5], 2) if vf and vf[5] else None,
-            "EV/EBITDA": round(vf[6], 1) if vf and vf[6] else None,
+            "value_score": score,
+            "PER": round(fin[0], 1) if fin and fin[0] else None,
+            "PBR": round(fin[1], 2) if fin and fin[1] else None,
+            "EV/EBITDA": round(fin[2], 1) if fin and fin[2] else None,
             "시가총액": raw_mcaps[i],
         })
 
@@ -703,13 +755,13 @@ def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd
     rows = []
     for i, (code, _) in enumerate(stocks):
         sp = conn.execute(
-            "SELECT close FROM daily_price "
-            "WHERE stock_code=? AND trade_date>=? ORDER BY trade_date ASC LIMIT 1",
+            "SELECT adj_close FROM daily_price "
+            "WHERE stock_code=? AND trade_date>=? AND adj_close>0 ORDER BY trade_date ASC LIMIT 1",
             (code, start_date),
         ).fetchone()
         ep = conn.execute(
-            "SELECT close FROM daily_price "
-            "WHERE stock_code=? AND trade_date<=? ORDER BY trade_date DESC LIMIT 1",
+            "SELECT adj_close FROM daily_price "
+            "WHERE stock_code=? AND trade_date<=? AND adj_close>0 ORDER BY trade_date DESC LIMIT 1",
             (code, end_date),
         ).fetchone()
 
@@ -719,10 +771,10 @@ def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd
         contribution = ret * weights[i] * 100  # 기여도(%)
 
         meta = conn.execute(
-            "SELECT sm.stock_name, COALESCE(fm.sec_cd_nm, sm.sector, '기타') "
-            "FROM stock_master sm "
-            "LEFT JOIN fnspace_master fm ON 'A'||sm.stock_code = fm.stock_code "
-            "WHERE sm.stock_code=?",
+            "SELECT fm.stock_name, COALESCE(fm.sec_cd_nm, '기타') "
+            "FROM fnspace_master fm "
+            "WHERE fm.stock_code = 'A' || ? "
+            "ORDER BY fm.snapshot_date DESC LIMIT 1",
             (code,),
         ).fetchone()
 
@@ -744,12 +796,10 @@ def get_monthly_attribution(strategy: str, start_date: str, end_date: str) -> pd
 @st.cache_data(ttl=3600)
 def get_overlap_matrix(calc_date: str, top_n: int = 30) -> pd.DataFrame:
     """Compute pairwise stock overlap between strategies."""
-    from step7_backtest import get_portfolio_stocks
-
     conn = _get_conn()
     sets = {}
-    for label, code in _STRAT_CODE.items():
-        stocks = get_portfolio_stocks(conn, calc_date, code, top_n)
+    for label in _STRAT_CODE:
+        stocks = _get_strategy_stocks(conn, label, calc_date, top_n)
         sets[label] = set(c for c, _ in stocks)
     conn.close()
 
@@ -961,7 +1011,7 @@ def delete_strategy(name: str):
 # Strategy backtest (factor_engine 기반)
 # ═══════════════════════════════════════════════════════
 
-def run_strategy_backtest(strategy_code: str, progress_callback=None) -> dict | None:
+def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: str = None, weight_cap_pct_override: int = None) -> dict | None:
     """
     커스텀 전략 코드로 백테스트를 실행한다.
 
@@ -989,29 +1039,16 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None) -> dict | 
     top_n = params.get("top_n", 30)
     tx_cost_bp = params.get("tx_cost_bp", 30)
     weight_cap_pct = params.get("weight_cap_pct", 15)
+    if weight_cap_pct_override is not None:
+        weight_cap_pct = weight_cap_pct_override
 
-    # stock_selector 콜백 생성 (get_portfolio_stocks와 동일한 유동성+생존 필터 적용)
+    # stock_selector 콜백 생성 (universe 테이블 기반)
+    from step7_backtest import get_universe_stocks
+
     def stock_selector(conn, calc_date, _top_n):
+        universe_set = get_universe_stocks(conn, calc_date)
         candidates = score_stocks_from_strategy(conn, calc_date, strategy_module)
-        filtered = []
-        for code, score in candidates:
-            if len(filtered) >= _top_n:
-                break
-            price_exists = conn.execute("""
-                SELECT COUNT(*) FROM daily_price
-                WHERE stock_code = ? AND trade_date >= date(?, '-5 days')
-                  AND trade_date <= ?
-            """, (code, calc_date, calc_date)).fetchone()[0]
-            if price_exists == 0:
-                continue
-            vol_data = conn.execute("""
-                SELECT AVG(close * volume) as avg_trade_amount
-                FROM daily_price
-                WHERE stock_code = ? AND trade_date <= ?
-                  AND trade_date >= date(?, '-30 days')
-            """, (code, calc_date, calc_date)).fetchone()
-            if vol_data and vol_data[0] and vol_data[0] >= 100_000_000:
-                filtered.append((code, score))
+        filtered = [(c, s) for c, s in candidates if c in universe_set][:_top_n]
         return filtered
 
     # 4. BACKTEST_CONFIG 임시 변경 후 실행
@@ -1019,11 +1056,14 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None) -> dict | 
         "top_n_stocks": BACKTEST_CONFIG["top_n_stocks"],
         "transaction_cost_bp": BACKTEST_CONFIG["transaction_cost_bp"],
         "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 15),
+        "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
     }
     try:
         BACKTEST_CONFIG["top_n_stocks"] = top_n
         BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
         BACKTEST_CONFIG["weight_cap_pct"] = weight_cap_pct
+        if universe:
+            BACKTEST_CONFIG["universe"] = universe
 
         result = run_backtest(
             "custom",
@@ -1052,3 +1092,4 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None) -> dict | 
         BACKTEST_CONFIG["top_n_stocks"] = orig["top_n_stocks"]
         BACKTEST_CONFIG["transaction_cost_bp"] = orig["transaction_cost_bp"]
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]
+        BACKTEST_CONFIG["universe"] = orig["universe"]

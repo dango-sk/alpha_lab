@@ -32,7 +32,7 @@ def _translate_sql(sql: str) -> str:
     # date(?, '-N days') → (CAST(%s AS date) + INTERVAL '-N days')
     sql = re.sub(
         r"date\(\s*\?\s*,\s*'(-\d+)\s+days?'\s*\)",
-        lambda m: f"(CAST(%s AS date) + INTERVAL '{m.group(1)} days')",
+        lambda m: f"CAST((CAST(%s AS date) + INTERVAL '{m.group(1)} days') AS text)",
         sql,
     )
     # ? → %s (남은 것들)
@@ -108,7 +108,11 @@ def get_conn():
     """환경에 맞는 DB 커넥션 반환."""
     if _is_pg:
         import psycopg2
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
+        cur = conn.cursor()
+        cur.execute("SET search_path TO alpha_lab, public")
+        conn.commit()
+        cur.close()
         return _PgConnWrapper(conn)
     else:
         conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)

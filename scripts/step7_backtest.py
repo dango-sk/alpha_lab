@@ -4,6 +4,9 @@ Step 7: 백테스트
 전략:
   A0: 원본 사분위 밸류 (멀티팩터)
 
+데이터: Railway PostgreSQL (alpha_lab 스키마)
+유니버스: universe 테이블 (사전 필터 완료)
+수익률: adj_close 기반
 비중: 시총 비례 + 비중상한 캡 (전 전략 공통)
 """
 import json
@@ -14,7 +17,7 @@ from pathlib import Path
 from scipy import stats
 
 sys.path.append(str(Path(__file__).parent.parent))
-from config.settings import DB_PATH, BACKTEST_CONFIG, CACHE_DIR
+from config.settings import BACKTEST_CONFIG, CACHE_DIR
 from lib.factor_engine import (
     score_stocks_from_strategy, code_to_module,
     DEFAULT_STRATEGY_CODE, clear_factor_cache,
@@ -26,148 +29,56 @@ def get_db():
     return get_conn()
 
 
-def _get_large_cap_set(conn, calc_date):
-    """calc_date 기준 시총 하한 이상 종목 코드 set 반환."""
-    min_mcap = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
+# ═══════════════════════════════════════════════════════
+# 유니버스 & 리밸런싱 (PG universe 테이블 기반)
+# ═══════════════════════════════════════════════════════
+
+def get_rebalance_dates(conn, rebal_type="monthly"):
+    """universe 테이블에서 리밸런싱 날짜 조회"""
     rows = conn.execute("""
-        SELECT stock_code FROM daily_price
-        WHERE trade_date = (
+        SELECT DISTINCT rebal_date FROM universe
+        WHERE rebal_type = ? AND rebal_date >= ? AND rebal_date <= ?
+        ORDER BY rebal_date
+    """, (rebal_type, BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"])).fetchall()
+    dates = [r[0] for r in rows]
+
+    # 마지막 거래일 추가 (종료일까지의 수익률 계산용)
+    if dates:
+        last_trade = conn.execute("""
             SELECT MAX(trade_date) FROM daily_price
-            WHERE trade_date <= ? AND market_cap > 0
-        )
-        AND market_cap >= ?
-    """, (calc_date, min_mcap)).fetchall()
-    return {code for code, in rows}
+            WHERE trade_date <= ? AND trade_date > ?
+        """, (BACKTEST_CONFIG["end"], dates[-1])).fetchone()
+        if last_trade and last_trade[0] and last_trade[0] > dates[-1]:
+            dates.append(last_trade[0])
+
+    return dates
 
 
+def get_universe_stocks(conn, rebal_date, rebal_type="monthly", min_market_cap=0):
+    """universe 테이블에서 해당 날짜의 종목 set 반환"""
+    rows = conn.execute("""
+        SELECT stock_code, market_cap FROM universe
+        WHERE rebal_date = ? AND rebal_type = ? AND market_cap >= ?
+    """, (rebal_date, rebal_type, min_market_cap)).fetchall()
+    return {code: mcap for code, mcap in rows}
+
+
+# 하위 호환용
 def get_monthly_rebalance_dates(conn):
-    """매월 첫 거래일 리스트 + 종료일 끝점"""
-    trade_dates = conn.execute("""
-        SELECT DISTINCT trade_date FROM daily_price
-        WHERE trade_date >= ? AND trade_date <= ?
-        ORDER BY trade_date
-    """, (BACKTEST_CONFIG["start"], BACKTEST_CONFIG["end"])).fetchall()
-
-    monthly = []
-    current_month = ""
-    for (td,) in trade_dates:
-        month = td[:7]
-        if month != current_month:
-            monthly.append(td)
-            current_month = month
-
-    if trade_dates:
-        last_trade = trade_dates[-1][0]
-        if monthly and last_trade > monthly[-1]:
-            monthly.append(last_trade)
-
-    return monthly
+    return get_rebalance_dates(conn, rebal_type=BACKTEST_CONFIG.get("rebal_type", "monthly"))
 
 
-def get_portfolio_stocks(conn, calc_date, strategy, top_n=30):
-    """전략별 포트폴리오 종목 선정 (대형주 유니버스 한정)
-
-    흐름: 대형주 200개 → 유동성/생존 필터 → 점수순 top_n개
-    """
-    large_cap_set = _get_large_cap_set(conn, calc_date)
-
-    # ─── 1. 대형주 중 유동성/생존 필터 통과 종목 ───
-    tradeable_large = set()
-    for code in large_cap_set:
-        price_exists = conn.execute("""
-            SELECT COUNT(*) FROM daily_price
-            WHERE stock_code = ? AND trade_date >= date(?, '-5 days')
-              AND trade_date <= ?
-        """, (code, calc_date, calc_date)).fetchone()[0]
-        if price_exists == 0:
-            continue
-
-        vol_data = conn.execute("""
-            SELECT AVG(close * volume) as avg_trade_amount
-            FROM daily_price
-            WHERE stock_code = ? AND trade_date <= ?
-              AND trade_date >= date(?, '-30 days')
-        """, (code, calc_date, calc_date)).fetchone()
-        if vol_data and vol_data[0] and vol_data[0] >= 100_000_000:
-            tradeable_large.add(code)
-
-    if not tradeable_large:
-        return []
-
-    # ─── 2. 전략별 점수 조회 (tradeable 대형주만) ───
-    placeholders = ",".join("?" for _ in tradeable_large)
-    codes = list(tradeable_large)
-
-    # 동점 시 시총이 큰 종목 우선 (tiebreaker)
-    mcap_date = conn.execute("""
-        SELECT MAX(trade_date) FROM daily_price
-        WHERE trade_date <= ? AND market_cap > 0
-    """, (calc_date,)).fetchone()[0]
-
-    mcap_join = f"""
-        LEFT JOIN daily_price dp ON dp.stock_code = vf.stock_code
-            AND dp.trade_date = '{mcap_date}'
-    """
-
-    if strategy == "A":
-        rows = conn.execute(f"""
-            SELECT vf.stock_code, vf.value_score as score
-            FROM valuation_factors vf
-            {mcap_join}
-            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
-              AND vf.stock_code IN ({placeholders})
-            ORDER BY vf.value_score DESC, dp.market_cap DESC
-            LIMIT ?
-        """, [calc_date] + codes + [top_n]).fetchall()
-
-    elif strategy == "A0":
-        rows = conn.execute(f"""
-            SELECT vf.stock_code, vf.value_score_orig as score
-            FROM valuation_factors vf
-            {mcap_join}
-            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
-              AND vf.value_score_orig IS NOT NULL
-              AND vf.stock_code IN ({placeholders})
-            ORDER BY vf.value_score_orig DESC, dp.market_cap DESC
-            LIMIT ?
-        """, [calc_date] + codes + [top_n]).fetchall()
-
-    elif strategy == "VM":
-        rows = conn.execute(f"""
-            SELECT s.stock_code, (vf.value_score + COALESCE(s.tech_score, 0)) as score
-            FROM signals s
-            JOIN valuation_factors vf ON s.stock_code = vf.stock_code
-                AND vf.calc_date = s.calc_date
-            {mcap_join}
-            WHERE s.calc_date = ? AND vf.quality_pass = 1
-              AND s.stock_code IN ({placeholders})
-            ORDER BY score DESC, dp.market_cap DESC
-            LIMIT ?
-        """, [calc_date] + codes + [top_n]).fetchall()
-
-    elif strategy == "ATT2":
-        rows = conn.execute(f"""
-            SELECT vf.stock_code, vf.att2_score as score
-            FROM valuation_factors vf
-            {mcap_join}
-            WHERE vf.quality_pass = 1 AND vf.calc_date = ?
-              AND vf.att2_score IS NOT NULL
-              AND vf.stock_code IN ({placeholders})
-            ORDER BY vf.att2_score DESC, dp.market_cap DESC
-            LIMIT ?
-        """, [calc_date] + codes + [top_n]).fetchall()
-
-    else:
-        return []
-
-    filtered = [(code, score) for code, score in rows]
-
-    return filtered
-
+# ═══════════════════════════════════════════════════════
+# 비중 & 슬리피지
+# ═══════════════════════════════════════════════════════
 
 def _apply_mcap_cap(raw_weights, cap=0.15):
     """시총 비중에 상한선 적용 (초과분 반복 재배분)"""
-    weights = [w / sum(raw_weights) for w in raw_weights]
+    total = sum(raw_weights)
+    if total <= 0:
+        n = len(raw_weights)
+        return [1 / n] * n if n > 0 else []
+    weights = [w / total for w in raw_weights]
     for _ in range(20):
         capped = [min(w, cap) for w in weights]
         excess = sum(w - min(w, cap) for w in weights)
@@ -195,71 +106,99 @@ def _calc_slippage(market_cap):
         return 0.0050
 
 
+# ═══════════════════════════════════════════════════════
+# 수익률 계산 (adj_close 기반)
+# ═══════════════════════════════════════════════════════
+
 def calc_portfolio_return(conn, stocks, start_date, end_date):
-    """포트폴리오 수익률 계산 (시총비중 + 비중상한 캡)"""
+    """포트폴리오 수익률 계산 (시총비중 + 비중상한 캡, adj_close 기반) — 배치 쿼리"""
     if not stocks:
         return 0.0
 
+    codes = [code for code, _ in stocks]
+    placeholders = ",".join(["?"] * len(codes))
+
+    # ─── 배치: 시작일 이후 첫 거래일 데이터 (시총 + adj_close) ───
+    start_rows = conn.execute(f"""
+        SELECT dp.stock_code, dp.market_cap, dp.adj_close
+        FROM daily_price dp
+        INNER JOIN (
+            SELECT stock_code, MIN(trade_date) as first_date
+            FROM daily_price
+            WHERE stock_code IN ({placeholders}) AND trade_date >= ?
+            GROUP BY stock_code
+        ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.first_date
+    """, (*codes, start_date)).fetchall()
+    start_map = {r[0]: (r[1], r[2]) for r in start_rows}  # code -> (mcap, adj_close)
+
+    # ─── 배치: 종료일 이전 마지막 거래일 adj_close ───
+    end_rows = conn.execute(f"""
+        SELECT dp.stock_code, dp.adj_close
+        FROM daily_price dp
+        INNER JOIN (
+            SELECT stock_code, MAX(trade_date) as last_date
+            FROM daily_price
+            WHERE stock_code IN ({placeholders}) AND trade_date <= ? AND adj_close > 0
+            GROUP BY stock_code
+        ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.last_date
+    """, (*codes, end_date)).fetchall()
+    end_map = {r[0]: r[1] for r in end_rows}  # code -> adj_close
+
+    # ─── 배치: 시작일 이후 마지막 거래일 adj_close (상폐 대비) ───
+    last_rows = conn.execute(f"""
+        SELECT dp.stock_code, dp.adj_close
+        FROM daily_price dp
+        INNER JOIN (
+            SELECT stock_code, MAX(trade_date) as last_date
+            FROM daily_price
+            WHERE stock_code IN ({placeholders}) AND trade_date >= ? AND adj_close > 0
+            GROUP BY stock_code
+        ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.last_date
+    """, (*codes, start_date)).fetchall()
+    last_map = {r[0]: r[1] for r in last_rows}  # code -> adj_close
+
     # ─── 시총 비중 + 비중상한 캡 ───
-    raw_mcaps = []
-    for code, _ in stocks:
-        row = conn.execute("""
-            SELECT market_cap FROM daily_price
-            WHERE stock_code = ? AND trade_date >= ?
-            ORDER BY trade_date ASC LIMIT 1
-        """, (code, start_date)).fetchone()
-        raw_mcaps.append(row[0] if row and row[0] else 0)
+    raw_mcaps = [start_map.get(code, (0, 0))[0] or 0 for code in codes]
 
-    cap = BACKTEST_CONFIG.get("weight_cap_pct", 15) / 100
-    weights = _apply_mcap_cap(raw_mcaps, cap=cap)
+    cap_pct = BACKTEST_CONFIG.get("weight_cap_pct", 10)
+    if cap_pct > 0:
+        weights = _apply_mcap_cap(raw_mcaps, cap=cap_pct / 100)
+    else:
+        total = sum(raw_mcaps)
+        weights = [w / total for w in raw_mcaps] if total > 0 else [1/len(raw_mcaps)] * len(raw_mcaps)
 
-    # ─── 종목별 수익률 ───
+    # ─── 종목별 수익률 (adj_close) ───
     weighted_returns = []
-    for i, (code, _) in enumerate(stocks):
-        start_price = conn.execute("""
-            SELECT close FROM daily_price
-            WHERE stock_code = ? AND trade_date >= ?
-            ORDER BY trade_date ASC LIMIT 1
-        """, (code, start_date)).fetchone()
-
-        end_price = conn.execute("""
-            SELECT close FROM daily_price
-            WHERE stock_code = ? AND trade_date <= ?
-            ORDER BY trade_date DESC LIMIT 1
-        """, (code, end_date)).fetchone()
-
-        if start_price and start_price[0] > 0:
-            if end_price and end_price[0] > 0:
-                ret = (end_price[0] - start_price[0]) / start_price[0]
+    for i, code in enumerate(codes):
+        sp = start_map.get(code, (0, 0))[1] or 0
+        if sp <= 0:
+            continue
+        ep = end_map.get(code, 0) or 0
+        if ep > 0:
+            ret = (ep - sp) / sp
+            weighted_returns.append(ret * weights[i])
+        else:
+            lp = last_map.get(code, 0) or 0
+            if lp > 0:
+                ret = (lp - sp) / sp
                 weighted_returns.append(ret * weights[i])
             else:
-                # 상폐: 마지막 가격으로 계산
-                last_price = conn.execute("""
-                    SELECT close FROM daily_price
-                    WHERE stock_code = ? AND trade_date >= ?
-                    ORDER BY trade_date DESC LIMIT 1
-                """, (code, start_date)).fetchone()
-
-                if last_price and last_price[0] > 0:
-                    ret = (last_price[0] - start_price[0]) / start_price[0]
-                    weighted_returns.append(ret * weights[i])
-                else:
-                    weighted_returns.append(-1.0 * weights[i])
+                weighted_returns.append(-1.0 * weights[i])
 
     return sum(weighted_returns) if weighted_returns else 0.0
 
 
 def calc_etf_return(conn, etf_code, start_date, end_date):
-    """단일 ETF 수익률 계산"""
+    """단일 ETF 수익률 계산 (adj_close)"""
     start_price = conn.execute("""
-        SELECT close FROM daily_price
-        WHERE stock_code = ? AND trade_date >= ?
+        SELECT adj_close FROM daily_price
+        WHERE stock_code = ? AND trade_date >= ? AND adj_close > 0
         ORDER BY trade_date ASC LIMIT 1
     """, (etf_code, start_date)).fetchone()
 
     end_price = conn.execute("""
-        SELECT close FROM daily_price
-        WHERE stock_code = ? AND trade_date <= ?
+        SELECT adj_close FROM daily_price
+        WHERE stock_code = ? AND trade_date <= ? AND adj_close > 0
         ORDER BY trade_date DESC LIMIT 1
     """, (etf_code, end_date)).fetchone()
 
@@ -279,7 +218,11 @@ def calc_etf_monthly_returns(conn, etf_code, rebalance_dates):
 
 def calc_all_benchmarks(conn, rebalance_dates):
     """벤치마크 수익률 + MDD + Sharpe"""
-    benchmarks = {"KOSPI": ("KS200", "KOSPI 200")}
+    universe = BACKTEST_CONFIG.get("universe", "KOSPI")
+    if universe == "KOSPI+KOSDAQ":
+        benchmarks = {"KOSPI": ("292150", "KRX 300")}
+    else:
+        benchmarks = {"KOSPI": ("069500", "KODEX 200")}
     results = {}
 
     for key, (etf_code, name) in benchmarks.items():
@@ -326,15 +269,18 @@ def calc_all_benchmarks(conn, rebalance_dates):
     return results
 
 
-def run_backtest(strategy_name, stock_selector=None, progress_callback=None):
+# ═══════════════════════════════════════════════════════
+# 백테스트 실행
+# ═══════════════════════════════════════════════════════
+
+def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progress_callback=None):
     """단일 전략 백테스트 실행.
 
     stock_selector: 커스텀 종목 선정 콜백 (conn, calc_date, top_n) -> [(code, score), ...]
-                    None이면 기존 DB 기반 get_portfolio_stocks 사용.
-    progress_callback: 진행률 콜백 (current, total) -> None
+    rebal_type: "monthly" 또는 "biweekly"
     """
     conn = get_db()
-    rebalance_dates = get_monthly_rebalance_dates(conn)
+    rebalance_dates = get_rebalance_dates(conn, rebal_type)
 
     if len(rebalance_dates) < 2:
         print("  리밸런싱 날짜가 부족합니다.")
@@ -363,7 +309,7 @@ def run_backtest(strategy_name, stock_selector=None, progress_callback=None):
         if stock_selector:
             stocks = stock_selector(conn, start, top_n)
         else:
-            stocks = get_portfolio_stocks(conn, start, strategy_name, top_n)
+            stocks = []
         if not stocks and prev_stocks_list:
             stocks = prev_stocks_list
         prev_stocks_list = stocks
@@ -382,10 +328,23 @@ def run_backtest(strategy_name, stock_selector=None, progress_callback=None):
 
         # 수익률 (거래비용 = 턴오버 x (수수료 + 슬리피지) x 양방향)
         raw_return = calc_portfolio_return(conn, stocks, start, end)
-        avg_slippage = np.mean([_calc_slippage(
-            (conn.execute("SELECT market_cap FROM daily_price WHERE stock_code=? AND trade_date>=? ORDER BY trade_date ASC LIMIT 1",
-                          (c, start)).fetchone() or [0])[0] or 0
-        ) for c, _ in stocks]) if stocks else 0
+        if stocks:
+            slip_codes = [c for c, _ in stocks]
+            slip_ph = ",".join(["?"] * len(slip_codes))
+            slip_rows = conn.execute(f"""
+                SELECT dp.stock_code, dp.market_cap
+                FROM daily_price dp
+                INNER JOIN (
+                    SELECT stock_code, MIN(trade_date) as first_date
+                    FROM daily_price
+                    WHERE stock_code IN ({slip_ph}) AND trade_date >= ?
+                    GROUP BY stock_code
+                ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.first_date
+            """, (*slip_codes, start)).fetchall()
+            slip_mcap_map = {r[0]: r[1] or 0 for r in slip_rows}
+            avg_slippage = np.mean([_calc_slippage(slip_mcap_map.get(c, 0)) for c, _ in stocks])
+        else:
+            avg_slippage = 0
         net_return = raw_return - (turnover * (tx_cost + avg_slippage) * 2)
 
         monthly_returns.append(net_return)
@@ -427,7 +386,7 @@ def run_backtest(strategy_name, stock_selector=None, progress_callback=None):
         "monthly_returns": monthly_returns,
         "portfolio_values": portfolio_values,
         "portfolio_sizes": portfolio_sizes,
-        "rebalance_dates": get_monthly_rebalance_dates(get_db()),
+        "rebalance_dates": list(rebalance_dates),
     }
 
 
@@ -442,10 +401,10 @@ _BASE_STRATEGY_CODES = {
 }
 
 
-def make_engine_selector(strategy_key):
+def make_engine_selector(strategy_key, rebal_type="monthly", min_market_cap=0):
     """factor_engine 기반 stock_selector 콜백 생성.
 
-    score_stocks_from_strategy()로 스코어링 후 유동성/생존 필터 적용.
+    universe 테이블과 교집합하여 종목 선정 (N+1 유동성 쿼리 제거).
     """
     code = _BASE_STRATEGY_CODES.get(strategy_key)
     if not code:
@@ -453,47 +412,45 @@ def make_engine_selector(strategy_key):
     strategy_module = code_to_module(code)
 
     def selector(conn, calc_date, top_n):
+        # universe 테이블에서 해당 날짜 종목 조회
+        universe_set = get_universe_stocks(conn, calc_date, rebal_type, min_market_cap)
+        if not universe_set:
+            return []
+
+        # factor_engine으로 스코어링
         candidates = score_stocks_from_strategy(conn, calc_date, strategy_module)
-        filtered = []
-        for code_str, score in candidates:
-            if len(filtered) >= top_n:
-                break
-            price_exists = conn.execute("""
-                SELECT COUNT(*) FROM daily_price
-                WHERE stock_code = ? AND trade_date >= date(?, '-5 days')
-                  AND trade_date <= ?
-            """, (code_str, calc_date, calc_date)).fetchone()[0]
-            if price_exists == 0:
-                continue
-            vol_data = conn.execute("""
-                SELECT AVG(close * volume) as avg_trade_amount
-                FROM daily_price
-                WHERE stock_code = ? AND trade_date <= ?
-                  AND trade_date >= date(?, '-30 days')
-            """, (code_str, calc_date, calc_date)).fetchone()
-            if vol_data and vol_data[0] and vol_data[0] >= 100_000_000:
-                filtered.append((code_str, score))
+
+        # universe와 교집합 → top_n
+        filtered = [(code_str, score) for code_str, score in candidates
+                     if code_str in universe_set][:top_n]
         return filtered
 
     return selector
 
 
-def run_all_backtests():
+def run_all_backtests(rebal_type=None, min_market_cap=None):
     """기본 전략 + 벤치마크 백테스트 (factor_engine 파이프라인 사용)"""
+    if rebal_type is None:
+        rebal_type = BACKTEST_CONFIG.get("rebal_type", "monthly")
+    if min_market_cap is None:
+        min_market_cap = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
+
+    rebal_label = "격주" if rebal_type == "biweekly" else "월간"
     print("\n" + "=" * 60)
     print("Step 7: 백테스트")
     print(f"   기간: {BACKTEST_CONFIG['start']} ~ {BACKTEST_CONFIG['end']}")
-    print(f"   리밸런싱: 월 1회, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목")
+    print(f"   리밸런싱: {rebal_label}, 상위 {BACKTEST_CONFIG['top_n_stocks']}종목")
     print(f"   거래비용: 편도 {BACKTEST_CONFIG['transaction_cost_bp']}bp + 슬리피지")
     print(f"   비중: 시총비례 + {BACKTEST_CONFIG.get('weight_cap_pct', 10)}% 캡")
+    print(f"   시총하한: {min_market_cap/1e8:,.0f}억원")
     print(f"   파이프라인: factor_engine (퀄리티필터→스코어링)")
     print("=" * 60)
 
     results = {}
     for key, strat, desc in STRATEGIES:
         print(f"\n  {key} ({desc}) 백테스트 중...")
-        selector = make_engine_selector(key)
-        result = run_backtest(strat, stock_selector=selector)
+        selector = make_engine_selector(key, rebal_type, min_market_cap)
+        result = run_backtest(strat, stock_selector=selector, rebal_type=rebal_type)
         clear_factor_cache()
         if result:
             result["strategy"] = key
@@ -501,7 +458,7 @@ def run_all_backtests():
             print(f"     평균 포트폴리오: {result['avg_portfolio_size']:.0f}종목")
 
     conn = get_db()
-    rebalance_dates = get_monthly_rebalance_dates(conn)
+    rebalance_dates = get_rebalance_dates(conn, rebal_type)
     if len(rebalance_dates) >= 2:
         bm_results = calc_all_benchmarks(conn, rebalance_dates)
         results.update(bm_results)
@@ -571,7 +528,8 @@ def show_comparison(results):
     print(f"  {'─'*72}")
     if "KOSPI" in results:
         r = results["KOSPI"]
-        print(f"  {'BM: KOSPI 200':<30} {r['total_return']:>+9.1%} {r['cagr']:>+9.1%} "
+        bm_name = r.get("strategy", "KODEX 200")
+        print(f"  {f'BM: {bm_name}':<30} {r['total_return']:>+9.1%} {r['cagr']:>+9.1%} "
               f"{r['mdd']:>9.1%} {r['sharpe']:>10.2f}")
 
     # ── IS/OOS 분할 ──
@@ -601,24 +559,30 @@ def show_comparison(results):
             print(f"  {desc:<30} | {is_sh:>10.2f} {is_cum:>+9.1%} | {oos_sh:>10.2f} {oos_cum:>+9.1%}")
 
         if "KOSPI" in results:
+            universe = BACKTEST_CONFIG.get("universe", "KOSPI")
+            _bm_code = "292150" if universe == "KOSPI+KOSDAQ" else "069500"
+            _bm_name = "KRX 300" if _bm_code == "292150" else "KODEX 200"
             conn = get_db()
-            bm_monthly = calc_etf_monthly_returns(conn, "KS200", rb_dates)
+            bm_monthly = calc_etf_monthly_returns(conn, _bm_code, rb_dates)
             conn.close()
             bm_is = np.array(bm_monthly[:split_idx])
             bm_oos = np.array(bm_monthly[split_idx:])
             bm_is_sh = (bm_is.mean() / bm_is.std() * np.sqrt(12)) if len(bm_is) > 0 and bm_is.std() > 0 else 0
             bm_oos_sh = (bm_oos.mean() / bm_oos.std() * np.sqrt(12)) if len(bm_oos) > 0 and bm_oos.std() > 0 else 0
-            is_ret = calc_etf_return(get_db(), "KS200", BACKTEST_CONFIG["start"], is_end)
-            oos_ret = calc_etf_return(get_db(), "KS200", oos_start, BACKTEST_CONFIG["end"])
+            is_ret = calc_etf_return(get_db(), _bm_code, BACKTEST_CONFIG["start"], is_end)
+            oos_ret = calc_etf_return(get_db(), _bm_code, oos_start, BACKTEST_CONFIG["end"])
             print(f"  {'─'*74}")
-            print(f"  {'BM: KOSPI 200':<30} | {bm_is_sh:>10.2f} {is_ret or 0:>+9.1%} | {bm_oos_sh:>10.2f} {oos_ret or 0:>+9.1%}")
+            print(f"  {f'BM: {_bm_name}':<30} | {bm_is_sh:>10.2f} {is_ret or 0:>+9.1%} | {bm_oos_sh:>10.2f} {oos_ret or 0:>+9.1%}")
 
     # ── 통계적 유의성 ──
-    print(f"\n  통계적 유의성 (vs KOSPI 200)")
+    universe = BACKTEST_CONFIG.get("universe", "KOSPI")
+    _bm_code = "292150" if universe == "KOSPI+KOSDAQ" else "069500"
+    _bm_name = "KRX 300" if _bm_code == "292150" else "KODEX 200"
+    print(f"\n  통계적 유의성 (vs {_bm_name})")
     print(f"  {'─'*60}")
     if ref_key:
         conn = get_db()
-        bm_monthly = np.array(calc_etf_monthly_returns(conn, "KS200", rb_dates))
+        bm_monthly = np.array(calc_etf_monthly_returns(conn, _bm_code, rb_dates))
         conn.close()
 
         for key, _, desc in STRATEGIES:
@@ -636,7 +600,6 @@ def show_comparison(results):
 
 if __name__ == "__main__":
     print("Step 7: 백테스트")
-    print(f"   DB: {DB_PATH}")
 
     results = run_all_backtests()
     if results:
