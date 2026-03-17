@@ -81,6 +81,11 @@ export async function getRobustness(params: Record<string, string>) {
   return fetchApi(`/api/robustness?${qs}`);
 }
 
+export async function getRegimeAnalysis(params: Record<string, string>) {
+  const qs = new URLSearchParams(params).toString();
+  return fetchApi(`/api/regime?${qs}`);
+}
+
 export async function getStrategies() {
   return fetchApi('/api/strategies');
 }

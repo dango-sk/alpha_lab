@@ -1364,3 +1364,147 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]
         BACKTEST_CONFIG["universe"] = orig["universe"]
         BACKTEST_CONFIG["rebal_type"] = orig["rebal_type"]
+
+
+def compute_regime_analysis(
+    start: str = None,
+    end: str = None,
+    universe: str = None,
+    rebal_type: str = None,
+) -> dict:
+    """KOSPI 6개월 롤링 누적수익률로 시장 국면(Bull/Sideways/Bear)을 분류하고,
+    각 전략의 국면별 성과 통계를 반환한다.
+
+    국면 기준 (6개월 누적수익률):
+        Bull     : > +5%
+        Sideways : -5% ~ +5%
+        Bear     : < -5%
+
+    Returns:
+        {
+            "regimes": {date_str: regime_str, ...},          # 국면 분류 (날짜별)
+            "summary": {strategy_key: {regime: stats}, ...}, # 전략×국면 성과
+            "regime_counts": {regime: int, ...},             # 전체 국면 월 수
+        }
+    """
+    results = load_all_results(start, end, universe=universe, rebal_type=rebal_type)
+
+    bm = results.get("KOSPI", {})
+    bm_dates = bm.get("rebalance_dates", [])
+    bm_returns = bm.get("monthly_returns", [])
+
+    if len(bm_dates) < 2 or not bm_returns:
+        return {"regimes": {}, "summary": {}, "regime_counts": {}}
+
+    # monthly_returns[i] → 기간: bm_dates[i] ~ bm_dates[i+1]
+    # 날짜 레이블은 bm_dates[i+1] (해당 월말/리밸런싱일)
+    n = len(bm_returns)
+    ret_dates = bm_dates[1 : n + 1]          # len == n
+
+    bm_arr = np.array(bm_returns, dtype=float)
+
+    # 6개월 롤링 누적수익률: 현재 포함 직전 6개월
+    WINDOW = 6
+    rolling_cum = np.full(n, np.nan)
+    for i in range(WINDOW - 1, n):
+        window = bm_arr[i - WINDOW + 1 : i + 1]
+        rolling_cum[i] = float(np.prod(1 + window) - 1)
+
+    # 국면 분류
+    def _classify(rc):
+        if np.isnan(rc):
+            return None
+        if rc > 0.05:
+            return "Bull"
+        if rc < -0.05:
+            return "Bear"
+        return "Sideways"
+
+    regimes_by_date = {}
+    for i, d in enumerate(ret_dates):
+        r = _classify(rolling_cum[i])
+        if r is not None:
+            regimes_by_date[str(d)] = r
+
+    regime_counts = {"Bull": 0, "Sideways": 0, "Bear": 0}
+    for r in regimes_by_date.values():
+        regime_counts[r] += 1
+
+    # 전략별 국면 성과 계산
+    REGIMES = ["Bull", "Sideways", "Bear"]
+    summary = {}
+
+    for key, val in results.items():
+        if key == "KOSPI":
+            continue
+        if not isinstance(val, dict):
+            continue
+        strat_dates = val.get("rebalance_dates", [])
+        strat_returns = val.get("monthly_returns", [])
+        if not strat_returns or len(strat_dates) < 2:
+            continue
+
+        ns = len(strat_returns)
+        strat_ret_dates = strat_dates[1 : ns + 1]
+        strat_arr = np.array(strat_returns, dtype=float)
+
+        # 날짜 → 인덱스 맵 (bm 기준)
+        bm_date_idx = {str(d): i for i, d in enumerate(ret_dates)}
+
+        per_regime: dict[str, dict] = {r: {"rets": [], "bm_rets": []} for r in REGIMES}
+
+        for j, sd in enumerate(strat_ret_dates):
+            regime = regimes_by_date.get(str(sd))
+            if regime is None:
+                continue
+            per_regime[regime]["rets"].append(float(strat_arr[j]))
+            bi = bm_date_idx.get(str(sd))
+            if bi is not None:
+                per_regime[regime]["bm_rets"].append(float(bm_arr[bi]))
+
+        strat_summary = {}
+        for regime, data in per_regime.items():
+            rets = np.array(data["rets"], dtype=float)
+            bm_rets = np.array(data["bm_rets"], dtype=float)
+            cnt = len(rets)
+            if cnt == 0:
+                strat_summary[regime] = {
+                    "count": 0,
+                    "avg_monthly_return": None,
+                    "total_return": None,
+                    "sharpe": None,
+                    "win_rate": None,
+                    "avg_excess": None,
+                }
+                continue
+
+            avg_ret = float(rets.mean())
+            total_ret = float(np.prod(1 + rets) - 1)
+            win_rate = float((rets > 0).mean())
+
+            if cnt >= 3 and rets.std() > 0:
+                sharpe = float(rets.mean() / rets.std() * np.sqrt(12))
+            else:
+                sharpe = None
+
+            if len(bm_rets) == cnt:
+                avg_excess = float((rets - bm_rets).mean())
+            else:
+                avg_excess = None
+
+            strat_summary[regime] = {
+                "count": cnt,
+                "avg_monthly_return": avg_ret,
+                "total_return": total_ret,
+                "sharpe": sharpe,
+                "win_rate": win_rate,
+                "avg_excess": avg_excess,
+            }
+
+        summary[key] = strat_summary
+
+    return {
+        "regimes": regimes_by_date,
+        "summary": summary,
+        "regime_counts": regime_counts,
+    }

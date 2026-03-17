@@ -66,6 +66,7 @@ from lib.data import (
     save_strategy,
     delete_strategy,
     run_strategy_backtest,
+    compute_regime_analysis,
     STRATEGY_LABELS,
     STRATEGY_COLORS,
     ALL_KEYS,
@@ -699,6 +700,25 @@ def api_chat_sql(req: SqlQueryRequest):
         raise HTTPException(status_code=400, detail=f"SQL error: {e.pgerror or str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════
+# 16. GET /api/regime
+# ══════════════════════════════════════════════
+@app.get("/api/regime")
+def api_regime(
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    cache_key = f"regime:{start}:{end}:{universe}:{rebal_type}"
+    result = _cached(
+        cache_key,
+        lambda: compute_regime_analysis(start, end, universe=universe, rebal_type=rebal_type),
+        ttl=600,
+    )
+    return _convert_for_json(result)
 
 
 # ══════════════════════════════════════════════

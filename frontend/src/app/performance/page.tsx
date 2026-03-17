@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getResults, getConfig } from '@/lib/api';
+import { getResults, getConfig, getRegimeAnalysis } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/KpiCard';
@@ -158,6 +158,11 @@ export default function PerformancePage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
+  const [regimeData, setRegimeData] = useState<{
+    regimes: Record<string, string>;
+    summary: Record<string, Record<string, { avg_monthly_return: number; cumulative_return: number; sharpe: number; win_rate: number; months: number; excess_vs_bm: number }>>;
+    regime_counts: Record<string, number>;
+  } | null>(null);
 
   // Load config first to get default dates
   useEffect(() => {
@@ -193,6 +198,13 @@ export default function PerformancePage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  }, [universe, rebalType, startDate, endDate]);
+
+  useEffect(() => {
+    setRegimeData(null);
+    getRegimeAnalysis({ start: startDate, end: endDate, universe, rebal_type: rebalType })
+      .then(setRegimeData)
+      .catch(() => setRegimeData(null));
   }, [universe, rebalType, startDate, endDate]);
 
   // All keys available for selection
@@ -703,6 +715,148 @@ export default function PerformancePage() {
           />
         </div>
       )}
+
+      {/* Regime Analysis */}
+      {regimeData && (() => {
+        const REGIME_COLORS: Record<string, string> = {
+          Bull: '#22c55e',
+          Sideways: '#6b7280',
+          Bear: '#ef4444',
+        };
+        const REGIME_ORDER = ['Bull', 'Sideways', 'Bear'];
+
+        // ── Timeline chart ──
+        const regimeDates = Object.keys(regimeData.regimes).sort();
+        // Build colored scatter trace per regime as filled areas using vrect-style shapes
+        // Use a bar chart: one trace per regime, y=1 where active
+        const regimeTimelineTraces: Plotly.Data[] = REGIME_ORDER.map((regime) => ({
+          type: 'bar' as const,
+          name: regime,
+          x: regimeDates.filter((d) => regimeData.regimes[d] === regime),
+          y: regimeDates.filter((d) => regimeData.regimes[d] === regime).map(() => 1),
+          marker: { color: REGIME_COLORS[regime] },
+          hovertemplate: `%{x}<br>${regime}<extra></extra>`,
+        }));
+
+        const regimeTimelineLayout: Partial<Plotly.Layout> = {
+          title: { text: '시장 국면 (Regime) 분류', font: { size: 13, color: '#e4e4e7' } },
+          barmode: 'stack' as const,
+          bargap: 0,
+          yaxis: { showticklabels: false, fixedrange: true },
+          xaxis: { tickfont: { size: 10 } },
+          legend: { font: { size: 10, color: '#a1a1aa' }, bgcolor: 'transparent', orientation: 'h', y: -0.25 },
+        };
+
+        // ── Performance table rows ──
+        const regimePerfRows: Record<string, unknown>[] = [];
+        for (const key of strategyKeys) {
+          const stratSummary = regimeData.summary?.[key];
+          if (!stratSummary) continue;
+          for (const regime of REGIME_ORDER) {
+            const m = stratSummary[regime];
+            if (!m) continue;
+            regimePerfRows.push({
+              strategy: labels[key] || key,
+              regime,
+              months: m.months,
+              avg_monthly_return: m.avg_monthly_return,
+              cumulative_return: m.cumulative_return,
+              sharpe: m.sharpe,
+              win_rate: m.win_rate,
+              excess_vs_bm: m.excess_vs_bm,
+            });
+          }
+        }
+
+        const regimePerfColumns = [
+          { key: 'strategy', label: '전략', align: 'left' as const },
+          {
+            key: 'regime',
+            label: 'Regime',
+            align: 'left' as const,
+            format: (v: unknown) => v as string,
+            colorFn: (v: unknown) => {
+              if (v === 'Bull') return 'text-green-400';
+              if (v === 'Bear') return 'text-red-400';
+              return 'text-gray-400';
+            },
+          },
+          { key: 'months', label: '개월수', align: 'right' as const, mono: true, format: (v: unknown) => fmtNum(v as number, 0) },
+          {
+            key: 'avg_monthly_return',
+            label: '평균월수익률',
+            align: 'right' as const,
+            mono: true,
+            format: (v: unknown) => fmtPct(v as number),
+            colorFn: (v: unknown) => valueColor(v as number),
+          },
+          {
+            key: 'cumulative_return',
+            label: '누적수익률',
+            align: 'right' as const,
+            mono: true,
+            format: (v: unknown) => fmtPct(v as number),
+            colorFn: (v: unknown) => valueColor(v as number),
+          },
+          {
+            key: 'sharpe',
+            label: 'Sharpe',
+            align: 'right' as const,
+            mono: true,
+            format: (v: unknown) => fmtNum(v as number),
+          },
+          {
+            key: 'win_rate',
+            label: '승률',
+            align: 'right' as const,
+            mono: true,
+            format: (v: unknown) => fmtPct(v as number),
+            colorFn: (v: unknown) => valueColor((v as number) - 0.5),
+          },
+          {
+            key: 'excess_vs_bm',
+            label: 'BM 대비 초과',
+            align: 'right' as const,
+            mono: true,
+            format: (v: unknown) => fmtPct(v as number),
+            colorFn: (v: unknown) => valueColor(v as number),
+          },
+        ];
+
+        // ── Bar chart: avg monthly return by regime per strategy ──
+        const regimeBarTraces: Plotly.Data[] = REGIME_ORDER.map((regime) => ({
+          type: 'bar' as const,
+          name: regime,
+          x: strategyKeys.map((k) => labels[k] || k),
+          y: strategyKeys.map((k) => regimeData.summary?.[k]?.[regime]?.avg_monthly_return ?? null),
+          marker: { color: REGIME_COLORS[regime] },
+          hovertemplate: `%{x}<br>${regime}: %{y:.2%}<extra></extra>`,
+        }));
+
+        const regimeBarLayout: Partial<Plotly.Layout> = {
+          title: { text: '국면별 평균 월수익률', font: { size: 13, color: '#e4e4e7' } },
+          barmode: 'group' as const,
+          yaxis: { tickformat: '.1%', tickfont: { size: 10 } },
+          xaxis: { tickfont: { size: 10 } },
+          legend: { font: { size: 10, color: '#a1a1aa' }, bgcolor: 'transparent', orientation: 'h', y: -0.25 },
+        };
+
+        return (
+          <div className="space-y-4">
+            <SectionHeader
+              title="시장 국면 분석 (Regime Analysis)"
+              subtitle={`Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Sideways: ${regimeData.regime_counts?.Sideways ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
+            />
+            <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
+            {regimePerfRows.length > 0 && (
+              <DataTable columns={regimePerfColumns} data={regimePerfRows} maxHeight="none" />
+            )}
+            {regimeBarTraces.length > 0 && (
+              <PlotlyChart data={regimeBarTraces} layout={regimeBarLayout} height={300} />
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
