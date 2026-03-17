@@ -577,11 +577,14 @@ export default function LabPage() {
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <input
-                              type="number"
-                              step="1"
+                              type="text"
+                              inputMode="numeric"
                               value={Math.round(w * 100)}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) => {
-                                const v = parseInt(e.target.value);
+                                const raw = e.target.value.replace(/[^0-9-]/g, '');
+                                if (raw === '' || raw === '-') return;
+                                const v = parseInt(raw);
                                 if (!isNaN(v)) {
                                   setCode((prev) => updateWeightInCode(prev, factor, v / 100));
                                 }

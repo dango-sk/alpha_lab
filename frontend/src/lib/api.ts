@@ -90,11 +90,26 @@ export async function getLatestPriceDate() {
 }
 
 export async function runBacktest(code: string, params: Record<string, unknown>) {
-  return fetchApi('/api/backtest', {
+  // Start backtest job
+  const { job_id } = await fetchApi('/api/backtest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ strategy_code: code, ...params }),
   });
+
+  // Poll for result
+  const maxWait = 300_000; // 5 min
+  const interval = 2_000;
+  const start = Date.now();
+
+  while (Date.now() - start < maxWait) {
+    await new Promise((r) => setTimeout(r, interval));
+    const res = await fetchApi(`/api/backtest/${job_id}`);
+    if (res.status === 'done') return res.result;
+    if (res.status === 'error') throw new Error(res.detail || '백테스트 실패');
+    // still running, continue polling
+  }
+  throw new Error('백테스트 시간 초과 (5분)');
 }
 
 export async function sendChat(

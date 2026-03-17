@@ -446,8 +446,10 @@ def api_delete_strategy(name: str):
 
 
 # ══════════════════════════════════════════════
-# 12. POST /api/backtest
+# 12. POST /api/backtest  (async: start → poll)
 # ══════════════════════════════════════════════
+import threading, uuid as _uuid
+
 class BacktestRequest(BaseModel):
     strategy_code: str
     universe: Optional[str] = None
@@ -455,9 +457,11 @@ class BacktestRequest(BaseModel):
     weight_cap_pct: Optional[int] = None
     tx_cost_bp: Optional[int] = None
 
+# In-memory job store
+_backtest_jobs: dict[str, dict] = {}
 
-@app.post("/api/backtest")
-def api_run_backtest(req: BacktestRequest):
+
+def _run_backtest_job(job_id: str, req: BacktestRequest):
     import traceback as _tb
     try:
         result = run_strategy_backtest(
@@ -467,15 +471,45 @@ def api_run_backtest(req: BacktestRequest):
             weight_cap_pct_override=req.weight_cap_pct,
             tx_cost_bp_override=req.tx_cost_bp,
         )
+        if result is None:
+            _backtest_jobs[job_id] = {"status": "error", "detail": "Backtest returned no results"}
+        elif isinstance(result, dict) and "error" in result:
+            _backtest_jobs[job_id] = {"status": "error", "detail": result["error"]}
+        else:
+            _backtest_jobs[job_id] = {"status": "done", "result": _convert_for_json(result)}
     except Exception as e:
-        detail = f"{type(e).__name__}: {e}\n{_tb.format_exc()}"
-        print(f"[BACKTEST ERROR] {detail}", flush=True)
-        raise HTTPException(status_code=500, detail=detail)
-    if result is None:
-        raise HTTPException(status_code=500, detail="Backtest returned no results")
-    if isinstance(result, dict) and "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-    return _convert_for_json(result)
+        detail = f"{type(e).__name__}: {e}"
+        print(f"[BACKTEST ERROR] {detail}\n{_tb.format_exc()}", flush=True)
+        _backtest_jobs[job_id] = {"status": "error", "detail": detail}
+
+
+@app.post("/api/backtest")
+def api_run_backtest(req: BacktestRequest):
+    # Validate code first (fast)
+    from lib.factor_engine import validate_strategy_code
+    is_valid, err = validate_strategy_code(req.strategy_code)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=err)
+
+    job_id = str(_uuid.uuid4())[:8]
+    _backtest_jobs[job_id] = {"status": "running"}
+    t = threading.Thread(target=_run_backtest_job, args=(job_id, req), daemon=True)
+    t.start()
+    return {"job_id": job_id, "status": "running"}
+
+
+@app.get("/api/backtest/{job_id}")
+def api_backtest_status(job_id: str):
+    job = _backtest_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job["status"] == "done":
+        result = _backtest_jobs.pop(job_id)
+        return result
+    if job["status"] == "error":
+        detail = _backtest_jobs.pop(job_id)["detail"]
+        raise HTTPException(status_code=400, detail=detail)
+    return {"status": "running"}
 
 
 # ══════════════════════════════════════════════
