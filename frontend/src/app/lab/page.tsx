@@ -67,6 +67,18 @@ function parseWeights(code: string): Record<string, number> {
   return weights;
 }
 
+function updateWeightInCode(code: string, factor: string, newValue: number): string {
+  // Update a single weight value in WEIGHTS_LARGE block
+  const regex = new RegExp(
+    `(WEIGHTS_LARGE\\s*=\\s*\\{[^}]*["']${factor}["']\\s*:\\s*)([+-]?\\d+(?:\\.\\d+)?)`,
+    's'
+  );
+  if (regex.test(code)) {
+    return code.replace(regex, `$1${newValue.toFixed(2)}`);
+  }
+  return code;
+}
+
 // ─── Saved strategy type ───
 
 interface SavedStrategy {
@@ -540,9 +552,18 @@ export default function LabPage() {
                               }}
                             />
                           </div>
-                          <span className="text-xs font-num text-foreground w-12 text-right flex-shrink-0">
-                            {w.toFixed(1)}
-                          </span>
+                          <input
+                            type="number"
+                            step="0.05"
+                            value={w}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              if (!isNaN(v)) {
+                                setCode((prev) => updateWeightInCode(prev, factor, v));
+                              }
+                            }}
+                            className="w-14 text-xs font-num text-foreground text-right bg-transparent border border-border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary flex-shrink-0"
+                          />
                         </div>
                       );
                     })}
