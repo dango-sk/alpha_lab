@@ -146,10 +146,115 @@ _QUARTILE_MAP = {
 # 1. 범용 팩터 데이터 로딩 (전략과 무관)
 # ═══════════════════════════════════════════════════════
 
+# ── 프리페치 캐시 (백테스트 속도 최적화) ──
+_prefetch_cache: dict[str, pd.DataFrame] = {}
+
+
+def prefetch_all_data(conn):
+    """백테스트 전에 대형 테이블을 한 번에 메모리로 로드.
+    이후 load_factor_data가 DB 대신 이 캐시에서 읽음."""
+    global _prefetch_cache
+    import time
+    t0 = time.time()
+
+    _prefetch_cache["finance"] = read_sql("""
+        SELECT stock_code, fiscal_year, fiscal_quarter,
+               pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
+               net_debt, interest_debt, total_equity,
+               eps, bps, per, psr, ev_ebitda,
+               revenue, operating_income, net_income,
+               oi_margin, div_yield, pcf
+        FROM fnspace_finance WHERE fiscal_quarter = 'Annual'
+    """, conn)
+
+    _prefetch_cache["forward"] = read_sql("""
+        SELECT stock_code, trade_date, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
+               fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
+        FROM fnspace_forward
+    """, conn)
+
+    _prefetch_cache["price"] = read_sql("""
+        SELECT 'A' || stock_code as stock_code, trade_date, close, market_cap, trade_amount
+        FROM daily_price
+    """, conn)
+
+    _prefetch_cache["master"] = read_sql("""
+        SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ, snapshot_date
+        FROM fnspace_master
+    """, conn)
+
+    print(f"[PREFETCH] Loaded all data in {time.time()-t0:.1f}s", flush=True)
+
+
+def clear_prefetch_cache():
+    """메모리 해제."""
+    global _prefetch_cache
+    _prefetch_cache.clear()
+
+
+def _get_fin_for_year(max_year: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """프리페치 캐시에서 재무 데이터 추출."""
+    fin_all = _prefetch_cache["finance"]
+    # 종목별 max_year 이하 최신 연도
+    valid = fin_all[(fin_all["fiscal_year"] <= max_year) & fin_all["roe"].notna()].copy()
+    idx = valid.groupby("stock_code")["fiscal_year"].idxmax()
+    fin_df = valid.loc[idx].drop(columns=["fiscal_quarter"], errors="ignore")
+    prev_rev = fin_all[fin_all["fiscal_year"] == max_year - 1][["stock_code", "revenue"]].copy()
+    prev_rev = prev_rev.rename(columns={"revenue": "prev_revenue"})
+    return fin_df, prev_rev
+
+
+def _get_fwd_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """프리페치 캐시에서 포워드 데이터 추출."""
+    fwd_all = _prefetch_cache["forward"]
+    dates = fwd_all["trade_date"].unique()
+    dates_before = sorted(d for d in dates if d < calc_date)
+    fwd_date = dates_before[-1] if dates_before else (sorted(dates)[0] if len(dates) else None)
+    fwd_df = fwd_all[fwd_all["trade_date"] == fwd_date].drop(columns=["trade_date"]) if fwd_date else pd.DataFrame()
+
+    three_m_ago = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=90)).strftime("%Y-%m-%d")
+    dates_3m = sorted(d for d in dates if d <= three_m_ago)
+    fwd_date_3m = dates_3m[-1] if dates_3m else None
+    fwd_3m_df = pd.DataFrame()
+    if fwd_date_3m:
+        fwd_3m_df = fwd_all[fwd_all["trade_date"] == fwd_date_3m][["stock_code", "fwd_eps"]].copy()
+        fwd_3m_df = fwd_3m_df.rename(columns={"fwd_eps": "fwd_eps_3m"})
+    return fwd_df, fwd_3m_df
+
+
+def _get_price_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """프리페치 캐시에서 주가 데이터 추출."""
+    price_all = _prefetch_cache["price"]
+    dates = price_all["trade_date"].unique()
+    dates_before = sorted(d for d in dates if d < calc_date)
+    price_date = dates_before[-1] if dates_before else None
+    price_df = price_all[price_all["trade_date"] == price_date][["stock_code", "close", "market_cap", "trade_amount"]] if price_date else pd.DataFrame()
+
+    three_m_ago = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=90)).strftime("%Y-%m-%d")
+    dates_3m = sorted(d for d in dates if d <= three_m_ago)
+    price_date_3m = dates_3m[-1] if dates_3m else None
+    price_3m_df = pd.DataFrame()
+    if price_date_3m:
+        price_3m_df = price_all[price_all["trade_date"] == price_date_3m][["stock_code", "close"]].copy()
+        price_3m_df = price_3m_df.rename(columns={"close": "close_3m"})
+    return price_df, price_3m_df
+
+
+def _get_master_for_date(calc_date: str) -> pd.DataFrame:
+    """프리페치 캐시에서 마스터 데이터 추출."""
+    master_all = _prefetch_cache["master"]
+    snap_month = calc_date[:7]
+    snaps = sorted(master_all["snapshot_date"].unique())
+    valid_snaps = [s for s in snaps if s <= snap_month]
+    snap = valid_snaps[-1] if valid_snaps else (snaps[0] if snaps else snap_month)
+    return master_all[master_all["snapshot_date"] == snap][["stock_code", "stock_name", "market", "sec_cd_nm", "finacc_typ"]]
+
+
 def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     """
     DB에서 재무/주가/포워드 데이터를 로딩하고 모든 파생 지표를 계산한다.
     유니버스 설정에 따라 필터링이 달라지므로 (날짜, 유니버스) 조합으로 캐시.
+    프리페치 캐시가 있으면 DB 쿼리 대신 메모리에서 처리.
     """
     from config.settings import BACKTEST_CONFIG as _BC
     _universe = _BC.get("universe", "KOSPI")
@@ -160,97 +265,105 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     dt = datetime.strptime(calc_date, "%Y-%m-%d")
     max_usable_year = dt.year - 1 if dt.month >= 4 else dt.year - 2
 
-    # ─── 1. Trailing 재무 ───
-    fin_df = read_sql("""
-        SELECT ff.stock_code, ff.fiscal_year,
-               ff.pbr, ff.roe, ff.roic,
-               ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
-               ff.net_debt, ff.interest_debt, ff.total_equity,
-               ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
-               ff.revenue, ff.operating_income, ff.net_income,
-               ff.oi_margin, ff.div_yield, ff.pcf
-        FROM fnspace_finance ff
-        INNER JOIN (
-            SELECT stock_code, MAX(fiscal_year) as max_year
-            FROM fnspace_finance
-            WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
-            GROUP BY stock_code
-        ) latest ON ff.stock_code = latest.stock_code
-            AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
-    """, conn, params=(max_usable_year,))
+    # ── 프리페치 캐시가 있으면 메모리에서 처리 ──
+    if _prefetch_cache:
+        fin_df, prev_rev_df = _get_fin_for_year(max_usable_year)
+        if fin_df.empty:
+            return None
+        fwd_df, fwd_3m_df = _get_fwd_for_date(calc_date)
+        price_df, price_3m_df = _get_price_for_date(calc_date)
+        master_df = _get_master_for_date(calc_date)
+    else:
+        # ── 기존 DB 쿼리 로직 (프리페치 없을 때) ──
+        fin_df = read_sql("""
+            SELECT ff.stock_code, ff.fiscal_year,
+                   ff.pbr, ff.roe, ff.roic,
+                   ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                   ff.net_debt, ff.interest_debt, ff.total_equity,
+                   ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                   ff.revenue, ff.operating_income, ff.net_income,
+                   ff.oi_margin, ff.div_yield, ff.pcf
+            FROM fnspace_finance ff
+            INNER JOIN (
+                SELECT stock_code, MAX(fiscal_year) as max_year
+                FROM fnspace_finance
+                WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
+                GROUP BY stock_code
+            ) latest ON ff.stock_code = latest.stock_code
+                AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
+        """, conn, params=(max_usable_year,))
 
-    if fin_df.empty:
-        return None
+        if fin_df.empty:
+            return None
 
-    prev_rev_df = read_sql("""
-        SELECT stock_code, revenue as prev_revenue
-        FROM fnspace_finance WHERE fiscal_quarter='Annual' AND fiscal_year=?
-    """, conn, params=(max_usable_year - 1,))
+        prev_rev_df = read_sql("""
+            SELECT stock_code, revenue as prev_revenue
+            FROM fnspace_finance WHERE fiscal_quarter='Annual' AND fiscal_year=?
+        """, conn, params=(max_usable_year - 1,))
 
-    # ─── 2. Forward ───
-    fwd_date = conn.execute(
-        "SELECT MAX(trade_date) FROM fnspace_forward WHERE trade_date < ?",
-        (calc_date,),
-    ).fetchone()[0]
-    if not fwd_date:
         fwd_date = conn.execute(
-            "SELECT MIN(trade_date) FROM fnspace_forward"
+            "SELECT MAX(trade_date) FROM fnspace_forward WHERE trade_date < ?",
+            (calc_date,),
         ).fetchone()[0]
+        if not fwd_date:
+            fwd_date = conn.execute(
+                "SELECT MIN(trade_date) FROM fnspace_forward"
+            ).fetchone()[0]
 
-    fwd_df = pd.DataFrame()
-    if fwd_date:
-        fwd_df = read_sql("""
-            SELECT stock_code, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
-                   fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
-            FROM fnspace_forward WHERE trade_date = ?
-        """, conn, params=(fwd_date,))
+        fwd_df = pd.DataFrame()
+        if fwd_date:
+            fwd_df = read_sql("""
+                SELECT stock_code, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
+                       fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
+                FROM fnspace_forward WHERE trade_date = ?
+            """, conn, params=(fwd_date,))
 
-    # 3개월 전 Forward EPS
-    three_m_ago = (dt - timedelta(days=90)).strftime("%Y-%m-%d")
-    fwd_date_3m = conn.execute(
-        "SELECT MAX(trade_date) FROM fnspace_forward WHERE trade_date <= ?",
-        (three_m_ago,),
-    ).fetchone()[0]
-    fwd_3m_df = pd.DataFrame()
-    if fwd_date_3m:
-        fwd_3m_df = read_sql(
-            "SELECT stock_code, fwd_eps as fwd_eps_3m FROM fnspace_forward WHERE trade_date=?",
-            conn, params=(fwd_date_3m,),
+        # 3개월 전 Forward EPS
+        three_m_ago = (dt - timedelta(days=90)).strftime("%Y-%m-%d")
+        fwd_date_3m = conn.execute(
+            "SELECT MAX(trade_date) FROM fnspace_forward WHERE trade_date <= ?",
+            (three_m_ago,),
+        ).fetchone()[0]
+        fwd_3m_df = pd.DataFrame()
+        if fwd_date_3m:
+            fwd_3m_df = read_sql(
+                "SELECT stock_code, fwd_eps as fwd_eps_3m FROM fnspace_forward WHERE trade_date=?",
+                conn, params=(fwd_date_3m,),
+            )
+
+        # ─── 3. 주가 ───
+        price_date = conn.execute(
+            "SELECT MAX(trade_date) FROM daily_price WHERE trade_date < ?",
+            (calc_date,),
+        ).fetchone()[0]
+        price_df = read_sql("""
+            SELECT 'A' || dp.stock_code as stock_code, dp.close, dp.market_cap, dp.trade_amount
+            FROM daily_price dp WHERE dp.trade_date = ?
+        """, conn, params=(price_date,))
+
+        # 3개월 전 주가
+        price_date_3m = conn.execute(
+            "SELECT MAX(trade_date) FROM daily_price WHERE trade_date <= ?",
+            (three_m_ago,),
+        ).fetchone()[0]
+        price_3m_df = pd.DataFrame()
+        if price_date_3m:
+            price_3m_df = read_sql(
+                "SELECT 'A'||stock_code as stock_code, close as close_3m FROM daily_price WHERE trade_date=?",
+                conn, params=(price_date_3m,),
+            )
+
+        # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
+        _snap_month = calc_date[:7]
+        _snap_date = conn.execute(
+            "SELECT MAX(snapshot_date) FROM fnspace_master WHERE snapshot_date <= ?",
+            (_snap_month,),
+        ).fetchone()[0] or _snap_month
+        master_df = read_sql(
+            "SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ "
+            "FROM fnspace_master WHERE snapshot_date = ?",
+            conn, params=(_snap_date,),
         )
-
-    # ─── 3. 주가 ───
-    price_date = conn.execute(
-        "SELECT MAX(trade_date) FROM daily_price WHERE trade_date < ?",
-        (calc_date,),
-    ).fetchone()[0]
-    price_df = read_sql("""
-        SELECT 'A' || dp.stock_code as stock_code, dp.close, dp.market_cap, dp.trade_amount
-        FROM daily_price dp WHERE dp.trade_date = ?
-    """, conn, params=(price_date,))
-
-    # 3개월 전 주가
-    price_date_3m = conn.execute(
-        "SELECT MAX(trade_date) FROM daily_price WHERE trade_date <= ?",
-        (three_m_ago,),
-    ).fetchone()[0]
-    price_3m_df = pd.DataFrame()
-    if price_date_3m:
-        price_3m_df = read_sql(
-            "SELECT 'A'||stock_code as stock_code, close as close_3m FROM daily_price WHERE trade_date=?",
-            conn, params=(price_date_3m,),
-        )
-
-    # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
-    _snap_month = calc_date[:7]  # "2026-03-03" → "2026-03"
-    _snap_date = conn.execute(
-        "SELECT MAX(snapshot_date) FROM fnspace_master WHERE snapshot_date <= ?",
-        (_snap_month,),
-    ).fetchone()[0] or _snap_month
-    master_df = read_sql(
-        "SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ "
-        "FROM fnspace_master WHERE snapshot_date = ?",
-        conn, params=(_snap_date,),
-    )
 
     # ─── 병합 ───
     merged = fin_df.merge(price_df, on="stock_code", how="inner")

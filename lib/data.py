@@ -1134,6 +1134,7 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         run_backtest, calc_all_benchmarks,
         get_monthly_rebalance_dates, get_db, _numpy_to_python,
     )
+    from lib.factor_engine import prefetch_all_data, clear_prefetch_cache
 
     # 1. 검증
     is_valid, err = validate_strategy_code(strategy_code)
@@ -1178,6 +1179,11 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         BACKTEST_CONFIG["rebal_type"] = _rebal
         if universe:
             BACKTEST_CONFIG["universe"] = universe
+
+        # 프리페치: 전체 데이터를 한 번에 메모리로 로드
+        _pf_conn = get_db()
+        prefetch_all_data(_pf_conn)
+        _pf_conn.close()
 
         result = run_backtest(
             "custom",
@@ -1265,6 +1271,7 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
 
         return _numpy_to_python(results)
     finally:
+        clear_prefetch_cache()
         BACKTEST_CONFIG["top_n_stocks"] = orig["top_n_stocks"]
         BACKTEST_CONFIG["transaction_cost_bp"] = orig["transaction_cost_bp"]
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]
