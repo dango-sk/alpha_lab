@@ -67,6 +67,7 @@ export default function PlotlyChart({
           height,
           xaxis: { ...darkLayout.xaxis, ...layout?.xaxis },
           yaxis: { ...darkLayout.yaxis, ...layout?.yaxis },
+          hoverlabel: { ...darkLayout.hoverlabel, ...layout?.hoverlabel },
         }}
         config={{ ...defaultConfig, ...config }}
         useResizeHandler
