@@ -39,9 +39,9 @@ const darkLayout: Partial<Plotly.Layout> = {
     y: -0.15,
   },
   hoverlabel: {
-    bgcolor: '#1a1a24',
-    bordercolor: 'rgba(255,255,255,0.1)',
-    font: { color: '#e4e4e7', size: 11 },
+    bgcolor: '#27272a',
+    bordercolor: 'rgba(255,255,255,0.25)',
+    font: { color: '#ffffff', size: 12 },
   },
 };
 

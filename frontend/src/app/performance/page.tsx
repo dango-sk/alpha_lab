@@ -738,6 +738,14 @@ export default function PerformancePage() {
           hovertemplate: `%{x}<br>${regime}<extra></extra>`,
         }));
 
+        // Manual bear periods with event labels
+        const manualBears: Array<{ start: string; end: string; label: string }> = [
+          { start: '2018-01-01', end: '2019-01-31', label: '미중 무역전쟁' },
+          { start: '2020-01-01', end: '2020-03-31', label: '코로나 쇼크' },
+          { start: '2021-06-01', end: '2022-10-31', label: '글로벌 금리 인상' },
+          { start: '2024-07-01', end: '2024-10-31', label: 'AI 랠리 조정' },
+        ];
+
         const regimeTimelineLayout: Partial<Plotly.Layout> = {
           title: { text: '시장 국면 (Regime) 분류', font: { size: 13, color: '#e4e4e7' } },
           barmode: 'stack' as const,
@@ -745,6 +753,29 @@ export default function PerformancePage() {
           yaxis: { showticklabels: false, fixedrange: true },
           xaxis: { tickfont: { size: 10 } },
           legend: { font: { size: 10, color: '#a1a1aa' }, bgcolor: 'transparent', orientation: 'h', y: -0.25 },
+          shapes: manualBears.map((b) => ({
+            type: 'rect' as const,
+            xref: 'x' as const,
+            yref: 'paper' as const,
+            x0: b.start,
+            x1: b.end,
+            y0: 0,
+            y1: 1,
+            fillcolor: 'rgba(239, 68, 68, 0.15)',
+            line: { color: 'rgba(239, 68, 68, 0.4)', width: 1, dash: 'dot' as const },
+          })),
+          annotations: manualBears.map((b) => ({
+            x: b.start,
+            y: 1,
+            xref: 'x' as const,
+            yref: 'paper' as const,
+            text: b.label,
+            showarrow: false,
+            font: { size: 9, color: '#fca5a5' },
+            xanchor: 'left' as const,
+            yanchor: 'bottom' as const,
+            yshift: 2,
+          })),
         };
 
         // ── Performance table rows ──
