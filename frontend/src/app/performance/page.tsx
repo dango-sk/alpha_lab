@@ -157,6 +157,7 @@ export default function PerformancePage() {
   const [results, setResults] = useState<Record<string, StrategyResult>>({});
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
 
   // Load config first to get default dates
   useEffect(() => {
@@ -185,14 +186,22 @@ export default function PerformancePage() {
   useEffect(() => {
     setLoading(true);
     getResults({ start: startDate, end: endDate, universe, rebal_type: rebalType })
-      .then((res) => setResults(res))
+      .then((res) => {
+        setResults(res);
+        // Auto-select all strategies on first load
+        setSelectedStrategies((prev) => prev.length > 0 ? prev.filter((k) => res[k]) : Object.keys(res));
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [universe, rebalType, startDate, endDate]);
 
+  // All keys available for selection
+  const allStrategyKeys = useMemo(() => Object.keys(results), [results]);
+
+  // Filtered by selection
   const strategyKeys = useMemo(
-    () => Object.keys(results),
-    [results]
+    () => selectedStrategies.filter((k) => results[k]),
+    [selectedStrategies, results]
   );
 
   const labels = config?.strategy_labels ?? {};
@@ -532,6 +541,39 @@ export default function PerformancePage() {
           rebalType={rebalType}
           onRebalTypeChange={setRebalType}
         />
+      </div>
+
+      {/* Strategy selector */}
+      <div className="space-y-2">
+        <label className="text-xs text-muted font-medium">전략 선택</label>
+        <div className="flex flex-wrap gap-2">
+          {allStrategyKeys.map((key) => {
+            const selected = selectedStrategies.includes(key);
+            const lbl = labels[key] || key;
+            const color = colors[key] || '#6366f1';
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  if (selected) {
+                    setSelectedStrategies((prev) => prev.filter((k) => k !== key));
+                  } else {
+                    setSelectedStrategies((prev) => [...prev, key]);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
+                style={{
+                  backgroundColor: selected ? color + '20' : 'transparent',
+                  borderColor: selected ? color : 'var(--color-border)',
+                  color: selected ? color : 'var(--color-muted)',
+                }}
+              >
+                {lbl}
+                {selected && <span className="ml-1 opacity-60">&times;</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {bc && (

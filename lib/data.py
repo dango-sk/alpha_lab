@@ -1086,8 +1086,15 @@ def save_strategy(
     if results is not None:
         from step7_backtest import _numpy_to_python
         clean = _numpy_to_python(results)
-        holdings_json = clean.pop("holdings", None)
-        results_json = clean
+        # Custom backtest results come as {"KOSPI": {...}, "CUSTOM": {...}}
+        # Extract the CUSTOM sub-result for storage
+        if "CUSTOM" in clean and "rebalance_dates" not in clean:
+            custom = clean["CUSTOM"]
+            holdings_json = custom.pop("holdings", None)
+            results_json = custom
+        else:
+            holdings_json = clean.pop("holdings", None)
+            results_json = clean
 
     try:
         conn.execute("""

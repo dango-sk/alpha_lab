@@ -91,9 +91,10 @@ export default function StatisticsPage() {
   const labels = config.strategy_labels ?? {};
   const colors = config.strategy_colors ?? {};
 
-  // Strategy keys from IS results — exclude custom strategies (only base strategies)
-  const baseKeys = new Set<string>(config.all_keys?.filter((k: string) => k === 'A0') ?? ['A0']);
-  const strategyKeys = Object.keys(data.is_oos?.is_results ?? {}).filter((k) => baseKeys.has(k));
+  // All strategy keys available in robustness data
+  const allStrategyKeys = Object.keys(data.is_oos?.is_results ?? {});
+  const [selectedStrategies, setSelectedStrategies] = useState<string[]>(allStrategyKeys);
+  const strategyKeys = allStrategyKeys.filter((k) => selectedStrategies.includes(k));
   const label = (k: string) => labels[k] || k;
 
   // ──────── IS vs OOS Section ────────
@@ -147,7 +148,7 @@ export default function StatisticsPage() {
 
   // ──────── Bootstrap Significance Section ────────
   const bmSig = data.stat?.bm_significance ?? {};
-  const sigKeys = Object.keys(bmSig).filter((k) => baseKeys.has(k));
+  const sigKeys = Object.keys(bmSig);
 
   const sigTableData = sigKeys.map((k) => {
     const s = bmSig[k];
@@ -193,7 +194,7 @@ export default function StatisticsPage() {
 
   // ──────── Rolling Section ────────
   const rollingData = data.rolling ?? {};
-  const rollingKeys = Object.keys(rollingData).filter((k) => baseKeys.has(k));
+  const rollingKeys = Object.keys(rollingData);
 
   const rollingChartTraces: Plotly.Data[] = rollingKeys.map((k) => {
     const rd = rollingData[k].rolling_data ?? [];
@@ -247,6 +248,39 @@ export default function StatisticsPage() {
           rebalType={rebalType}
           onRebalTypeChange={setRebalType}
         />
+      </div>
+
+      {/* Strategy selector */}
+      <div className="space-y-2">
+        <label className="text-xs text-muted font-medium">전략 선택</label>
+        <div className="flex flex-wrap gap-2">
+          {allStrategyKeys.map((key) => {
+            const selected = selectedStrategies.includes(key);
+            const lbl = label(key);
+            const color = colors[key] || '#6366f1';
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  if (selected) {
+                    setSelectedStrategies((prev) => prev.filter((k) => k !== key));
+                  } else {
+                    setSelectedStrategies((prev) => [...prev, key]);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
+                style={{
+                  backgroundColor: selected ? color + '20' : 'transparent',
+                  borderColor: selected ? color : 'var(--color-border)',
+                  color: selected ? color : 'var(--color-muted)',
+                }}
+              >
+                {lbl}
+                {selected && <span className="ml-1 opacity-60">&times;</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ─── IS vs OOS Section ─── */}
