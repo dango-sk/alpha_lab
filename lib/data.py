@@ -1435,8 +1435,6 @@ def compute_regime_analysis(
     summary = {}
 
     for key, val in results.items():
-        if key == "KOSPI":
-            continue
         if not isinstance(val, dict):
             continue
         strat_dates = val.get("rebalance_dates", [])

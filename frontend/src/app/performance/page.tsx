@@ -160,7 +160,7 @@ export default function PerformancePage() {
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
   const [regimeData, setRegimeData] = useState<{
     regimes: Record<string, string>;
-    summary: Record<string, Record<string, { avg_monthly_return: number; cumulative_return: number; sharpe: number; win_rate: number; months: number; excess_vs_bm: number }>>;
+    summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>;
     regime_counts: Record<string, number>;
   } | null>(null);
 
@@ -789,12 +789,12 @@ export default function PerformancePage() {
             regimePerfRows.push({
               strategy: labels[key] || key,
               regime,
-              months: m.months,
+              count: m.count,
               avg_monthly_return: m.avg_monthly_return,
-              cumulative_return: m.cumulative_return,
+              total_return: m.total_return,
               sharpe: m.sharpe,
               win_rate: m.win_rate,
-              excess_vs_bm: m.excess_vs_bm,
+              avg_excess: m.avg_excess,
             });
           }
         }
@@ -812,7 +812,7 @@ export default function PerformancePage() {
               return 'text-gray-400';
             },
           },
-          { key: 'months', label: '개월수', align: 'right' as const, mono: true, format: (v: unknown) => fmtNum(v as number, 0) },
+          { key: 'count', label: '개월수', align: 'right' as const, mono: true, format: (v: unknown) => fmtNum(v as number, 0) },
           {
             key: 'avg_monthly_return',
             label: '평균월수익률',
@@ -822,7 +822,7 @@ export default function PerformancePage() {
             colorFn: (v: unknown) => valueColor(v as number),
           },
           {
-            key: 'cumulative_return',
+            key: 'total_return',
             label: '누적수익률',
             align: 'right' as const,
             mono: true,
@@ -845,7 +845,7 @@ export default function PerformancePage() {
             colorFn: (v: unknown) => valueColor((v as number) - 0.5),
           },
           {
-            key: 'excess_vs_bm',
+            key: 'avg_excess',
             label: 'BM 대비 초과',
             align: 'right' as const,
             mono: true,
