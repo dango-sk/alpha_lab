@@ -378,12 +378,14 @@ def api_robustness(
     is_end: Optional[str] = None,
     oos_start: Optional[str] = None,
     universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
 ):
-    cache_key = f"robustness:{start}:{end}:{is_end}:{oos_start}:{universe}"
+    cache_key = f"robustness:{start}:{end}:{is_end}:{oos_start}:{universe}:{rebal_type}"
 
     def _load():
         is_oos, stat, rolling = load_all_robustness_results(
             start, end, is_end, oos_start, universe=universe,
+            rebal_type=rebal_type,
         )
         # Remove boot_means (large array, not needed in API)
         for sig in stat.get("bm_significance", {}).values():

@@ -52,11 +52,11 @@ _REMOVED_STRATEGIES = {"A", "A+M", "VM", "ATT2"}
 
 # 커스텀 전략용 팔레트
 _CUSTOM_PALETTE = [
-    "#FF6B6B",  # 코랄
-    "#4ECDC4",  # 민트
-    "#F7DC6F",  # 옐로
-    "#BB8FCE",  # 퍼플
     "#F0B27A",  # 오렌지
+    "#4ECDC4",  # 민트
+    "#BB8FCE",  # 퍼플
+    "#F7DC6F",  # 옐로
+    "#7FB3D8",  # 스카이블루
     "#85C1E9",  # 스카이블루
 ]
 
@@ -393,7 +393,8 @@ def load_all_results(start: str = None, end: str = None,
 
 @st.cache_data(show_spinner=False)
 def load_robustness_results(start: str = None, end: str = None,
-                            is_end: str = None, oos_start: str = None):
+                            is_end: str = None, oos_start: str = None,
+                            rebal_type: str = None):
     """강건성 검증 결과. 기간 지정 시 백테스트 결과에서 실시간 계산."""
     default_start = BACKTEST_CONFIG["start"]
     default_end = BACKTEST_CONFIG["end"]
@@ -401,9 +402,10 @@ def load_robustness_results(start: str = None, end: str = None,
     use_end = end or default_end
     use_is_end = is_end or BACKTEST_CONFIG.get("insample_end", "2024-06-30")
     use_oos_start = oos_start or BACKTEST_CONFIG.get("oos_start", "2024-07-01")
+    use_rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
 
-    # 기본 기간이면 캐시 사용 (PG 우선 → JSON fallback)
-    if use_start == default_start and use_end == default_end:
+    # 기본 기간+기본 rebal_type이면 캐시 사용
+    if use_start == default_start and use_end == default_end and use_rebal == "monthly":
         # 1) PG
         try:
             conn = _get_conn_raw()
@@ -428,8 +430,77 @@ def load_robustness_results(start: str = None, end: str = None,
                     sig["boot_means"] = np.array(sig["boot_means"])
             return data["is_oos"], data["stat"], data["rolling"]
 
-    # 커스텀 기간 → 백테스트 결과에서 실시간 계산
-    return _compute_robustness(use_start, use_end, use_is_end, use_oos_start)
+    # 커스텀 기간/rebal_type → 캐시된 백테스트 결과에서 IS/OOS 슬라이싱
+    return _compute_robustness_from_cache(use_start, use_end, use_is_end, use_oos_start, use_rebal)
+
+
+def _compute_robustness_from_cache(start, end, is_end, oos_start, rebal_type="monthly"):
+    """캐시된 백테스트 결과를 IS/OOS로 슬라이싱해서 강건성 계산 (빠름)."""
+    from scipy import stats as sp_stats
+
+    # 전체 기간 백테스트 결과 로드
+    full_results = load_backtest_results(start, end, rebal_type=rebal_type)
+    is_results = _slice_period_multi(full_results, start, is_end) if full_results else {}
+    oos_results = _slice_period_multi(full_results, oos_start, end) if full_results else {}
+
+    # IS/OOS 데이터 구성
+    is_oos_data = {"is_results": {}, "oos_results": {}, "benchmarks": {}}
+    for key, r in is_results.items():
+        if isinstance(r, dict) and "cagr" in r:
+            is_oos_data["is_results"][key] = r
+    for key, r in oos_results.items():
+        if isinstance(r, dict) and "cagr" in r:
+            is_oos_data["oos_results"][key] = r
+
+    # 통계 데이터
+    stat_data = {"full_results": {}, "bm_significance": {}}
+    for key, r in full_results.items():
+        if isinstance(r, dict) and "cagr" in r:
+            stat_data["full_results"][key] = r
+
+    # BM 대비 유의성 (부트스트랩)
+    baseline_key = next((k for k in ["A0"] if k in full_results), None)
+    bm_key = next((k for k in ["KOSPI", "BM"] if k in full_results), None)
+    if baseline_key and bm_key:
+        bl = full_results[baseline_key]
+        bm = full_results[bm_key]
+        bl_mr = np.array(bl.get("monthly_returns", []))
+        bm_mr = np.array(bm.get("monthly_returns", []))
+        if len(bl_mr) > 0 and len(bm_mr) > 0:
+            min_len = min(len(bl_mr), len(bm_mr))
+            excess = bl_mr[:min_len] - bm_mr[:min_len]
+            n_boot = 5000
+            boot_means = np.array([
+                np.mean(np.random.choice(excess, size=len(excess), replace=True))
+                for _ in range(n_boot)
+            ])
+            stat_data["bm_significance"][baseline_key] = {
+                "mean_excess": float(np.mean(excess)),
+                "p_value": float((boot_means < 0).sum() / n_boot),
+                "ci_lower": float(np.percentile(boot_means, 2.5)),
+                "ci_upper": float(np.percentile(boot_means, 97.5)),
+            }
+
+    # 롤링 윈도우
+    rolling_all = {}
+    if baseline_key:
+        bl = full_results[baseline_key]
+        bl_mr = np.array(bl.get("monthly_returns", []))
+        bm_mr = np.array(full_results.get(bm_key, {}).get("monthly_returns", [])) if bm_key else np.array([])
+        min_len = min(len(bl_mr), len(bm_mr)) if len(bm_mr) > 0 else len(bl_mr)
+        if min_len >= 24:
+            dates = bl.get("rebalance_dates", [])[1:min_len+1]
+            rolling_excess = []
+            for i in range(min_len - 23):
+                window = bl_mr[i:i+24] - bm_mr[i:i+24] if len(bm_mr) >= min_len else bl_mr[i:i+24]
+                cum = float(np.prod(1 + window) - 1)
+                rolling_excess.append(cum)
+            rolling_all[baseline_key] = {
+                "dates": dates[23:] if len(dates) > 23 else [],
+                "rolling_24m_excess": rolling_excess,
+            }
+
+    return is_oos_data, stat_data, rolling_all
 
 
 def _compute_robustness(start, end, is_end, oos_start):
@@ -573,10 +644,10 @@ def _compute_robustness(start, end, is_end, oos_start):
 
 def load_all_robustness_results(start: str = None, end: str = None,
                                  is_end: str = None, oos_start: str = None,
-                                 universe: str = None):
+                                 universe: str = None, rebal_type: str = None):
     """기본 전략 강건성 + 커스텀 전략 강건성 (저장된 백테스트 결과 기반)."""
     is_oos_data, stat_data, rolling_all = load_robustness_results(
-        start, end, is_end, oos_start,
+        start, end, is_end, oos_start, rebal_type=rebal_type,
     )
 
     # 캐시 결과 변경 방지를 위한 복사
@@ -596,7 +667,8 @@ def load_all_robustness_results(start: str = None, end: str = None,
     use_end = end or BACKTEST_CONFIG["end"]
     use_oos_start = oos_start or BACKTEST_CONFIG.get("oos_start", "2024-07-01")
 
-    base_results = load_backtest_results(use_start, use_end)
+    _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    base_results = load_backtest_results(use_start, use_end, rebal_type=_rebal)
     baseline_key = next((k for k in ["A0"] if k in base_results), None)
     if not baseline_key:
         return is_oos_data, stat_data, rolling_all
