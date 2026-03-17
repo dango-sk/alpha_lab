@@ -1162,10 +1162,10 @@ def list_strategies(universe: str = None, rebal_type: str = None) -> list:
 
         where = " AND ".join(conditions)
         rows = conn.execute(f"""
-            SELECT name, description, created_at, results_json
+            SELECT DISTINCT ON (name) name, description, created_at, results_json
             FROM backtest_cache
             WHERE {where}
-            ORDER BY updated_at DESC
+            ORDER BY name, updated_at DESC
         """, tuple(params)).fetchall()
 
         items = []
