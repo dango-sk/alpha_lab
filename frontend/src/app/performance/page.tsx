@@ -478,13 +478,6 @@ export default function PerformancePage() {
     }
   }, [strategyKeys, selectedStrategy]);
 
-  if (loading || !config) {
-    return <LoadingState />;
-  }
-
-  const primaryKey = strategyKeys[0] || '';
-  const primary = results[primaryKey];
-
   // ─── Comparison table data ───
   const comparisonData = useMemo(() => strategyKeys.map((key) => {
     const r = results[key];
@@ -711,6 +704,13 @@ export default function PerformancePage() {
         v !== null && v !== undefined ? fmtNum(v as number) : '-',
     },
   ];
+
+  if (loading || !config) {
+    return <LoadingState />;
+  }
+
+  const primaryKey = strategyKeys[0] || '';
+  const primary = results[primaryKey];
 
   return (
     <div className="space-y-6 animate-fade-in">
