@@ -786,6 +786,7 @@ export default function PerformancePage() {
           for (const regime of REGIME_ORDER) {
             const m = stratSummary[regime];
             if (!m) continue;
+            const isBm = key === 'KOSPI';
             regimePerfRows.push({
               strategy: labels[key] || key,
               regime,
@@ -793,8 +794,8 @@ export default function PerformancePage() {
               avg_monthly_return: m.avg_monthly_return,
               total_return: m.total_return,
               sharpe: m.sharpe,
-              win_rate: m.win_rate,
-              avg_excess: m.avg_excess,
+              win_rate: isBm ? null : m.win_rate,
+              avg_excess: isBm ? null : m.avg_excess,
             });
           }
         }
@@ -841,16 +842,16 @@ export default function PerformancePage() {
             label: '승률',
             align: 'right' as const,
             mono: true,
-            format: (v: unknown) => fmtPct(v as number),
-            colorFn: (v: unknown) => valueColor((v as number) - 0.5),
+            format: (v: unknown) => v == null ? '-' : fmtPct(v as number),
+            colorFn: (v: unknown) => v == null ? 'text-muted' : valueColor((v as number) - 0.5),
           },
           {
             key: 'avg_excess',
             label: 'BM 대비 초과',
             align: 'right' as const,
             mono: true,
-            format: (v: unknown) => fmtPct(v as number),
-            colorFn: (v: unknown) => valueColor(v as number),
+            format: (v: unknown) => v == null ? '-' : fmtPct(v as number),
+            colorFn: (v: unknown) => v == null ? 'text-muted' : valueColor(v as number),
           },
         ];
 
