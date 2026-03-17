@@ -98,7 +98,7 @@ export async function runBacktest(code: string, params: Record<string, unknown>)
   });
 
   // Poll for result
-  const maxWait = 300_000; // 5 min
+  const maxWait = 900_000; // 15 min
   const interval = 2_000;
   const start = Date.now();
 
