@@ -7,7 +7,16 @@ __pycache__
 data/
 research/
 analysis/
-scripts/
+scripts/step0_*
+scripts/step1_collect*
+scripts/step2_collect*
+scripts/step3_fill*
+scripts/step4_*
+scripts/step4b_*
+scripts/step5_*
+scripts/step6_build*
+scripts/step7_collect*
+scripts/migrate_*
 *.db
 *.log
 pipeline_cron*

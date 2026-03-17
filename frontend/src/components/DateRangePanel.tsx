@@ -11,6 +11,7 @@ interface DateRangePanelProps {
   onStartDateChange: (v: string) => void;
   onEndDateChange: (v: string) => void;
   onIsOosSplitChange: (v: string) => void;
+  onApply?: () => void;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ export default function DateRangePanel({
   onStartDateChange,
   onEndDateChange,
   onIsOosSplitChange,
+  onApply,
   className,
 }: DateRangePanelProps) {
   const [open, setOpen] = useState(false);
@@ -66,6 +68,16 @@ export default function DateRangePanel({
               />
             </div>
           </div>
+          {onApply && (
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={onApply}
+                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-primary text-background hover:opacity-90 transition-opacity"
+              >
+                적용
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

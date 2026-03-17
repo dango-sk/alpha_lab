@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getResults, getConfig } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
@@ -147,9 +147,13 @@ function getAllMonths(results: Record<string, StrategyResult>): string[] {
 export default function PerformancePage() {
   const [universe, setUniverse] = useState<'KOSPI' | 'KOSPI+KOSDAQ'>('KOSPI');
   const [rebalType, setRebalType] = useState<'monthly' | 'biweekly'>('monthly');
+  // Applied dates (trigger API) vs draft dates (user editing)
   const [startDate, setStartDate] = useState('2018-04-01');
   const [endDate, setEndDate] = useState('2026-04-01');
   const [isOosSplit, setIsOosSplit] = useState('2024-07-01');
+  const [draftStart, setDraftStart] = useState('2018-04-01');
+  const [draftEnd, setDraftEnd] = useState('2026-04-01');
+  const [draftSplit, setDraftSplit] = useState('2024-07-01');
   const [results, setResults] = useState<Record<string, StrategyResult>>({});
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
@@ -160,12 +164,23 @@ export default function PerformancePage() {
       setConfig(cfg);
       const bc = cfg?.backtest_config;
       if (bc) {
-        setStartDate(bc.start || '2018-04-01');
-        setEndDate(bc.end || '2026-04-01');
-        setIsOosSplit(bc.oos_start || '2024-07-01');
+        const s = bc.start || '2018-04-01';
+        const e = bc.end || '2026-04-01';
+        const sp = bc.oos_start || '2024-07-01';
+        setStartDate(s); setDraftStart(s);
+        setEndDate(e); setDraftEnd(e);
+        setIsOosSplit(sp); setDraftSplit(sp);
       }
     }).catch(console.error);
   }, []);
+
+  const applyDates = useCallback(() => {
+    if (draftStart.length === 10 && draftEnd.length === 10) {
+      setStartDate(draftStart);
+      setEndDate(draftEnd);
+      setIsOosSplit(draftSplit);
+    }
+  }, [draftStart, draftEnd, draftSplit]);
 
   useEffect(() => {
     setLoading(true);
@@ -501,12 +516,13 @@ export default function PerformancePage() {
       <SectionHeader title="성과 비교" subtitle="전략별 누적 수익률 및 핵심 지표" />
 
       <DateRangePanel
-        startDate={startDate}
-        endDate={endDate}
-        isOosSplit={isOosSplit}
-        onStartDateChange={setStartDate}
-        onEndDateChange={setEndDate}
-        onIsOosSplitChange={setIsOosSplit}
+        startDate={draftStart}
+        endDate={draftEnd}
+        isOosSplit={draftSplit}
+        onStartDateChange={setDraftStart}
+        onEndDateChange={setDraftEnd}
+        onIsOosSplitChange={setDraftSplit}
+        onApply={applyDates}
       />
 
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -628,8 +644,8 @@ export default function PerformancePage() {
             data={rollingExcessTraces}
             layout={{
               height: 350,
-              margin: { l: 50, r: 20, t: 10, b: 40 },
-              xaxis: { tickfont: { size: 10 }, dtick: 6 },
+              margin: { l: 50, r: 20, t: 10, b: 50 },
+              xaxis: { tickfont: { size: 10 }, dtick: 12, tickangle: 0 },
               yaxis: {
                 ticksuffix: '%p',
                 tickfont: { size: 10 },
