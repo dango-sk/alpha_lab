@@ -478,7 +478,7 @@ export default function PerformancePage() {
     }
   }, [strategyKeys, selectedStrategy]);
 
-  if (loading) {
+  if (loading || !config) {
     return <LoadingState />;
   }
 

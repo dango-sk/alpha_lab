@@ -409,7 +409,7 @@ export default function PortfolioPage() {
     },
   ];
 
-  if (loading) return <LoadingState />;
+  if (loading || !config) return <LoadingState />;
 
   return (
     <div className="space-y-6 animate-fade-in">

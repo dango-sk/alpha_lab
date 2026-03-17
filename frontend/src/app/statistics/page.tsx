@@ -79,7 +79,7 @@ export default function StatisticsPage() {
       .finally(() => setLoading(false));
   }, [universe, rebalType]);
 
-  if (loading) return <LoadingState message="강건성 데이터를 불러오는 중..." />;
+  if (loading || !config) return <LoadingState message="강건성 데이터를 불러오는 중..." />;
   if (error) {
     return (
       <div className="flex items-center justify-center py-20 text-accent-red text-sm">
