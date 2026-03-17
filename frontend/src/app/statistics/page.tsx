@@ -89,7 +89,8 @@ export default function StatisticsPage() {
   }
   if (!data || !config) return null;
 
-  const labels: Record<string, string> = { ...(config.strategy_labels ?? {}), KOSPI: universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200' };
+  const bmName = universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200';
+  const labels: Record<string, string> = { ...(config.strategy_labels ?? {}), KOSPI: `벤치마크 (${bmName})` };
   const colors = config.strategy_colors ?? {};
 
   // All strategy keys available in robustness data

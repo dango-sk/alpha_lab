@@ -216,7 +216,8 @@ export default function PerformancePage() {
     [selectedStrategies, results]
   );
 
-  const labels: Record<string, string> = { ...(config?.strategy_labels ?? {}), KOSPI: universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200' };
+  const bmName = universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200';
+  const labels: Record<string, string> = { ...(config?.strategy_labels ?? {}), KOSPI: `벤치마크 (${bmName})` };
   const colors = config?.strategy_colors ?? {};
   const bc = config?.backtest_config;
 
@@ -692,7 +693,7 @@ export default function PerformancePage() {
       {rollingExcessTraces.length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-muted mb-2">
-            롤링 12개월 누적 초과수익률 (vs KOSPI)
+            롤링 12개월 누적 초과수익률 (vs 벤치마크)
           </h3>
           <PlotlyChart
             data={rollingExcessTraces}
