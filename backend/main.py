@@ -239,10 +239,13 @@ SCORE_MAP = {
 }  # WEIGHTS_LARGE의 모든 키에 대응하는 스코어 컬럼
 
 SCORING_RULES = {
+    # rule1 = 낮을수록 좋음 (밸류: PER, PBR, EV/EBITDA 등)
+    # rule2 = 높을수록 좋음 (성장, 모멘텀, 회귀매력도, 유동비율 등)
+    # rule3 = 낮을수록 좋음 (가격모멘텀 역방향, 부채비율)
     "t_per": "rule1", "pbr": "rule1", "t_ev_ebitda": "rule1",
     "pbr_roe_attractiveness": "rule2", "fper_epsg_attractiveness": "rule2",
     "f_eps_m": "rule2",
-}  # 각 팩터의 점수 방향
+}
 
 PARAMS = {"top_n": 30, "tx_cost_bp": 30, "weight_cap_pct": 10}
 
@@ -255,6 +258,10 @@ QUALITY_FILTER = {
 ```
 
 중요: WEIGHTS_LARGE 합계는 0.95~1.05 사이여야 하며, 모든 WEIGHTS 키는 SCORE_MAP에 있어야 합니다.
+중요: SCORING_RULES 안에 반드시 rule 방향을 설명하는 주석을 포함하세요:
+  # rule1 = 낮을수록 좋음 (밸류 멀티플: PER, PBR, EV/EBITDA, PCF 등)
+  # rule2 = 높을수록 좋음 (성장률, 모멘텀, 회귀매력도, 유동비율 등)
+  # rule3 = 낮을수록 좋음 (가격모멘텀 역방향, 부채비율 등)
 """
 
 

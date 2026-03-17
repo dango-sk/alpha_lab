@@ -91,8 +91,9 @@ export default function StatisticsPage() {
   const labels = config.strategy_labels ?? {};
   const colors = config.strategy_colors ?? {};
 
-  // Strategy keys from IS results
-  const strategyKeys = Object.keys(data.is_oos?.is_results ?? {});
+  // Strategy keys from IS results — exclude custom strategies (only base strategies)
+  const baseKeys = new Set<string>(config.all_keys?.filter((k: string) => k === 'A0') ?? ['A0']);
+  const strategyKeys = Object.keys(data.is_oos?.is_results ?? {}).filter((k) => baseKeys.has(k));
   const label = (k: string) => labels[k] || k;
 
   // ──────── IS vs OOS Section ────────
@@ -146,7 +147,7 @@ export default function StatisticsPage() {
 
   // ──────── Bootstrap Significance Section ────────
   const bmSig = data.stat?.bm_significance ?? {};
-  const sigKeys = Object.keys(bmSig);
+  const sigKeys = Object.keys(bmSig).filter((k) => baseKeys.has(k));
 
   const sigTableData = sigKeys.map((k) => {
     const s = bmSig[k];
@@ -192,7 +193,7 @@ export default function StatisticsPage() {
 
   // ──────── Rolling Section ────────
   const rollingData = data.rolling ?? {};
-  const rollingKeys = Object.keys(rollingData);
+  const rollingKeys = Object.keys(rollingData).filter((k) => baseKeys.has(k));
 
   const rollingChartTraces: Plotly.Data[] = rollingKeys.map((k) => {
     const rd = rollingData[k].rolling_data ?? [];

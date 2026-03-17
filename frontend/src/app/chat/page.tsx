@@ -25,7 +25,7 @@ const SESSIONS_KEY = 'alpha-lab-chat-sessions';
 const ACTIVE_KEY = 'alpha-lab-chat-active';
 
 const SUGGESTIONS = [
-  'A0 전략의 최근 성과를 분석해줘',
+  '기존전략의 최근 성과를 분석해줘',
   '현재 포트폴리오의 섹터 집중도는?',
   'MDD가 큰 시기와 원인을 알려줘',
   'KOSPI 대비 초과수익률 추이는?',

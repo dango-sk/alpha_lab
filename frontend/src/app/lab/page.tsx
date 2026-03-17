@@ -293,7 +293,7 @@ export default function LabPage() {
     if (baseResults?.['A0']) {
       const r = baseResults['A0'];
       rows.push({
-        strategy: '기존전략 (A0)',
+        strategy: '기존전략',
         total_return: r.total_return,
         cagr: r.cagr,
         mdd: r.mdd,
@@ -370,7 +370,7 @@ export default function LabPage() {
       traces.push({
         x: r.rebalance_dates,
         y: r.portfolio_values,
-        name: '기존전략 (A0)',
+        name: '기존전략',
         type: 'scatter',
         mode: 'lines',
         line: { color: '#6366f1', width: 2 },
@@ -691,17 +691,19 @@ export default function LabPage() {
         </div>
 
         {running && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted">{progressMsg}</span>
-              <span className="text-foreground font-num">{progress}%</span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="animate-typing">{progressMsg}</span>
+              <span className="animate-blink text-primary font-light">|</span>
             </div>
-            <div className="w-full h-2 bg-surface rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
+                className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-700 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
+            <span className="text-xs text-muted/60 font-num">{progress}%</span>
           </div>
         )}
         {saveMsg && (
