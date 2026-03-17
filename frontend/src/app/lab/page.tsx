@@ -467,7 +467,8 @@ export default function LabPage() {
             <input
               type="number"
               className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
-              value={weightCapPct || ''}
+              value={weightCapPct}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setWeightCapPct(parseInt(e.target.value) || 0)}
               min={1}
               max={100}
@@ -478,7 +479,8 @@ export default function LabPage() {
             <input
               type="number"
               className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
-              value={topN || ''}
+              value={topN}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setTopN(parseInt(e.target.value) || 0)}
               min={5}
               max={100}
@@ -489,7 +491,8 @@ export default function LabPage() {
             <input
               type="number"
               className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
-              value={txCostBp || ''}
+              value={txCostBp}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setTxCostBp(parseInt(e.target.value) || 0)}
               min={0}
               max={100}
