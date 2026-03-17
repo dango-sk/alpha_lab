@@ -316,6 +316,10 @@ export default function ChatPage() {
 
     const doStream = async () => {
       try {
+        // Show thinking immediately before API responds
+        setThinkingLabel('생각하는 중');
+        if (_pendingStream) _pendingStream.thinkingLabel = '생각하는 중';
+
         const fullText = await sendChat(
           updated.map((m) => ({ role: m.role, content: m.content })),
           undefined,
@@ -342,10 +346,11 @@ export default function ChatPage() {
 
         if (_pendingStream) _pendingStream.messages = finalMsgs;
         setMessages(finalMsgs);
-      } catch {
+      } catch (err) {
+        console.error('[Chat] streaming error:', err);
         const errorMsgs: Message[] = [
           ...updated,
-          { role: 'assistant', content: '응답을 가져올 수 없습니다. 다시 시도해주세요.' },
+          { role: 'assistant', content: `오류가 발생했습니다: ${(err as Error)?.message || '알 수 없는 오류'}. 다시 시도해주세요.` },
         ];
         if (_pendingStream) _pendingStream.messages = errorMsgs;
         setMessages(errorMsgs);
