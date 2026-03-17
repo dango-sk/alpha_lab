@@ -446,15 +446,39 @@ def api_chat(req: ChatRequest):
 
     api_messages = [{"role": m["role"], "content": m["content"]} for m in req.messages]
 
+    def _pick_thinking_label(user_msg: str) -> str:
+        """Pick a contextual thinking label based on the user's message."""
+        msg = user_msg.lower()
+        if any(k in msg for k in ["분석", "성과", "수익", "mdd", "sharpe", "cagr"]):
+            return "데이터 분석 중"
+        if any(k in msg for k in ["전략", "팩터", "모멘텀", "밸류"]):
+            return "전략 설계 중"
+        if any(k in msg for k in ["비교", "차이", "vs"]):
+            return "비교 분석 중"
+        if any(k in msg for k in ["종목", "포트폴리오", "섹터", "편입", "편출"]):
+            return "포트폴리오 검토 중"
+        if any(k in msg for k in ["sql", "쿼리", "데이터"]):
+            return "데이터 조회 중"
+        return "생각하는 중"
+
     def event_generator():
         try:
+            # Send thinking status before streaming
+            user_msg = api_messages[-1]["content"] if api_messages else ""
+            label = _pick_thinking_label(user_msg)
+            yield f"data: {json.dumps({'thinking': label}, ensure_ascii=False)}\n\n"
+
             with client.messages.stream(
                 model=MODEL_FAST,
                 max_tokens=2000,
                 system=_SYSTEM_GENERAL + context_str,
                 messages=api_messages,
             ) as stream:
+                first = True
                 for text in stream.text_stream:
+                    if first:
+                        yield f"data: {json.dumps({'thinking_done': True})}\n\n"
+                        first = False
                     # SSE format
                     yield f"data: {json.dumps({'text': text}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"

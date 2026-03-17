@@ -128,13 +128,19 @@ export default function PortfolioPage() {
   }, [config, results]);
 
   // Active strategy keys (filtered by selection)
-  const strategyKeys = selectedStrategies.filter((k) => results[k]);
+  const strategyKeys = useMemo(
+    () => selectedStrategies.filter((k) => results[k]),
+    [selectedStrategies, results]
+  );
 
   // Previous date for turnover
   const prevDate = useMemo(() => {
     const idx = availableDates.indexOf(selectedDate);
     return idx > 0 ? availableDates[idx - 1] : '';
   }, [availableDates, selectedDate]);
+
+  // Stable key for useEffect dependency
+  const strategyKeysStr = strategyKeys.join(',');
 
   // Load holdings, characteristics, and turnover when date changes
   useEffect(() => {
@@ -179,7 +185,8 @@ export default function PortfolioPage() {
       })
       .catch(console.error)
       .finally(() => setDetailLoading(false));
-  }, [selectedDate, strategyKeys, universe, rebalType, prevDate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, strategyKeysStr, universe, rebalType, prevDate]);
 
   const labels = config?.strategy_labels || {};
   const colors = config?.strategy_colors || {};

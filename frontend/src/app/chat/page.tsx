@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Bot, User, Trash2, Copy, Check, Download, Database, FlaskConical } from 'lucide-react';
+import { Send, Bot, User, Trash2, Copy, Check, Download, Database, FlaskConical, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sendChat, executeSql } from '@/lib/api';
 import SectionHeader from '@/components/SectionHeader';
@@ -92,6 +92,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [thinkingLabel, setThinkingLabel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [initialized, setInitialized] = useState(false);
@@ -161,7 +162,8 @@ export default function ChatPage() {
             copy[copy.length - 1] = { role: 'assistant', content: chunk };
             return copy;
           });
-        }
+        },
+        (label) => setThinkingLabel(label)
       );
 
       const sqlResults = await processSqlBlocks(fullText);
@@ -183,6 +185,7 @@ export default function ChatPage() {
       });
     } finally {
       setStreaming(false);
+      setThinkingLabel(null);
       inputRef.current?.focus();
     }
   };
@@ -284,8 +287,14 @@ export default function ChatPage() {
               >
                 {msg.role === 'assistant' ? (
                   <>
+                    {streaming && i === messages.length - 1 && thinkingLabel && !msg.content && (
+                      <div className="flex items-center gap-2 text-sm text-muted py-1">
+                        <Sparkles size={14} className="text-primary animate-spin" style={{ animationDuration: '3s' }} />
+                        <span className="animate-pulse">{thinkingLabel}...</span>
+                      </div>
+                    )}
                     <MarkdownRenderer content={msg.content} />
-                    {streaming && i === messages.length - 1 && (
+                    {streaming && i === messages.length - 1 && msg.content && (
                       <span className="inline-block w-1.5 h-4 bg-primary animate-pulse ml-0.5 align-middle" />
                     )}
                   </>

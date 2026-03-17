@@ -100,7 +100,8 @@ export async function runBacktest(code: string, params: Record<string, unknown>)
 export async function sendChat(
   messages: Array<{ role: string; content: string }>,
   context?: Record<string, unknown>,
-  onChunk?: (text: string) => void
+  onChunk?: (text: string) => void,
+  onThinking?: (label: string | null) => void
 ) {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
@@ -131,7 +132,11 @@ export async function sendChat(
       if (trimmed.startsWith('data: ')) {
         try {
           const json = JSON.parse(trimmed.slice(6));
-          if (json.text) {
+          if (json.thinking && onThinking) {
+            onThinking(json.thinking);
+          } else if (json.thinking_done && onThinking) {
+            onThinking(null);
+          } else if (json.text) {
             fullText += json.text;
             if (onChunk) onChunk(fullText);
           }
