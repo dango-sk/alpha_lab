@@ -409,7 +409,6 @@ export default function LabPage() {
     return <LoadingState message="전략 실험실 로딩 중..." />;
   }
 
-  const maxAbsWeight = Math.max(...Object.values(weights).map(Math.abs), 1);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -510,70 +509,97 @@ export default function LabPage() {
         </div>
       </div>
 
-      {/* ─── Factor Weights Visualization ─── */}
-      {Object.keys(weights).length > 0 && (
-        <div className="glass-card p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">팩터 가중치</h3>
-          <div className="space-y-5">
-            {Object.entries(FACTOR_CATEGORIES).map(([category, { factors, color }]) => {
-              const activeFactors = factors.filter((f) => weights[f] !== undefined);
-              if (activeFactors.length === 0) return null;
-              return (
-                <div key={category}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="text-xs font-medium text-muted">{category}</span>
+      {/* ─── Factor Weights Editor ─── */}
+      {Object.keys(weights).length > 0 && (() => {
+        const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0);
+        const categoryData = Object.entries(FACTOR_CATEGORIES).map(([cat, { factors, color }]) => {
+          const active = factors.filter((f) => weights[f] !== undefined);
+          const catSum = active.reduce((s, f) => s + (weights[f] ?? 0), 0);
+          return { cat, color, active, catSum };
+        }).filter((d) => d.active.length > 0);
+
+        return (
+          <div className="glass-card p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">팩터 가중치</h3>
+
+            {/* Category summary bar */}
+            <div className="flex rounded-lg overflow-hidden h-10 mb-6">
+              {categoryData.map(({ cat, color, catSum }) => {
+                const pct = totalWeight > 0 ? (catSum / totalWeight) * 100 : 0;
+                if (pct <= 0) return null;
+                return (
+                  <div
+                    key={cat}
+                    className="flex items-center justify-center text-xs font-semibold text-white"
+                    style={{ backgroundColor: color, width: `${pct}%`, minWidth: pct > 5 ? undefined : '2rem' }}
+                  >
+                    {pct >= 10 && <span>{cat}<br />{Math.round(pct)}%</span>}
+                    {pct < 10 && <span>{Math.round(pct)}%</span>}
                   </div>
-                  <div className="space-y-1.5">
-                    {activeFactors.map((factor) => {
+                );
+              })}
+            </div>
+
+            {/* Total */}
+            <div className="flex justify-end mb-4 text-xs text-muted">
+              전체 합계: <span className={`ml-1 font-semibold ${Math.abs(totalWeight - 1) < 0.01 ? 'text-accent-green' : 'text-accent-red'}`}>
+                {(totalWeight * 100).toFixed(0)}%
+              </span>
+            </div>
+
+            {/* Category sections */}
+            <div className="space-y-6">
+              {categoryData.map(({ cat, color, active, catSum }) => (
+                <div key={cat} className="rounded-lg border border-border overflow-hidden">
+                  {/* Category header */}
+                  <div className="flex items-center justify-between px-4 py-3" style={{ borderLeft: `3px solid ${color}` }}>
+                    <span className="text-sm font-semibold text-foreground">{cat}</span>
+                    <span className="text-sm font-semibold" style={{ color }}>
+                      {(catSum * 100).toFixed(0)}%
+                    </span>
+                  </div>
+
+                  {/* Factor rows */}
+                  <div className="px-4 pb-3 space-y-2">
+                    {active.map((factor) => {
                       const w = weights[factor] ?? 0;
-                      const pct = (Math.abs(w) / maxAbsWeight) * 100;
+                      const barPct = totalWeight > 0 ? (Math.abs(w) / totalWeight) * 100 : 0;
                       return (
                         <div key={factor} className="flex items-center gap-3">
-                          <span className="text-xs text-muted w-36 flex-shrink-0 truncate">
+                          <span className="text-xs text-muted w-44 flex-shrink-0 truncate">
                             {FACTOR_LABELS[factor] || factor}
                           </span>
-                          <div className="flex-1 h-5 relative flex items-center">
-                            {/* center line */}
-                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border" />
-                            {/* bar */}
+                          <div className="flex-1 h-4 bg-background rounded-full overflow-hidden">
                             <div
-                              className="absolute h-4 rounded-sm transition-all"
-                              style={{
-                                backgroundColor: color,
-                                opacity: 0.7,
-                                width: `${pct / 2}%`,
-                                ...(w >= 0
-                                  ? { left: '50%' }
-                                  : { right: '50%' }),
-                              }}
+                              className="h-full rounded-full transition-all"
+                              style={{ backgroundColor: color, width: `${Math.min(barPct * 2, 100)}%`, opacity: 0.8 }}
                             />
                           </div>
-                          <input
-                            type="number"
-                            step="0.05"
-                            value={w}
-                            onChange={(e) => {
-                              const v = parseFloat(e.target.value);
-                              if (!isNaN(v)) {
-                                setCode((prev) => updateWeightInCode(prev, factor, v));
-                              }
-                            }}
-                            className="w-14 text-xs font-num text-foreground text-right bg-transparent border border-border rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary flex-shrink-0"
-                          />
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <input
+                              type="number"
+                              step="1"
+                              value={Math.round(w * 100)}
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value);
+                                if (!isNaN(v)) {
+                                  setCode((prev) => updateWeightInCode(prev, factor, v / 100));
+                                }
+                              }}
+                              className="w-12 text-xs font-num text-foreground text-right bg-surface border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <span className="text-xs text-muted">%</span>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ─── Code Viewer ─── */}
       <div className="glass-card p-5">
