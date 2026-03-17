@@ -385,8 +385,9 @@ def load_all_results(start: str = None, end: str = None,
     병합 후 STRATEGY_KEYS/ALL_KEYS/LABELS/COLORS를 동적으로 갱신한다.
     """
     results = dict(load_backtest_results(start, end, weight_cap_pct, universe, rebal_type))
-    # _load_backtest_cached already loads ALL strategies from backtest_cache
-    # (including custom ones), so no need to loop list_strategies separately.
+    # Filter out strategies with incomplete results (missing rebalance_dates)
+    results = {k: v for k, v in results.items()
+               if isinstance(v, dict) and v.get("rebalance_dates")}
     _update_strategy_registry(results)
     return results
 
