@@ -181,11 +181,33 @@ Alpha Lab 대시보드의 모든 데이터에 접근할 수 있으며, 사용자
 - IS/OOS 분할 검증, 벤치마크 대비 유의성 검정(t-test, 부트스트랩)
 - 롤링 윈도우 초과수익률, 강건성 검증 결과
 
+## SQL 데이터 조회 기능
+컨텍스트에 포함되지 않은 상세 데이터(보유종목, 개별 종목 주가, 재무제표 등)가 필요하면
+```sql 블록으로 PostgreSQL SELECT 쿼리를 작성하세요. 시스템이 자동 실행하여 결과를 표시합니다.
+
+### 주요 테이블 스키마
+- **backtest_cache**: name, universe, rebal_type, results_json(jsonb), holdings_json(jsonb)
+  - holdings_json.holdings.{날짜} = [{stock_code, stock_name, sector, weight, score, per, pbr, ev_ebitda, market_cap}, ...]
+  - holdings_json.attribution.{날짜} = [{stock_code, stock_name, weight_start, weight_end, return_pct, contribution}, ...]
+- **daily_price**: stock_code, trade_date, open, high, low, close, volume, market_cap
+- **fnspace_finance**: stock_code, fiscal_year, fiscal_quarter, revenue, operating_profit, net_income, total_assets, total_liabilities, total_equity, per, pbr, ev_ebitda, pcf, roe, roa, dividend_yield
+- **fnspace_forward**: trade_date, stock_code, f_per, f_pbr, f_ev_ebitda, f_eps, target_price, f_eps_m, f_spsg
+- **fnspace_consensus_daily**: trade_date, stock_code, f_eps_1y, f_eps_2y, f_per_1y, f_revenue_1y, f_op_1y
+- **universe**: rebal_date, rebal_type, stock_code, stock_name, sector, market_cap, size_group
+- **corp_master**: stock_code, stock_name, market, sector, industry
+- **shares_outstanding**: stock_code, disclosure_date, shares_common, shares_preferred
+
+### SQL 쿼리 작성 규칙
+- SELECT/WITH만 허용 (INSERT/UPDATE/DELETE 불가)
+- 결과가 너무 크지 않도록 LIMIT 사용
+- 보유종목 조회 예시: holdings_json->'holdings'->'{날짜}' 형태로 JSONB 접근
+- 간단한 보유종목 질문은 컨텍스트의 최신 보유종목 요약을 먼저 참고
+
 ## 규칙
 - 한국어로 응답합니다.
 - 전문 금융 용어를 사용하되, 코드 변수명이나 프로그래밍 용어는 절대 사용하지 마세요.
 - 답변은 간결하고 핵심적으로. 수치를 근거로 들어 답변하세요.
-- 사용자가 특정 종목이나 데이터를 물어보면, 당신이 가지고 있는 컨텍스트 데이터를 기반으로 답변하세요.
+- 사용자가 특정 종목이나 데이터를 물어보면, 컨텍스트 데이터를 먼저 확인하고, 없으면 SQL 쿼리로 조회하세요.
 - 사용자가 새로운 전략을 만들어달라고 하면, factor_engine 형식의 파이썬 코드를 ```python 블록으로 생성하세요.
 - 생성한 전략 코드는 사용자가 "전략 실험실에서 열기" 버튼으로 바로 백테스트할 수 있습니다.
 
@@ -532,6 +554,8 @@ class ChatRequest(BaseModel):
 
 def _build_chat_context() -> str:
     """Build auto-context from current cached data for AI chat."""
+    parts = []
+    # 1) 전략 성과 요약
     try:
         results = load_all_results(universe="KOSPI", rebal_type="monthly")
         summary_parts = ["\n\n## 현재 전략 성과 요약 (KOSPI, 월간)"]
@@ -547,9 +571,31 @@ def _build_chat_context() -> str:
                 summary_parts.append(
                     f"- {label}: 총수익률 {total*100:.1f}%, CAGR {cagr_s}, MDD {mdd_s}, Sharpe {sharpe:.2f}"
                 )
-        return "\n".join(summary_parts)
+        parts.append("\n".join(summary_parts))
     except Exception:
-        return ""
+        pass
+
+    # 2) 최신 보유종목 요약
+    try:
+        from lib.data import _load_holdings_cache
+        hcache = _load_holdings_cache(universe="KOSPI", rebal_type="monthly")
+        if hcache:
+            parts.append("\n\n## 최신 보유종목 요약 (KOSPI, 월간)")
+            for strategy_name, dates_data in hcache.items():
+                if not isinstance(dates_data, dict):
+                    continue
+                latest_date = max(dates_data.keys())
+                holdings = dates_data[latest_date]
+                if not holdings:
+                    continue
+                label = STRATEGY_LABELS.get(strategy_name, strategy_name)
+                top5 = holdings[:5]
+                names = ", ".join(h.get("stock_name", h.get("name", "?")) for h in top5)
+                parts.append(f"- {label} ({latest_date}, {len(holdings)}종목): Top5 = {names}")
+    except Exception:
+        pass
+
+    return "".join(parts)
 
 
 @app.post("/api/chat")
