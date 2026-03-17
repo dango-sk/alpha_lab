@@ -186,24 +186,31 @@ Alpha Lab 대시보드의 모든 데이터에 접근할 수 있으며, 사용자
 <sql>SELECT ...</sql> 태그로 PostgreSQL SELECT 쿼리를 작성하세요. 시스템이 자동 실행합니다.
 중요: SQL 쿼리는 반드시 <sql>...</sql> 태그 안에 넣고, 사용자에게 쿼리를 보여주지 마세요. 결과만 자연스럽게 설명하세요.
 
-### 주요 테이블 스키마
-- **backtest_cache**: name, universe, rebal_type, results_json(jsonb), holdings_json(jsonb)
-  - holdings_json.holdings.{날짜} = [{stock_code, stock_name, sector, weight, score, per, pbr, ev_ebitda, market_cap}, ...]
-  - holdings_json.attribution.{날짜} = [{stock_code, stock_name, weight_start, weight_end, return_pct, contribution}, ...]
-- **daily_price**: stock_code, trade_date, open, high, low, close, volume, market_cap
-- **fnspace_finance**: stock_code, fiscal_year, fiscal_quarter, revenue, operating_profit, net_income, total_assets, total_liabilities, total_equity, per, pbr, ev_ebitda, pcf, roe, roa, dividend_yield
-- **fnspace_forward**: trade_date, stock_code, f_per, f_pbr, f_ev_ebitda, f_eps, target_price, f_eps_m, f_spsg
-- **fnspace_consensus_daily**: trade_date, stock_code, f_eps_1y, f_eps_2y, f_per_1y, f_revenue_1y, f_op_1y
-- **universe**: rebal_date, rebal_type, stock_code, stock_name, sector, market_cap, size_group
-- **corp_master**: stock_code, stock_name, market, sector, industry
-- **shares_outstanding**: stock_code, disclosure_date, shares_common, shares_preferred
+### 주요 테이블 스키마 (모든 테이블은 alpha_lab 스키마)
+- **alpha_lab.backtest_cache**: name, universe, rebal_type, results_json(jsonb), holdings_json(jsonb)
+  - holdings_json->'holdings'->'YYYY-MM-DD' = [{"종목코드","종목명","섹터","비중(%)","점수","PER","PBR","EV/EBITDA","시가총액","value_score"}, ...]
+- **alpha_lab.daily_price**: stock_code, trade_date, open, high, low, close, volume, market_cap
+- **alpha_lab.fnspace_finance**: stock_code, fiscal_year, fiscal_quarter, revenue, operating_profit, net_income, total_assets, total_liabilities, total_equity, per, pbr, ev_ebitda, pcf, roe, roa, dividend_yield
+- **alpha_lab.fnspace_forward**: trade_date, stock_code, f_per, f_pbr, f_ev_ebitda, f_eps, target_price, f_eps_m, f_spsg
+- **alpha_lab.fnspace_consensus_daily**: trade_date, stock_code, f_eps_1y, f_eps_2y, f_per_1y, f_revenue_1y, f_op_1y
+- **alpha_lab.universe**: rebal_date, rebal_type, stock_code, stock_name, sector, market_cap, size_group
+- **alpha_lab.corp_master**: stock_code, stock_name, market, sector, industry
 
 ### SQL 쿼리 작성 규칙
-- SELECT/WITH만 허용 (INSERT/UPDATE/DELETE 불가)
+- SELECT/WITH만 허용
 - 결과가 너무 크지 않도록 LIMIT 사용
-- 보유종목 조회 예시: holdings_json->'holdings'->'{날짜}' 형태로 JSONB 접근
-- 간단한 보유종목 질문은 컨텍스트의 최신 보유종목 요약을 먼저 참고
-- 모든 테이블은 alpha_lab 스키마 안에 있으므로 alpha_lab.테이블명 으로 접근
+- 간단한 보유종목 질문은 컨텍스트의 최신 보유종목 요약을 먼저 참고하고, SQL 없이 답변
+
+### 보유종목 JSONB 쿼리 예시
+섹터별 비중 조회:
+WITH latest AS (
+  SELECT MAX(k) as d FROM alpha_lab.backtest_cache, jsonb_object_keys(holdings_json->'holdings') k
+  WHERE name='A0' AND universe='KOSPI' AND rebal_type='monthly'
+)
+SELECT h->>'섹터' as sector, COUNT(*) as cnt, ROUND(SUM((h->>'비중(%)')::numeric), 1) as weight_pct
+FROM alpha_lab.backtest_cache bc, latest l, LATERAL jsonb_array_elements(bc.holdings_json->'holdings'->l.d) h
+WHERE bc.name='A0' AND bc.universe='KOSPI' AND bc.rebal_type='monthly'
+GROUP BY h->>'섹터' ORDER BY weight_pct DESC
 
 ## 규칙
 - 한국어로 응답합니다.
