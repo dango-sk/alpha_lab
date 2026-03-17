@@ -256,7 +256,7 @@ def _slice_period_single(val: dict, s: str, e: str) -> dict | None:
     new_mr = v.get("monthly_returns", [])
     if new_pv and len(new_pv) >= 2:
         v["total_return"] = new_pv[-1] / new_pv[0] - 1
-        n_years = max(len(v["rebalance_dates"]) / 12, 0.5)
+        n_years = max((len(v["rebalance_dates"]) - 1) / 12, 0.5)
         tr = v["total_return"]
         v["cagr"] = (1 + tr) ** (1 / n_years) - 1 if tr > -1 else 0
     if new_mr:
@@ -268,7 +268,7 @@ def _slice_period_single(val: dict, s: str, e: str) -> dict | None:
         cum_arr = np.cumprod(1 + mr_arr)
         peak = np.maximum.accumulate(cum_arr)
         dd = (cum_arr - peak) / peak
-        v["mdd"] = float(np.min(dd))
+        v["mdd"] = float(abs(np.min(dd)))  # 양수로 통일 (step7과 일치)
 
     return v
 
