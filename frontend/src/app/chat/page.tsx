@@ -247,18 +247,19 @@ export default function ChatPage() {
       setThinkingLabel(_pendingStream.thinkingLabel);
       // Poll module-level state to sync UI
       const interval = setInterval(() => {
-        if (!_pendingStream) { clearInterval(interval); return; }
-        setThinkingLabel(_pendingStream.thinkingLabel);
-        // Update last message with current content
+        const ps = _pendingStream;
+        if (!ps) { clearInterval(interval); setStreaming(false); setThinkingLabel(null); return; }
+        setThinkingLabel(ps.thinkingLabel);
+        const content = ps.currentContent;
         setMessages((prev) => {
           if (prev.length === 0) return prev;
           const copy = [...prev];
-          copy[copy.length - 1] = { role: 'assistant', content: _pendingStream!.currentContent };
+          copy[copy.length - 1] = { role: 'assistant', content };
           return copy;
         });
-        if (!_pendingStream.streaming) {
+        if (!ps.streaming) {
           clearInterval(interval);
-          setMessages(_pendingStream.messages);
+          setMessages(ps.messages);
           setStreaming(false);
           setThinkingLabel(null);
           _pendingStream = null;
