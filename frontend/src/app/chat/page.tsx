@@ -242,31 +242,40 @@ export default function ChatPage() {
 
   // Resume pending stream on mount (user navigated away and came back)
   useEffect(() => {
-    if (_pendingStream && _pendingStream.streaming) {
-      setStreaming(true);
-      setThinkingLabel(_pendingStream.thinkingLabel);
-      // Poll module-level state to sync UI
-      const interval = setInterval(() => {
-        const ps = _pendingStream;
-        if (!ps) { clearInterval(interval); setStreaming(false); setThinkingLabel(null); return; }
-        setThinkingLabel(ps.thinkingLabel);
-        const content = ps.currentContent;
-        setMessages((prev) => {
-          if (prev.length === 0) return prev;
-          const copy = [...prev];
-          copy[copy.length - 1] = { role: 'assistant', content };
-          return copy;
-        });
-        if (!ps.streaming) {
-          clearInterval(interval);
-          setMessages(ps.messages);
-          setStreaming(false);
-          setThinkingLabel(null);
-          _pendingStream = null;
-        }
-      }, 100);
-      return () => clearInterval(interval);
+    if (!_pendingStream) return;
+
+    // Stream already finished while we were away — just apply final messages
+    if (!_pendingStream.streaming) {
+      setMessages(_pendingStream.messages);
+      setStreaming(false);
+      setThinkingLabel(null);
+      _pendingStream = null;
+      return;
     }
+
+    // Stream still in progress — poll to sync UI
+    setStreaming(true);
+    setThinkingLabel(_pendingStream.thinkingLabel);
+    const interval = setInterval(() => {
+      const ps = _pendingStream;
+      if (!ps) { clearInterval(interval); setStreaming(false); setThinkingLabel(null); return; }
+      setThinkingLabel(ps.thinkingLabel);
+      const content = ps.currentContent;
+      setMessages((prev) => {
+        if (prev.length === 0) return prev;
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: 'assistant', content };
+        return copy;
+      });
+      if (!ps.streaming) {
+        clearInterval(interval);
+        setMessages(ps.messages);
+        setStreaming(false);
+        setThinkingLabel(null);
+        _pendingStream = null;
+      }
+    }, 100);
+    return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
