@@ -27,7 +27,6 @@ COPY lib/ ./lib/
 COPY backend/ ./backend/
 COPY cache/ ./cache/
 COPY config/ ./config/
-COPY scripts/ ./scripts/
 
 # Next.js build
 COPY --from=frontend-build /app/frontend/.next ./.next
