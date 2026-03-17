@@ -295,6 +295,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     portfolio_values = [1.0]
     turnover_list = []
     prev_stocks = set()
+    prev_weight_map = {}
     portfolio_sizes = []
     prev_stocks_list = []
     holdings_by_date = {}  # {date: [(code, score, weight, mcap), ...]}
@@ -340,14 +341,19 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
                 for j, (code, score) in enumerate(stocks)
             ]
 
-        # 턴오버
-        if prev_stocks:
-            changed = len(current_codes - prev_stocks) + len(prev_stocks - current_codes)
-            turnover = changed / (2 * max(len(current_codes), 1))
+        # 턴오버 (비중 기준)
+        current_weight_map = {}
+        if holdings_by_date.get(start):
+            for code, _sc, wt, _mcap in holdings_by_date[start]:
+                current_weight_map[code] = wt
+        if prev_weight_map:
+            all_codes = set(current_weight_map) | set(prev_weight_map)
+            turnover = sum(abs(current_weight_map.get(c, 0) - prev_weight_map.get(c, 0)) for c in all_codes) / 2
         else:
             turnover = 1.0
         turnover_list.append(turnover)
         prev_stocks = current_codes
+        prev_weight_map = current_weight_map
 
         # 수익률 (거래비용 = 턴오버 x (수수료 + 슬리피지) x 양방향)
         raw_return = calc_portfolio_return(conn, stocks, start, end)

@@ -248,8 +248,9 @@ def _slice_period_single(val: dict, s: str, e: str) -> dict | None:
         v["monthly_returns"] = [mr[i] for i in mr_indices]
 
     ps = val.get("portfolio_sizes", [])
-    if ps and len(ps) == len(rb):
-        v["portfolio_sizes"] = [ps[i] for i in indices]
+    if ps and len(ps) == len(rb) - 1:
+        ps_indices = [i for i in indices if i < len(ps)]
+        v["portfolio_sizes"] = [ps[i] for i in ps_indices]
 
     # 통계 재계산
     new_pv = v.get("portfolio_values", [])
