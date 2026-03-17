@@ -222,13 +222,14 @@ export default function ChatPage() {
   }, [activeId]);
 
   const processSqlBlocks = useCallback(async (content: string): Promise<Message['sqlResults']> => {
-    const sqlRegex = /```sql\n([\s\S]*?)```/g;
+    // Support both <sql>...</sql> tags and ```sql blocks
+    const sqlRegex = /<sql>([\s\S]*?)<\/sql>|```sql\n([\s\S]*?)```/g;
     const matches = [...content.matchAll(sqlRegex)];
     if (matches.length === 0) return undefined;
 
     const results: NonNullable<Message['sqlResults']> = [];
     for (const match of matches) {
-      const query = match[1].trim();
+      const query = (match[1] || match[2]).trim();
       if (!query.toLowerCase().startsWith('select')) continue;
       try {
         const result = await executeSql(query);
@@ -526,7 +527,7 @@ export default function ChatPage() {
                           <span className="animate-pulse">{thinkingLabel}...</span>
                         </div>
                       )}
-                      <MarkdownRenderer content={msg.content} />
+                      <MarkdownRenderer content={msg.content.replace(/<sql>[\s\S]*?<\/sql>/g, '')} />
                       {streaming && i === messages.length - 1 && msg.content && (
                         <span className="inline-block w-1.5 h-4 bg-primary animate-pulse ml-0.5 align-middle" />
                       )}
