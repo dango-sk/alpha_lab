@@ -61,6 +61,7 @@ export default function StatisticsPage() {
   const [data, setData] = useState<RobustnessData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -93,7 +94,10 @@ export default function StatisticsPage() {
 
   // All strategy keys available in robustness data
   const allStrategyKeys = Object.keys(data.is_oos?.is_results ?? {});
-  const [selectedStrategies, setSelectedStrategies] = useState<string[]>(allStrategyKeys);
+  // Auto-select all on first load
+  if (selectedStrategies.length === 0 && allStrategyKeys.length > 0) {
+    setSelectedStrategies(allStrategyKeys);
+  }
   const strategyKeys = allStrategyKeys.filter((k) => selectedStrategies.includes(k));
   const label = (k: string) => labels[k] || k;
 
