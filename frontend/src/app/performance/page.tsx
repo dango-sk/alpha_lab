@@ -216,7 +216,7 @@ export default function PerformancePage() {
     [selectedStrategies, results]
   );
 
-  const labels = config?.strategy_labels ?? {};
+  const labels = { ...(config?.strategy_labels ?? {}), KOSPI: universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200' };
   const colors = config?.strategy_colors ?? {};
   const bc = config?.backtest_config;
 
@@ -590,7 +590,7 @@ export default function PerformancePage() {
 
       {bc && (
         <p className="text-xs text-muted">
-          기간: {startDate} ~ {endDate} | 리밸런싱: {rebalType === 'monthly' ? '월간' : '격주'}, 상위 {bc.top_n_stocks}종목 | 비중: 시총비례 + {bc.weight_cap_pct}% 캡 | 거래비용: 편도 {bc.transaction_cost_bp}bp | 유니버스: {universe} (BM: KODEX 200)
+          기간: {startDate} ~ {endDate} | 리밸런싱: {rebalType === 'monthly' ? '월간' : '격주'}, 상위 {bc.top_n_stocks}종목 | 비중: 시총비례 + {bc.weight_cap_pct}% 캡 | 거래비용: 편도 {bc.transaction_cost_bp}bp | 유니버스: {universe} (BM: {universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200'})
         </p>
       )}
 

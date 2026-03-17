@@ -191,7 +191,7 @@ export default function PortfolioPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, strategyKeysStr, universe, rebalType, prevDate]);
 
-  const labels = config?.strategy_labels || {};
+  const labels = { ...(config?.strategy_labels || {}), KOSPI: universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200' };
   const colors = config?.strategy_colors || {};
 
   // Top holdings comparison chart (dot chart)
