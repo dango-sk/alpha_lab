@@ -399,7 +399,7 @@ def load_all_results(start: str = None, end: str = None,
 @st.cache_data(show_spinner=False)
 def load_robustness_results(start: str = None, end: str = None,
                             is_end: str = None, oos_start: str = None,
-                            rebal_type: str = None):
+                            rebal_type: str = None, universe: str = None):
     """강건성 검증 결과. 기간 지정 시 백테스트 결과에서 실시간 계산."""
     default_start = BACKTEST_CONFIG["start"]
     default_end = BACKTEST_CONFIG["end"]
@@ -408,9 +408,10 @@ def load_robustness_results(start: str = None, end: str = None,
     use_is_end = is_end or BACKTEST_CONFIG.get("insample_end", "2024-06-30")
     use_oos_start = oos_start or BACKTEST_CONFIG.get("oos_start", "2024-07-01")
     use_rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    use_universe = universe or "KOSPI"
 
-    # 기본 기간+기본 rebal_type이면 캐시 사용
-    if use_start == default_start and use_end == default_end and use_rebal == "monthly":
+    # 기본 기간+기본 rebal_type+기본 universe이면 캐시 사용
+    if use_start == default_start and use_end == default_end and use_rebal == "monthly" and use_universe == "KOSPI":
         # 1) PG
         try:
             conn = _get_conn_raw()
@@ -435,16 +436,16 @@ def load_robustness_results(start: str = None, end: str = None,
                     sig["boot_means"] = np.array(sig["boot_means"])
             return data["is_oos"], data["stat"], data["rolling"]
 
-    # 커스텀 기간/rebal_type → 캐시된 백테스트 결과에서 IS/OOS 슬라이싱
-    return _compute_robustness_from_cache(use_start, use_end, use_is_end, use_oos_start, use_rebal)
+    # 커스텀 기간/rebal_type/universe → 캐시된 백테스트 결과에서 IS/OOS 슬라이싱
+    return _compute_robustness_from_cache(use_start, use_end, use_is_end, use_oos_start, use_rebal, use_universe)
 
 
-def _compute_robustness_from_cache(start, end, is_end, oos_start, rebal_type="monthly"):
+def _compute_robustness_from_cache(start, end, is_end, oos_start, rebal_type="monthly", universe="KOSPI"):
     """캐시된 백테스트 결과를 IS/OOS로 슬라이싱해서 강건성 계산 (빠름)."""
     from scipy import stats as sp_stats
 
     # 전체 기간 백테스트 결과 로드
-    full_results = load_backtest_results(start, end, rebal_type=rebal_type)
+    full_results = load_backtest_results(start, end, rebal_type=rebal_type, universe=universe)
     is_results = _slice_period_multi(full_results, start, is_end) if full_results else {}
     oos_results = _slice_period_multi(full_results, oos_start, end) if full_results else {}
 
@@ -652,7 +653,7 @@ def load_all_robustness_results(start: str = None, end: str = None,
                                  universe: str = None, rebal_type: str = None):
     """기본 전략 강건성 + 커스텀 전략 강건성 (저장된 백테스트 결과 기반)."""
     is_oos_data, stat_data, rolling_all = load_robustness_results(
-        start, end, is_end, oos_start, rebal_type=rebal_type,
+        start, end, is_end, oos_start, rebal_type=rebal_type, universe=universe,
     )
 
     # 캐시 결과 변경 방지를 위한 복사
@@ -673,7 +674,8 @@ def load_all_robustness_results(start: str = None, end: str = None,
     use_oos_start = oos_start or BACKTEST_CONFIG.get("oos_start", "2024-07-01")
 
     _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
-    base_results = load_backtest_results(use_start, use_end, rebal_type=_rebal)
+    _uni = universe or "KOSPI"
+    base_results = load_backtest_results(use_start, use_end, rebal_type=_rebal, universe=_uni)
     baseline_key = next((k for k in ["A0"] if k in base_results), None)
     if not baseline_key:
         return is_oos_data, stat_data, rolling_all
@@ -691,7 +693,8 @@ def load_all_robustness_results(start: str = None, end: str = None,
 
     from scipy import stats as sp_stats
 
-    for strat_info in list_strategies():
+    _uni_filter = universe or "KOSPI"
+    for strat_info in list_strategies(universe=_uni_filter, rebal_type=_rebal):
         name = strat_info["name"]
         if name in BASE_STRATEGY_KEYS or name == "KOSPI":
             continue

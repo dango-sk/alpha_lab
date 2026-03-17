@@ -355,7 +355,7 @@ export default function StatisticsPage() {
         <PlotlyChart
           data={rollingChartTraces}
           layout={{
-            title: { text: 'Rolling 24M Excess Return vs KOSPI', font: { size: 13, color: '#a1a1aa' } },
+            title: { text: `Rolling 24M Excess Return vs ${universe === 'KOSPI' ? 'KOSPI' : 'KOSPI+KOSDAQ'}`, font: { size: 13, color: '#a1a1aa' } },
             yaxis: { title: { text: '초과수익률 (%)', font: { size: 10 } } },
             xaxis: { title: { text: '시작일', font: { size: 10 } } },
             shapes: [zeroLineShape],
