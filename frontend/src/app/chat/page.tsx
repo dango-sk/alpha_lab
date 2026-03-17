@@ -95,6 +95,16 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+// ─── Module-level streaming state (survives unmount) ───
+let _pendingStream: {
+  promise: Promise<void>;
+  messages: Message[];      // final messages when done
+  streaming: boolean;
+  currentContent: string;
+  thinkingLabel: string | null;
+  sessionId: string | null;
+} | null = null;
+
 function generateTitle(messages: Message[]): string {
   const first = messages.find((m) => m.role === 'user');
   if (!first) return '새 대화';
@@ -230,6 +240,35 @@ export default function ChatPage() {
     return results.length > 0 ? results : undefined;
   }, []);
 
+  // Resume pending stream on mount (user navigated away and came back)
+  useEffect(() => {
+    if (_pendingStream && _pendingStream.streaming) {
+      setStreaming(true);
+      setThinkingLabel(_pendingStream.thinkingLabel);
+      // Poll module-level state to sync UI
+      const interval = setInterval(() => {
+        if (!_pendingStream) { clearInterval(interval); return; }
+        setThinkingLabel(_pendingStream.thinkingLabel);
+        // Update last message with current content
+        setMessages((prev) => {
+          if (prev.length === 0) return prev;
+          const copy = [...prev];
+          copy[copy.length - 1] = { role: 'assistant', content: _pendingStream!.currentContent };
+          return copy;
+        });
+        if (!_pendingStream.streaming) {
+          clearInterval(interval);
+          setMessages(_pendingStream.messages);
+          setStreaming(false);
+          setThinkingLabel(null);
+          _pendingStream = null;
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSend = async (text?: string) => {
     const msg = (text || input).trim();
     if (!msg || streaming) return;
@@ -255,42 +294,60 @@ export default function ChatPage() {
     const assistantMsg: Message = { role: 'assistant', content: '' };
     setMessages([...updated, assistantMsg]);
 
-    try {
-      const fullText = await sendChat(
-        updated.map((m) => ({ role: m.role, content: m.content })),
-        undefined,
-        (chunk) => {
-          setMessages((prev) => {
-            const copy = [...prev];
-            copy[copy.length - 1] = { role: 'assistant', content: chunk };
-            return copy;
-          });
-        },
-        (label) => setThinkingLabel(label)
-      );
+    // Set up module-level streaming state
+    _pendingStream = {
+      promise: Promise.resolve(),
+      messages: [...updated, assistantMsg],
+      streaming: true,
+      currentContent: '',
+      thinkingLabel: null,
+      sessionId: activeId,
+    };
 
-      const sqlResults = await processSqlBlocks(fullText);
-      if (sqlResults) {
-        setMessages((prev) => {
-          const copy = [...prev];
-          copy[copy.length - 1] = { ...copy[copy.length - 1], sqlResults };
-          return copy;
-        });
+    const doStream = async () => {
+      try {
+        const fullText = await sendChat(
+          updated.map((m) => ({ role: m.role, content: m.content })),
+          undefined,
+          (chunk) => {
+            if (_pendingStream) _pendingStream.currentContent = chunk;
+            setMessages((prev) => {
+              const copy = [...prev];
+              copy[copy.length - 1] = { role: 'assistant', content: chunk };
+              return copy;
+            });
+          },
+          (label) => {
+            if (_pendingStream) _pendingStream.thinkingLabel = label;
+            setThinkingLabel(label);
+          }
+        );
+
+        const finalMsgs: Message[] = [...updated, { role: 'assistant', content: fullText }];
+
+        const sqlResults = await processSqlBlocks(fullText);
+        if (sqlResults) {
+          finalMsgs[finalMsgs.length - 1] = { ...finalMsgs[finalMsgs.length - 1], sqlResults };
+        }
+
+        if (_pendingStream) _pendingStream.messages = finalMsgs;
+        setMessages(finalMsgs);
+      } catch {
+        const errorMsgs: Message[] = [
+          ...updated,
+          { role: 'assistant', content: '응답을 가져올 수 없습니다. 다시 시도해주세요.' },
+        ];
+        if (_pendingStream) _pendingStream.messages = errorMsgs;
+        setMessages(errorMsgs);
+      } finally {
+        if (_pendingStream) _pendingStream.streaming = false;
+        setStreaming(false);
+        setThinkingLabel(null);
+        inputRef.current?.focus();
       }
-    } catch {
-      setMessages((prev) => {
-        const copy = [...prev];
-        copy[copy.length - 1] = {
-          role: 'assistant',
-          content: '응답을 가져올 수 없습니다. 다시 시도해주세요.',
-        };
-        return copy;
-      });
-    } finally {
-      setStreaming(false);
-      setThinkingLabel(null);
-      inputRef.current?.focus();
-    }
+    };
+
+    _pendingStream.promise = doStream();
   };
 
   const handleExport = () => {
