@@ -458,13 +458,19 @@ class BacktestRequest(BaseModel):
 
 @app.post("/api/backtest")
 def api_run_backtest(req: BacktestRequest):
-    result = run_strategy_backtest(
-        strategy_code=req.strategy_code,
-        universe=req.universe,
-        rebal_type=req.rebal_type,
-        weight_cap_pct_override=req.weight_cap_pct,
-        tx_cost_bp_override=req.tx_cost_bp,
-    )
+    import traceback as _tb
+    try:
+        result = run_strategy_backtest(
+            strategy_code=req.strategy_code,
+            universe=req.universe,
+            rebal_type=req.rebal_type,
+            weight_cap_pct_override=req.weight_cap_pct,
+            tx_cost_bp_override=req.tx_cost_bp,
+        )
+    except Exception as e:
+        detail = f"{type(e).__name__}: {e}\n{_tb.format_exc()}"
+        print(f"[BACKTEST ERROR] {detail}", flush=True)
+        raise HTTPException(status_code=500, detail=detail)
     if result is None:
         raise HTTPException(status_code=500, detail="Backtest returned no results")
     if isinstance(result, dict) and "error" in result:

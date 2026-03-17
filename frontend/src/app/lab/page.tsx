@@ -60,7 +60,7 @@ function parseWeights(code: string): Record<string, number> {
   if (!match) return weights;
   const block = match[1];
   // Match each key: value pair like "T_PER": -1.0 or 'T_PER': -1.0
-  const entries = block.matchAll(/["'](\w+)["']\s*:\s*([+-]?\d+(?:\.\d+)?)/g);
+  const entries = block.matchAll(/["'](\w+)["']\s*:\s*([+-]?(?:\d+\.?\d*|\.\d+))/g);
   for (const entry of entries) {
     weights[entry[1]] = parseFloat(entry[2]);
   }
@@ -70,7 +70,7 @@ function parseWeights(code: string): Record<string, number> {
 function updateWeightInCode(code: string, factor: string, newValue: number): string {
   // Update a single weight value in WEIGHTS_LARGE block
   const regex = new RegExp(
-    `(WEIGHTS_LARGE\\s*=\\s*\\{[^}]*["']${factor}["']\\s*:\\s*)([+-]?\\d+(?:\\.\\d+)?)`,
+    `(WEIGHTS_LARGE\\s*=\\s*\\{[^}]*["']${factor}["']\\s*:\\s*)([+-]?(?:\\d+\\.?\\d*|\\.\\d+))`,
     's'
   );
   if (regex.test(code)) {
