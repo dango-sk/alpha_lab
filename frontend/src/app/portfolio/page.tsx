@@ -112,8 +112,11 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [universe, rebalType]);
 
-  // Available dates
+  // Available dates — use A0 (base strategy) dates as canonical schedule
   const availableDates = useMemo(() => {
+    const base = results['A0']?.rebalance_dates;
+    if (base?.length) return [...base].sort();
+    // fallback: intersection of all strategies
     const dateSet = new Set<string>();
     Object.values(results).forEach((r) => {
       r.rebalance_dates?.forEach((d) => dateSet.add(d));
