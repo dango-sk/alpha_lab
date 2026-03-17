@@ -119,6 +119,29 @@ function buildYearlyStats(
     });
 }
 
+function buildMonthlyMap(dates: string[], returns: number[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (let i = 0; i < dates.length; i++) {
+    const ym = dates[i].slice(0, 7);
+    if (map[ym] !== undefined) {
+      map[ym] = (1 + map[ym]) * (1 + returns[i]) - 1;
+    } else {
+      map[ym] = returns[i];
+    }
+  }
+  return map;
+}
+
+function getAllMonths(results: Record<string, StrategyResult>): string[] {
+  const set = new Set<string>();
+  for (const r of Object.values(results)) {
+    for (const d of r.rebalance_dates) {
+      set.add(d.slice(0, 7));
+    }
+  }
+  return Array.from(set).sort();
+}
+
 // ─── Page Component ───
 
 export default function PerformancePage() {
@@ -160,6 +183,56 @@ export default function PerformancePage() {
   const labels = config?.strategy_labels ?? {};
   const colors = config?.strategy_colors ?? {};
   const bc = config?.backtest_config;
+
+  // ─── Monthly maps for heatmap & rolling ───
+  const nonBmKeys = useMemo(
+    () => strategyKeys.filter((k) => k !== 'KOSPI' && k !== 'KOSDAQ'),
+    [strategyKeys]
+  );
+
+  const months = useMemo(() => getAllMonths(results), [results]);
+
+  const monthlyMaps = useMemo(() => {
+    const maps: Record<string, Record<string, number>> = {};
+    for (const key of Object.keys(results)) {
+      const r = results[key];
+      maps[key] = buildMonthlyMap(r.rebalance_dates, r.monthly_returns);
+    }
+    return maps;
+  }, [results]);
+
+  const rollingExcessTraces = useMemo(() => {
+    const kospiMap = monthlyMaps['KOSPI'];
+    if (!kospiMap || months.length < 12) return [];
+    const traces: Plotly.Data[] = [];
+    for (const key of nonBmKeys) {
+      const sMap = monthlyMaps[key];
+      if (!sMap) continue;
+      const xVals: string[] = [];
+      const yVals: number[] = [];
+      for (let i = 11; i < months.length; i++) {
+        const window = months.slice(i - 11, i + 1);
+        let cumS = 1;
+        let cumB = 1;
+        for (const m of window) {
+          cumS *= 1 + (sMap[m] ?? 0);
+          cumB *= 1 + (kospiMap[m] ?? 0);
+        }
+        xVals.push(months[i]);
+        yVals.push((cumS - cumB) * 100);
+      }
+      traces.push({
+        type: 'scatter',
+        mode: 'lines',
+        name: labels[key] || key,
+        x: xVals,
+        y: yVals,
+        line: { color: colors[key], width: 2 },
+        hovertemplate: '%{x}<br>%{y:+.1f}%p<extra>%{fullData.name}</extra>',
+      });
+    }
+    return traces;
+  }, [nonBmKeys, months, monthlyMaps, labels, colors]);
 
   // ─── IS/OOS split ───
   const isOosData = useMemo(() => {
@@ -533,16 +606,42 @@ export default function PerformancePage() {
       </div>
 
       {/* IS/OOS Comparison */}
-      {(
+      <div>
+        <SectionHeader
+          title="In-Sample / Out-of-Sample 비교"
+          subtitle={`IS: ${startDate} ~ ${isOosSplit} | OOS: ${isOosSplit} ~ ${endDate}`}
+        />
+        <DataTable
+          columns={isOosColumns}
+          data={isOosData}
+          maxHeight="none"
+        />
+      </div>
+
+      {/* Rolling 12-month Excess Return */}
+      {rollingExcessTraces.length > 0 && (
         <div>
-          <SectionHeader
-            title="In-Sample / Out-of-Sample 비교"
-            subtitle={`IS: ${startDate} ~ ${isOosSplit} | OOS: ${isOosSplit} ~ ${endDate}`}
-          />
-          <DataTable
-            columns={isOosColumns}
-            data={isOosData}
-            maxHeight="none"
+          <h3 className="text-sm font-medium text-muted mb-2">
+            롤링 12개월 누적 초과수익률 (vs KOSPI)
+          </h3>
+          <PlotlyChart
+            data={rollingExcessTraces}
+            layout={{
+              height: 350,
+              margin: { l: 50, r: 20, t: 10, b: 40 },
+              xaxis: { tickfont: { size: 10 }, dtick: 6 },
+              yaxis: {
+                ticksuffix: '%p',
+                tickfont: { size: 10 },
+                title: { text: '초과수익률 (%p)', font: { size: 10, color: '#a1a1aa' } },
+              },
+              legend: { font: { size: 10, color: '#a1a1aa' }, bgcolor: 'transparent', orientation: 'h', y: -0.2 },
+              shapes: [{
+                type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0, y1: 0,
+                line: { color: 'rgba(255,255,255,0.2)', width: 1, dash: 'dash' },
+              }],
+            }}
+            height={350}
           />
         </div>
       )}

@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/performance', label: '성과 비교', icon: BarChart3 },
-  { href: '/monthly', label: '월별 분석', icon: Calendar },
   { href: '/portfolio', label: '포트폴리오', icon: PieChart },
   { href: '/statistics', label: '통계 검증', icon: FlaskConical },
   { href: '/lab', label: '전략 실험실', icon: TestTube2 },

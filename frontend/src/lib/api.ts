@@ -146,3 +146,11 @@ export async function sendChat(
 
   return fullText;
 }
+
+export async function executeSql(query: string) {
+  return fetchApi('/api/chat/sql', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+}

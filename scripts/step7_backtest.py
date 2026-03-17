@@ -865,3 +865,4 @@ if __name__ == "__main__":
     if results:
         show_comparison(results)
         save_backtest_cache(results)
+        save_portfolio_cache(results)

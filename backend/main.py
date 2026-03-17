@@ -4,6 +4,8 @@ Alpha Lab Quant Dashboard — FastAPI Backend
 Wraps the existing Streamlit-based data layer (lib/) and exposes it as REST API.
 """
 import json
+import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -183,6 +185,8 @@ Alpha Lab 대시보드의 모든 데이터에 접근할 수 있으며, 사용자
 - 전문 금융 용어를 사용하되, 코드 변수명이나 프로그래밍 용어는 절대 사용하지 마세요.
 - 답변은 간결하고 핵심적으로. 수치를 근거로 들어 답변하세요.
 - 사용자가 특정 종목이나 데이터를 물어보면, 당신이 가지고 있는 컨텍스트 데이터를 기반으로 답변하세요.
+- 사용자가 새로운 전략을 만들어달라고 하면, factor_engine 형식의 파이썬 코드를 ```python 블록으로 생성하세요. 코드에는 반드시 WEIGHTS_LARGE 딕셔너리와 score 함수가 포함되어야 합니다.
+- 생성한 전략 코드는 사용자가 "전략 실험실에서 열기" 버튼으로 바로 백테스트할 수 있습니다.
 """
 
 
@@ -496,6 +500,64 @@ def api_chat_strategy(req: StrategyChatRequest):
         "updated_code": updated_code,
         "changes_summary": changes_summary,
     }
+
+
+# ══════════════════════════════════════════════
+# 15. POST /api/chat/sql — Execute read-only SQL against PG
+# ══════════════════════════════════════════════
+class SqlQueryRequest(BaseModel):
+    query: str
+
+
+_SQL_FORBIDDEN = re.compile(
+    r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|COPY|EXECUTE|DO)\b",
+    re.IGNORECASE,
+)
+
+
+@app.post("/api/chat/sql")
+def api_chat_sql(req: SqlQueryRequest):
+    query = req.query.strip().rstrip(";")
+
+    # Only allow SELECT / WITH (CTE) queries
+    if not re.match(r"^\s*(SELECT|WITH)\b", query, re.IGNORECASE):
+        raise HTTPException(status_code=400, detail="Only SELECT queries are allowed")
+
+    if _SQL_FORBIDDEN.search(query):
+        raise HTTPException(status_code=400, detail="Query contains forbidden statements")
+
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
+
+    import psycopg2
+    import psycopg2.extras
+
+    try:
+        conn = psycopg2.connect(database_url)
+        conn.set_session(readonly=True, autocommit=True)
+        cur = conn.cursor()
+        cur.execute(query)
+        columns = [desc[0] for desc in cur.description] if cur.description else []
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Convert rows to list of lists for JSON
+        data = [
+            [_convert_for_json(cell) for cell in row]
+            for row in rows
+        ]
+
+        return {
+            "columns": columns,
+            "data": data,
+            "row_count": len(data),
+        }
+    except psycopg2.Error as e:
+        raise HTTPException(status_code=400, detail=f"SQL error: {e.pgerror or str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ══════════════════════════════════════════════

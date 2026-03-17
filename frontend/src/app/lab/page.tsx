@@ -126,7 +126,17 @@ export default function LabPage() {
       .then(([cfg, strats, results]) => {
         setConfig(cfg);
         setDefaultCode(cfg.default_strategy_code || '');
-        setCode(cfg.default_strategy_code || '');
+
+        // Check if AI chat injected a strategy code
+        const injectedCode = localStorage.getItem('alpha-lab-strategy-code');
+        if (injectedCode) {
+          setCode(injectedCode);
+          setCodeExpanded(true);
+          localStorage.removeItem('alpha-lab-strategy-code');
+        } else {
+          setCode(cfg.default_strategy_code || '');
+        }
+
         setSavedStrategies(strats || []);
         setBaseResults(results || null);
         if (cfg.backtest_config) {
