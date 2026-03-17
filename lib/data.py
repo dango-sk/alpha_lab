@@ -309,6 +309,10 @@ def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type
             full_results = {}
             for name, rj in rows:
                 if isinstance(rj, dict):
+                    # Custom strategies store results as {"KOSPI": {...}, "CUSTOM": {...}}
+                    # Extract the CUSTOM sub-result if present
+                    if "CUSTOM" in rj and "rebalance_dates" not in rj:
+                        rj = rj["CUSTOM"]
                     rj.pop("holdings", None)
                     rj.pop("attribution", None)
                     full_results[name] = rj
