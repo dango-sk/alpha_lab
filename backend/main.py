@@ -555,43 +555,143 @@ class ChatRequest(BaseModel):
 def _build_chat_context() -> str:
     """Build auto-context from current cached data for AI chat."""
     parts = []
-    # 1) 전략 성과 요약
-    try:
-        results = load_all_results(universe="KOSPI", rebal_type="monthly")
-        summary_parts = ["\n\n## 현재 전략 성과 요약 (KOSPI, 월간)"]
-        for key, r in results.items():
-            if isinstance(r, dict) and "cagr" in r:
+
+    # 1) 전략 성과 요약 (양쪽 유니버스)
+    for univ in ["KOSPI", "KOSPI+KOSDAQ"]:
+        try:
+            results = load_all_results(universe=univ, rebal_type="monthly")
+            sp = [f"\n\n## 전략 성과 요약 ({univ}, 월간)"]
+            for key, r in results.items():
+                if not isinstance(r, dict) or "cagr" not in r:
+                    continue
+                label = STRATEGY_LABELS.get(key, key)
                 cagr = r.get("cagr", 0)
                 mdd = r.get("mdd", 0)
                 sharpe = r.get("sharpe", 0)
                 total = r.get("total_return", 0)
-                label = STRATEGY_LABELS.get(key, key)
-                cagr_s = f"{cagr*100:.1f}%" if cagr else "-"
-                mdd_s = f"{mdd*100:.1f}%" if mdd else "-"
-                summary_parts.append(
-                    f"- {label}: 총수익률 {total*100:.1f}%, CAGR {cagr_s}, MDD {mdd_s}, Sharpe {sharpe:.2f}"
+                monthly = r.get("monthly_returns", [])
+                # 최근 6개월 월별 수익률
+                recent = monthly[-6:] if monthly else []
+                recent_s = ", ".join(f"{m.get('return',0)*100:+.1f}%" for m in recent) if recent else ""
+                sp.append(
+                    f"- {label}: 총수익률 {total*100:.1f}%, CAGR {cagr*100:.1f}%, "
+                    f"MDD {mdd*100:.1f}%, Sharpe {sharpe:.2f}"
+                    + (f" | 최근6M: [{recent_s}]" if recent_s else "")
                 )
-        parts.append("\n".join(summary_parts))
-    except Exception:
-        pass
+            parts.append("\n".join(sp))
+        except Exception:
+            pass
 
-    # 2) 최신 보유종목 요약
+    # 2) 최신 보유종목 상세 (KOSPI 월간)
     try:
         from lib.data import _load_holdings_cache
         hcache = _load_holdings_cache(universe="KOSPI", rebal_type="monthly")
         if hcache:
-            parts.append("\n\n## 최신 보유종목 요약 (KOSPI, 월간)")
-            for strategy_name, dates_data in hcache.items():
+            parts.append("\n\n## 최신 보유종목 (KOSPI, 월간)")
+            for sname, dates_data in hcache.items():
                 if not isinstance(dates_data, dict):
                     continue
                 latest_date = max(dates_data.keys())
                 holdings = dates_data[latest_date]
                 if not holdings:
                     continue
-                label = STRATEGY_LABELS.get(strategy_name, strategy_name)
-                top5 = holdings[:5]
-                names = ", ".join(h.get("stock_name", h.get("name", "?")) for h in top5)
-                parts.append(f"- {label} ({latest_date}, {len(holdings)}종목): Top5 = {names}")
+                label = STRATEGY_LABELS.get(sname, sname)
+                parts.append(f"\n### {label} ({latest_date}, {len(holdings)}종목)")
+                for h in holdings[:15]:
+                    nm = h.get("stock_name", "?")
+                    w = h.get("weight", 0)
+                    sec = h.get("sector", "")
+                    per = h.get("per", "")
+                    pbr = h.get("pbr", "")
+                    ev = h.get("ev_ebitda", "")
+                    parts.append(
+                        f"  {nm}: {w:.1f}% | {sec} | PER {per} PBR {pbr} EV/EBITDA {ev}"
+                    )
+                if len(holdings) > 15:
+                    parts.append(f"  ... 외 {len(holdings)-15}종목")
+    except Exception:
+        pass
+
+    # 3) 포트폴리오 특성 (최신 날짜)
+    try:
+        from lib.data import _load_holdings_cache
+        hcache = _load_holdings_cache(universe="KOSPI", rebal_type="monthly")
+        if hcache:
+            parts.append("\n\n## 포트폴리오 특성 (가중평균)")
+            for sname, dates_data in hcache.items():
+                if not isinstance(dates_data, dict):
+                    continue
+                latest_date = max(dates_data.keys())
+                try:
+                    chars = get_portfolio_characteristics(sname, latest_date, universe="KOSPI", rebal_type="monthly")
+                    if chars:
+                        label = STRATEGY_LABELS.get(sname, sname)
+                        per_w = chars.get("PER", "-")
+                        pbr_w = chars.get("PBR", "-")
+                        ev_w = chars.get("EV/EBITDA", "-")
+                        parts.append(f"- {label}: PER {per_w}, PBR {pbr_w}, EV/EBITDA {ev_w}")
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # 4) 통계검증 요약
+    try:
+        rob = load_all_robustness_results(universe="KOSPI", rebal_type="monthly")
+        if rob:
+            stat = rob.get("stat", {})
+            bm_sig = stat.get("bm_significance", {})
+            if bm_sig:
+                parts.append("\n\n## 통계검증 — 벤치마크 대비 유의성")
+                for sname, s in bm_sig.items():
+                    label = STRATEGY_LABELS.get(sname, sname)
+                    pval = s.get("p_value", "-")
+                    tstat = s.get("t_stat", "-")
+                    sig = "유의" if s.get("significant") else "비유의"
+                    excess = s.get("monthly_excess", 0)
+                    win = s.get("bootstrap_win_rate", 0)
+                    parts.append(
+                        f"- {label}: 월평균초과 {excess*100:.2f}%, t={tstat:.2f}, "
+                        f"p={pval:.4f}, 부트스트랩승률 {win*100:.1f}%, {sig}"
+                    )
+
+            is_oos = rob.get("is_oos", {})
+            is_res = is_oos.get("is_results", {})
+            oos_res = is_oos.get("oos_results", {})
+            if is_res or oos_res:
+                parts.append("\n\n## IS/OOS 성과 비교")
+                for sname in set(list(is_res.keys()) + list(oos_res.keys())):
+                    label = STRATEGY_LABELS.get(sname, sname)
+                    ir = is_res.get(sname, {})
+                    osr = oos_res.get(sname, {})
+                    parts.append(
+                        f"- {label}: IS(CAGR {ir.get('cagr',0)*100:.1f}%, Sharpe {ir.get('sharpe',0):.2f}, "
+                        f"MDD {ir.get('mdd',0)*100:.1f}%) → OOS(CAGR {osr.get('cagr',0)*100:.1f}%, "
+                        f"Sharpe {osr.get('sharpe',0):.2f}, MDD {osr.get('mdd',0)*100:.1f}%)"
+                    )
+    except Exception:
+        pass
+
+    # 5) 레짐 분석 요약
+    try:
+        regime = compute_regime_analysis(universe="KOSPI", rebal_type="monthly")
+        if regime:
+            summary = regime.get("summary", {})
+            counts = regime.get("regime_counts", {})
+            if summary:
+                parts.append(f"\n\n## 시장 레짐 분석 (Bull/Sideways/Bear)")
+                if counts:
+                    parts.append(f"레짐 분포: Bull {counts.get('Bull',0)}개월, Sideways {counts.get('Sideways',0)}개월, Bear {counts.get('Bear',0)}개월")
+                for sname, regimes in summary.items():
+                    label = STRATEGY_LABELS.get(sname, sname)
+                    regime_parts = []
+                    for rname in ["Bull", "Sideways", "Bear"]:
+                        rd = regimes.get(rname, {})
+                        if rd:
+                            avg = rd.get("avg_monthly_return", 0)
+                            regime_parts.append(f"{rname} {avg*100:.2f}%/월")
+                    if regime_parts:
+                        parts.append(f"- {label}: {', '.join(regime_parts)}")
     except Exception:
         pass
 
