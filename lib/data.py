@@ -286,9 +286,9 @@ def _slice_period_multi(results: dict, s: str, e: str) -> dict:
     return sliced
 
 
-@st.cache_data(show_spinner=False, ttl=3600)
 def _load_backtest_cached(start: str, end: str, universe: str = None, rebal_type: str = None):
-    """기본 백테스트 캐시 로더. PG backtest_cache 테이블 → JSON 파일 fallback."""
+    """기본 백테스트 캐시 로더. PG backtest_cache 테이블 → JSON 파일 fallback.
+    NOTE: st.cache_data 제거 — 커스텀 전략 추가/삭제가 즉시 반영되어야 하므로."""
     _uni = universe or "KOSPI"
     _rt = rebal_type or "monthly"
 
