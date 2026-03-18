@@ -478,8 +478,15 @@ export default function PerformancePage() {
     }
   }, [strategyKeys, selectedStrategy]);
 
+  if (loading || !config) {
+    return <LoadingState />;
+  }
+
+  const primaryKey = strategyKeys[0] || '';
+  const primary = results[primaryKey];
+
   // ─── Comparison table data ───
-  const comparisonData = useMemo(() => strategyKeys.map((key) => {
+  const comparisonData = strategyKeys.map((key) => {
     const r = results[key];
     return {
       strategy: labels[key] || key,
@@ -490,10 +497,10 @@ export default function PerformancePage() {
       avg_turnover: r.avg_turnover ?? 0,
       avg_size: r.avg_portfolio_size ?? 0,
     };
-  }), [strategyKeys, results, labels]);
+  });
 
   // ─── Cumulative return chart ───
-  const cumRetTraces: Plotly.Data[] = useMemo(() => strategyKeys.map((key) => {
+  const cumRetTraces: Plotly.Data[] = strategyKeys.map((key) => {
     const r = results[key];
     return {
       x: r.rebalance_dates,
@@ -504,9 +511,9 @@ export default function PerformancePage() {
       line: { color: colors[key] || '#42A5F5', width: 2 },
       hovertemplate: '%{y:+.1f}%<extra></extra>',
     };
-  }), [strategyKeys, results, labels, colors]);
+  });
 
-  const cumRetLayout = useMemo<Partial<Plotly.Layout>>(() => ({
+  const cumRetLayout: Partial<Plotly.Layout> = {
     title: { text: '누적 수익률', font: { size: 13, color: '#e4e4e7' } },
     yaxis: { ticksuffix: '%' },
     shapes: [
@@ -531,10 +538,10 @@ export default function PerformancePage() {
         yanchor: 'bottom',
       },
     ],
-  }), [isOosSplit]);
+  };
 
   // ─── Drawdown chart ───
-  const ddTraces: Plotly.Data[] = useMemo(() => strategyKeys.map((key) => {
+  const ddTraces: Plotly.Data[] = strategyKeys.map((key) => {
     const r = results[key];
     const dd = calcDrawdown(r.portfolio_values);
     return {
@@ -548,25 +555,25 @@ export default function PerformancePage() {
       fillcolor: (colors[key] || '#42A5F5') + '33',
       hovertemplate: '%{y:.1f}%<extra></extra>',
     };
-  }), [strategyKeys, results, labels, colors]);
+  });
 
-  const ddLayout = useMemo<Partial<Plotly.Layout>>(() => ({
+  const ddLayout: Partial<Plotly.Layout> = {
     title: { text: 'Drawdown', font: { size: 13, color: '#e4e4e7' } },
     yaxis: { ticksuffix: '%' },
-  }), []);
+  };
 
   // ─── Yearly monthly return table ───
   const selResult = results[selectedStrategy];
-  const monthlyRows = useMemo(() => selResult
+  const monthlyRows = selResult
     ? buildMonthlyTable(selResult.rebalance_dates, selResult.monthly_returns)
-    : [], [selResult]);
-  const yearlyStats = useMemo(() => selResult
+    : [];
+  const yearlyStats = selResult
     ? buildYearlyStats(
         selResult.rebalance_dates,
         selResult.monthly_returns,
         selResult.portfolio_values
       )
-    : [], [selResult]);
+    : [];
 
   const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
@@ -704,13 +711,6 @@ export default function PerformancePage() {
         v !== null && v !== undefined ? fmtNum(v as number) : '-',
     },
   ];
-
-  if (loading || !config) {
-    return <LoadingState />;
-  }
-
-  const primaryKey = strategyKeys[0] || '';
-  const primary = results[primaryKey];
 
   return (
     <div className="space-y-6 animate-fade-in">
