@@ -61,11 +61,13 @@ export function useResults(universe: string, rebalType: string) {
   const [colors, setColors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // 페이지 진입마다 새 key → 항상 refetch
+  const mountKey = useRef(Date.now());
+  const [refreshKey, setRefreshKey] = useState(() => Date.now());
 
-  // 페이지 진입(포커스) 시 자동 refetch
+  // window focus 시에도 refetch (브라우저 탭 전환)
   useEffect(() => {
-    const onFocus = () => setRefreshKey((k) => k + 1);
+    const onFocus = () => setRefreshKey(Date.now());
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
