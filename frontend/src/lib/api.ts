@@ -3,13 +3,13 @@
 const API_BASE = '';
 
 export async function fetchApi(path: string, options?: RequestInit) {
-  const res = await fetch(`${API_BASE}${path}`, options);
+  const res = await fetch(`${API_BASE}${path}`, { cache: 'no-store', ...options });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
 
 export async function getConfig() {
-  return fetchApi('/api/config');
+  return fetchApi(`/api/config?_t=${Date.now()}`);
 }
 
 export async function getResults(params: {
@@ -18,7 +18,8 @@ export async function getResults(params: {
   universe?: string;
   rebal_type?: string;
 }) {
-  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  const p = { ...params, _t: String(Date.now()) } as Record<string, string>;
+  const qs = new URLSearchParams(p).toString();
   return fetchApi(`/api/results?${qs}`);
 }
 
