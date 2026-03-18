@@ -242,6 +242,7 @@ export default function LabPage() {
       setProgress(100);
       setProgressMsg('완료!');
       setBacktestResults(result);
+      if (!saveName.trim()) setSaveName(autoName);
     } catch (e) {
       alert(`백테스트 실패: ${(e as Error).message}`);
     } finally {

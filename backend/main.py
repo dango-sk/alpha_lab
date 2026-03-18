@@ -458,6 +458,13 @@ class SaveStrategyRequest(BaseModel):
     rebal_type: Optional[str] = None
 
 
+def _invalidate_results_cache():
+    """전략 저장/삭제 후 results 캐시를 즉시 무효화."""
+    keys_to_remove = [k for k in _cache if k.startswith("results_")]
+    for k in keys_to_remove:
+        del _cache[k]
+
+
 @app.post("/api/strategies")
 def api_save_strategy(req: SaveStrategyRequest):
     try:
@@ -469,6 +476,7 @@ def api_save_strategy(req: SaveStrategyRequest):
             universe=req.universe,
             rebal_type=req.rebal_type,
         )
+        _invalidate_results_cache()
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -481,6 +489,7 @@ def api_save_strategy(req: SaveStrategyRequest):
 def api_delete_strategy(name: str):
     try:
         delete_strategy(name)
+        _invalidate_results_cache()
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
