@@ -10,6 +10,7 @@ import PlotlyChart from '@/components/PlotlyChart';
 import FilterBar from '@/components/FilterBar';
 import LoadingState from '@/components/LoadingState';
 import DateRangePanel from '@/components/DateRangePanel';
+import LazyChart from '@/components/LazyChart';
 
 // ─── Helpers ───
 
@@ -310,12 +311,16 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
         title="시장 국면 분석 (Regime Analysis)"
         subtitle={`Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Sideways: ${regimeData.regime_counts?.Sideways ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
       />
-      <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
+      <LazyChart height={120}>
+        <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
+      </LazyChart>
       {regimePerfRows.length > 0 && (
         <DataTable columns={regimePerfColumns} data={regimePerfRows} maxHeight="none" />
       )}
       {regimeBarTraces.length > 0 && (
-        <PlotlyChart data={regimeBarTraces} layout={regimeBarLayout} height={300} />
+        <LazyChart height={300}>
+          <PlotlyChart data={regimeBarTraces} layout={regimeBarLayout} height={300} />
+        </LazyChart>
       )}
     </div>
   );
@@ -822,7 +827,9 @@ export default function PerformancePage() {
       {/* Drawdown Chart */}
       <div>
         <SectionHeader title="Drawdown" />
-        <PlotlyChart data={ddTraces} layout={ddLayout} height={300} />
+        <LazyChart height={300}>
+          <PlotlyChart data={ddTraces} layout={ddLayout} height={300} />
+        </LazyChart>
       </div>
 
       {/* Yearly Performance */}
@@ -874,25 +881,27 @@ export default function PerformancePage() {
           <h3 className="text-sm font-medium text-muted mb-2">
             롤링 12개월 누적 초과수익률 (vs 벤치마크)
           </h3>
-          <PlotlyChart
-            data={rollingExcessTraces}
-            layout={{
-              height: 350,
-              margin: { l: 50, r: 20, t: 10, b: 50 },
-              xaxis: { tickfont: { size: 10 }, dtick: 12, tickangle: 0 },
-              yaxis: {
-                ticksuffix: '%p',
-                tickfont: { size: 10 },
-                title: { text: '초과수익률 (%p)', font: { size: 10, color: '#a1a1aa' } },
-              },
-              legend: { font: { size: 10, color: '#a1a1aa' }, bgcolor: 'transparent', orientation: 'h', y: -0.2 },
-              shapes: [{
-                type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0, y1: 0,
-                line: { color: 'rgba(255,255,255,0.2)', width: 1, dash: 'dash' },
-              }],
-            }}
-            height={350}
-          />
+          <LazyChart height={350}>
+            <PlotlyChart
+              data={rollingExcessTraces}
+              layout={{
+                height: 350,
+                margin: { l: 50, r: 20, t: 10, b: 50 },
+                xaxis: { tickfont: { size: 10 }, dtick: 12, tickangle: 0 },
+                yaxis: {
+                  ticksuffix: '%p',
+                  tickfont: { size: 10 },
+                  title: { text: '초과수익률 (%p)', font: { size: 10, color: '#a1a1aa' } },
+                },
+                legend: { font: { size: 10, color: '#a1a1aa' }, bgcolor: 'transparent', orientation: 'h', y: -0.2 },
+                shapes: [{
+                  type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0, y1: 0,
+                  line: { color: 'rgba(255,255,255,0.2)', width: 1, dash: 'dash' },
+                }],
+              }}
+              height={350}
+            />
+          </LazyChart>
         </div>
       )}
 
