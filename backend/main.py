@@ -460,7 +460,7 @@ class SaveStrategyRequest(BaseModel):
 
 def _invalidate_results_cache():
     """전략 저장/삭제 후 results 캐시를 즉시 무효화."""
-    keys_to_remove = [k for k in _cache if k.startswith("results_")]
+    keys_to_remove = [k for k in _cache if k.startswith("results:")]
     for k in keys_to_remove:
         del _cache[k]
 
