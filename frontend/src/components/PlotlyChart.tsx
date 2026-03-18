@@ -19,30 +19,30 @@ const darkLayout: Partial<Plotly.Layout> = {
   plot_bgcolor: 'transparent',
   font: {
     family: "'Inter', system-ui, sans-serif",
-    color: '#a1a1aa',
+    color: '#6b7280',
     size: 11,
   },
   margin: { l: 50, r: 20, t: 30, b: 40 },
   xaxis: {
-    gridcolor: 'rgba(255,255,255,0.05)',
-    zerolinecolor: 'rgba(255,255,255,0.08)',
-    tickfont: { size: 10 },
+    gridcolor: 'rgba(0,0,0,0.06)',
+    zerolinecolor: 'rgba(0,0,0,0.1)',
+    tickfont: { size: 10, color: '#6b7280' },
   },
   yaxis: {
-    gridcolor: 'rgba(255,255,255,0.05)',
-    zerolinecolor: 'rgba(255,255,255,0.08)',
-    tickfont: { size: 10 },
+    gridcolor: 'rgba(0,0,0,0.06)',
+    zerolinecolor: 'rgba(0,0,0,0.1)',
+    tickfont: { size: 10, color: '#6b7280' },
   },
   legend: {
-    font: { size: 10, color: '#a1a1aa' },
+    font: { size: 10, color: '#6b7280' },
     bgcolor: 'transparent',
     orientation: 'h',
     y: -0.15,
   },
   hoverlabel: {
-    bgcolor: '#27272a',
-    bordercolor: 'rgba(255,255,255,0.25)',
-    font: { color: '#ffffff', size: 12 },
+    bgcolor: '#ffffff',
+    bordercolor: 'rgba(0,0,0,0.15)',
+    font: { color: '#1a1a2e', size: 12 },
   },
 };
 

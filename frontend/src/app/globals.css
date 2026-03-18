@@ -2,20 +2,20 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #0a0a0f;
-  --color-foreground: #e4e4e7;
-  --color-card: rgba(255, 255, 255, 0.03);
-  --color-card-hover: rgba(255, 255, 255, 0.06);
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-light: rgba(255, 255, 255, 0.04);
-  --color-primary: #FF9800;
-  --color-primary-dim: rgba(255, 152, 0, 0.15);
-  --color-accent-green: #4CAF50;
-  --color-accent-red: #EF5350;
-  --color-accent-blue: #42A5F5;
-  --color-muted: #71717a;
-  --color-surface: #111118;
-  --color-surface-light: #1a1a24;
+  --color-background: #f5f5f7;
+  --color-foreground: #1a1a2e;
+  --color-card: rgba(255, 255, 255, 0.85);
+  --color-card-hover: rgba(255, 255, 255, 0.95);
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-light: rgba(0, 0, 0, 0.04);
+  --color-primary: #e8850a;
+  --color-primary-dim: rgba(232, 133, 10, 0.1);
+  --color-accent-green: #16a34a;
+  --color-accent-red: #dc2626;
+  --color-accent-blue: #2563eb;
+  --color-muted: #6b7280;
+  --color-surface: #ffffff;
+  --color-surface-light: #f9fafb;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -36,12 +36,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .glass-card {
@@ -49,12 +49,14 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-card:hover {
   background: var(--color-card-hover);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .font-num {
@@ -72,8 +74,8 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
-  50% { box-shadow: 0 0 12px 2px rgba(255, 152, 0, 0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 133, 10, 0); }
+  50% { box-shadow: 0 0 12px 2px rgba(232, 133, 10, 0.15); }
 }
 
 .pulse-glow {
