@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -8,10 +8,7 @@ interface DateRangePanelProps {
   startDate: string;
   endDate: string;
   isOosSplit: string;
-  onStartDateChange: (v: string) => void;
-  onEndDateChange: (v: string) => void;
-  onIsOosSplitChange: (v: string) => void;
-  onApply?: () => void;
+  onApply: (start: string, end: string, split: string) => void;
   className?: string;
 }
 
@@ -19,13 +16,19 @@ export default function DateRangePanel({
   startDate,
   endDate,
   isOosSplit,
-  onStartDateChange,
-  onEndDateChange,
-  onIsOosSplitChange,
   onApply,
   className,
 }: DateRangePanelProps) {
   const [open, setOpen] = useState(false);
+  // Internal draft state — changes here do NOT re-render parent
+  const [dStart, setDStart] = useState(startDate);
+  const [dEnd, setDEnd] = useState(endDate);
+  const [dSplit, setDSplit] = useState(isOosSplit);
+
+  // Sync from parent when props change (e.g. config loaded)
+  useEffect(() => { setDStart(startDate); }, [startDate]);
+  useEffect(() => { setDEnd(endDate); }, [endDate]);
+  useEffect(() => { setDSplit(isOosSplit); }, [isOosSplit]);
 
   return (
     <div className={cn('rounded-lg border border-border bg-surface overflow-hidden', className)}>
@@ -44,8 +47,8 @@ export default function DateRangePanel({
               <label className="block text-xs text-muted mb-1.5">시작일</label>
               <input
                 type="date"
-                value={startDate}
-                onChange={(e) => onStartDateChange(e.target.value)}
+                value={dStart}
+                onChange={(e) => setDStart(e.target.value)}
                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -53,8 +56,8 @@ export default function DateRangePanel({
               <label className="block text-xs text-muted mb-1.5">종료일</label>
               <input
                 type="date"
-                value={endDate}
-                onChange={(e) => onEndDateChange(e.target.value)}
+                value={dEnd}
+                onChange={(e) => setDEnd(e.target.value)}
                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -62,22 +65,20 @@ export default function DateRangePanel({
               <label className="block text-xs text-muted mb-1.5">IS/OOS 분할점</label>
               <input
                 type="date"
-                value={isOosSplit}
-                onChange={(e) => onIsOosSplitChange(e.target.value)}
+                value={dSplit}
+                onChange={(e) => setDSplit(e.target.value)}
                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
-          {onApply && (
-            <div className="mt-3 flex justify-end">
-              <button
-                onClick={onApply}
-                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-primary text-background hover:opacity-90 transition-opacity"
-              >
-                적용
-              </button>
-            </div>
-          )}
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={() => onApply(dStart, dEnd, dSplit)}
+              className="px-4 py-1.5 text-xs font-medium rounded-lg bg-primary text-background hover:opacity-90 transition-opacity"
+            >
+              적용
+            </button>
+          </div>
         </div>
       )}
     </div>

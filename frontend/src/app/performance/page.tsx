@@ -331,13 +331,10 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
 export default function PerformancePage() {
   const [universe, setUniverse] = useState<'KOSPI' | 'KOSPI+KOSDAQ'>('KOSPI');
   const [rebalType, setRebalType] = useState<'monthly' | 'biweekly'>('monthly');
-  // Applied dates (trigger API) vs draft dates (user editing)
+  // Applied dates (trigger API). Draft dates are managed inside DateRangePanel.
   const [startDate, setStartDate] = useState('2018-04-01');
   const [endDate, setEndDate] = useState('2026-04-01');
   const [isOosSplit, setIsOosSplit] = useState('2024-07-01');
-  const [draftStart, setDraftStart] = useState('2018-04-01');
-  const [draftEnd, setDraftEnd] = useState('2026-04-01');
-  const [draftSplit, setDraftSplit] = useState('2024-07-01');
   const [results, setResults] = useState<Record<string, StrategyResult>>({});
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
@@ -357,20 +354,20 @@ export default function PerformancePage() {
         const s = bc.start || '2018-04-01';
         const e = bc.end || '2026-04-01';
         const sp = bc.oos_start || '2024-07-01';
-        setStartDate(s); setDraftStart(s);
-        setEndDate(e); setDraftEnd(e);
-        setIsOosSplit(sp); setDraftSplit(sp);
+        setStartDate(s);
+        setEndDate(e);
+        setIsOosSplit(sp);
       }
     }).catch(console.error);
   }, []);
 
-  const applyDates = useCallback(() => {
-    if (draftStart.length === 10 && draftEnd.length === 10) {
-      setStartDate(draftStart);
-      setEndDate(draftEnd);
-      setIsOosSplit(draftSplit);
+  const applyDates = useCallback((start: string, end: string, split: string) => {
+    if (start.length === 10 && end.length === 10) {
+      setStartDate(start);
+      setEndDate(end);
+      setIsOosSplit(split);
     }
-  }, [draftStart, draftEnd, draftSplit]);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -722,12 +719,9 @@ export default function PerformancePage() {
       <SectionHeader title="성과 비교" subtitle="전략별 누적 수익률 및 핵심 지표" />
 
       <DateRangePanel
-        startDate={draftStart}
-        endDate={draftEnd}
-        isOosSplit={draftSplit}
-        onStartDateChange={setDraftStart}
-        onEndDateChange={setDraftEnd}
-        onIsOosSplitChange={setDraftSplit}
+        startDate={startDate}
+        endDate={endDate}
+        isOosSplit={isOosSplit}
         onApply={applyDates}
       />
 

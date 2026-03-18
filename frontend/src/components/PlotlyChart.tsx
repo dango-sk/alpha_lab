@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 
@@ -50,7 +51,7 @@ const defaultConfig: Partial<Plotly.Config> = {
   responsive: true,
 };
 
-export default function PlotlyChart({
+export default memo(function PlotlyChart({
   data,
   layout,
   config,
@@ -75,4 +76,4 @@ export default function PlotlyChart({
       />
     </div>
   );
-}
+});
