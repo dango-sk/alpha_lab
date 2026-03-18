@@ -61,6 +61,14 @@ export function useResults(universe: string, rebalType: string) {
   const [colors, setColors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // 페이지 진입(포커스) 시 자동 refetch
+  useEffect(() => {
+    const onFocus = () => setRefreshKey((k) => k + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -68,7 +76,6 @@ export function useResults(universe: string, rebalType: string) {
     getResults({ universe, rebal_type: rebalType })
       .then((data) => {
         setResults(data);
-        // Also fetch config for labels/colors
         getConfig().then((cfg) => {
           setLabels(cfg.strategy_labels);
           setColors(cfg.strategy_colors);
@@ -76,7 +83,7 @@ export function useResults(universe: string, rebalType: string) {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [universe, rebalType]);
+  }, [universe, rebalType, refreshKey]);
 
   return { results, labels, colors, loading, error };
 }
