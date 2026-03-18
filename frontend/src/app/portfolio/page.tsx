@@ -101,9 +101,10 @@ export default function PortfolioPage() {
         const nonBm = keys.filter((k: string) => k !== 'KOSPI' && k !== 'KOSDAQ');
         setSelectedStrategies(nonBm.slice(0, 3));
         for (const key of keys) {
-          if (res[key]?.rebalance_dates?.length) {
+          if (res[key]?.rebalance_dates?.length >= 2) {
             const dates = res[key].rebalance_dates;
-            setSelectedDate(dates[dates.length - 1]);
+            // Last date is end-of-period marker; use second-to-last as latest rebal date
+            setSelectedDate(dates[dates.length - 2]);
             break;
           }
         }
@@ -113,13 +114,16 @@ export default function PortfolioPage() {
   }, [universe, rebalType]);
 
   // Available dates — use A0 (base strategy) dates as canonical schedule
+  // Exclude the last date (it's the end-of-period marker for return calc, not a rebalance date)
   const availableDates = useMemo(() => {
     const base = results['A0']?.rebalance_dates;
-    if (base?.length) return [...base].sort();
+    if (base?.length && base.length >= 2) return base.slice(0, -1).sort();
     // fallback: intersection of all strategies
     const dateSet = new Set<string>();
     Object.values(results).forEach((r) => {
-      r.rebalance_dates?.forEach((d) => dateSet.add(d));
+      if (r.rebalance_dates?.length && r.rebalance_dates.length >= 2) {
+        r.rebalance_dates.slice(0, -1).forEach((d) => dateSet.add(d));
+      }
     });
     return [...dateSet].sort();
   }, [results]);

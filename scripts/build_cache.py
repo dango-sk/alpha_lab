@@ -14,6 +14,7 @@ sys.path.append(str(Path(__file__).parent))
 
 from step7_backtest import run_all_backtests, save_backtest_cache
 from step8_robustness import (
+    _load_cached_results,
     test_is_oos_split,
     test_statistical_significance,
     test_rolling_window,
@@ -31,9 +32,10 @@ def main():
 
     # ── Step 8: 강건성 검증 ──
     print("\n[2/2] 강건성 검증 실행 중...")
-    is_oos = test_is_oos_split()
-    stat = test_statistical_significance()
-    rolling = test_rolling_window(stat["full_results"])
+    full_results = _load_cached_results()
+    is_oos = test_is_oos_split(full_results)
+    stat = test_statistical_significance(full_results)
+    rolling = test_rolling_window(full_results)
     save_robustness_cache(is_oos, stat, rolling)
 
     elapsed = time.time() - t0

@@ -7,10 +7,8 @@ Alpha Lab 일일 파이프라인 (Railway PostgreSQL)
 
 매일:
   1. Forward/Consensus     FnSpace → PG (증분)
-  2. PG → SQLite 동기화    증분 sync
-  3. 백테스트 캐시 갱신    4콤보 (KOSPI×월간, KOSPI×격주, KOSPI+KOSDAQ×월간, KOSPI+KOSDAQ×격주)
-  4. 강건성 검증           IS/OOS + bootstrap + 롤링윈도우 → JSON
-  5. Railway 배포          git commit + railway up
+  2. 백테스트 캐시 갱신    4콤보 (KOSPI×월간, KOSPI×격주, KOSPI+KOSDAQ×월간, KOSPI+KOSDAQ×격주)
+  3. 강건성 검증           IS/OOS + bootstrap + 롤링윈도우 → PG
 
 ※ 주가(daily_price) + 시총은 LG 그램에서 Railway PG로 별도 업로드
 
@@ -131,80 +129,6 @@ def step_collect_consensus():
 # 4. 백테스트 캐시 갱신
 # ═══════════════════════════════════════════════════════════
 
-def step_sync_to_sqlite():
-    """PG → 로컬 SQLite 증분 동기화 (백테스트/대시보드용)"""
-    import sqlite3
-    import psycopg2
-
-    sqlite_path = Path(__file__).parent.parent / "data" / "alpha_lab.db"
-    sq = sqlite3.connect(str(sqlite_path))
-    sq.execute("PRAGMA journal_mode=WAL")
-    sq.execute("PRAGMA synchronous=OFF")
-
-    pg = psycopg2.connect(PG_URL)
-    pg_cur = pg.cursor()
-    pg_cur.execute("SET search_path TO alpha_lab, public")
-
-    # 테이블별 동기화 설정: (테이블명, 증분키, full_replace 여부)
-    sync_tables = [
-        ("daily_price", "trade_date", False),
-        ("fnspace_forward", "trade_date", False),
-        ("fnspace_finance", None, True),      # 전체 교체 (작은 테이블)
-        ("fnspace_master", None, True),        # 전체 교체
-        ("universe", None, True),              # 전체 교체
-        ("har_universe", None, True),          # 전체 교체
-    ]
-
-    for tbl, incr_col, full_replace in sync_tables:
-        # PG 테이블 존재 확인
-        pg_cur.execute(f"SELECT * FROM {tbl} LIMIT 0")
-        cols = [d[0] for d in pg_cur.description]
-        placeholders = ", ".join(["?"] * len(cols))
-
-        # SQLite 테이블 없으면 생성
-        sq.execute(f"CREATE TABLE IF NOT EXISTS {tbl} ({', '.join(cols)})")
-
-        if full_replace:
-            # 작은 테이블: DROP + 재생성
-            pg_cur.execute(f"SELECT count(*) FROM {tbl}")
-            pg_cnt = pg_cur.fetchone()[0]
-            sq.execute(f"DELETE FROM {tbl}")
-            pg_cur.execute(f"SELECT * FROM {tbl}")
-            rows = pg_cur.fetchall()
-            if rows:
-                sq.executemany(f"INSERT INTO {tbl} VALUES ({placeholders})", rows)
-            sq.commit()
-            print(f"    {tbl}: {len(rows):,}행 (전체 교체)")
-        else:
-            # 큰 테이블: 증분만
-            local_max = sq.execute(f"SELECT MAX({incr_col}) FROM {tbl}").fetchone()[0]
-            if local_max:
-                pg_cur.execute(f"SELECT * FROM {tbl} WHERE {incr_col} > %s", (local_max,))
-            else:
-                pg_cur.execute(f"SELECT * FROM {tbl}")
-
-            total = 0
-            while True:
-                rows = pg_cur.fetchmany(50000)
-                if not rows:
-                    break
-                sq.executemany(f"INSERT OR REPLACE INTO {tbl} VALUES ({placeholders})", rows)
-                total += len(rows)
-            sq.commit()
-            print(f"    {tbl}: +{total:,}행 (증분, since {local_max or 'N/A'})")
-
-    # 인덱스
-    sq.execute("CREATE INDEX IF NOT EXISTS idx_dp_code_date ON daily_price(stock_code, trade_date)")
-    sq.execute("CREATE INDEX IF NOT EXISTS idx_dp_date ON daily_price(trade_date)")
-    sq.execute("CREATE INDEX IF NOT EXISTS idx_ff_code_year ON fnspace_finance(stock_code, fiscal_year)")
-    sq.execute("CREATE INDEX IF NOT EXISTS idx_fwd_date ON fnspace_forward(trade_date)")
-    sq.execute("CREATE INDEX IF NOT EXISTS idx_univ_date ON universe(rebal_date, rebal_type)")
-    sq.commit()
-
-    sq.close()
-    pg.close()
-    print("  동기화 완료")
-
 
 def step_backtest():
     """step7_backtest 실행 + 캐시 저장 (PG 직접, 4 콤보)"""
@@ -247,39 +171,20 @@ def step_backtest():
 def step_robustness():
     """step8_robustness 실행 + 캐시 저장"""
     from step8_robustness import (
+        _load_cached_results,
         test_is_oos_split, test_statistical_significance,
         test_rolling_window, show_results, generate_chart,
         save_robustness_cache,
     )
 
-    is_oos = test_is_oos_split()
-    stat = test_statistical_significance()
-    rolling = test_rolling_window(stat["full_results"])
+    full_results = _load_cached_results()
+    is_oos = test_is_oos_split(full_results)
+    stat = test_statistical_significance(full_results)
+    rolling = test_rolling_window(full_results)
     show_results(is_oos, stat, rolling)
     generate_chart(stat, rolling)
     save_robustness_cache(is_oos, stat, rolling)
 
-
-# ═══════════════════════════════════════════════════════════
-# 6. Railway 배포
-# ═══════════════════════════════════════════════════════════
-
-def step_deploy_railway():
-    """railway up으로 대시보드 배포 (캐시는 PG에 저장되므로 git commit 불필요)"""
-    import subprocess
-
-    project_dir = Path(__file__).parent.parent
-
-    print("  railway up 실행 중...")
-    result = subprocess.run(
-        ["railway", "up"],
-        cwd=str(project_dir),
-        capture_output=True, text=True, timeout=600,
-    )
-    if result.returncode == 0:
-        print("  Railway 배포 성공")
-    else:
-        print(f"  Railway 배포 실패: {result.stderr[:200]}")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -538,21 +443,15 @@ def main():
         run("마스터 스냅샷 수집", step_collect_master)
         run("재무 보충 수집", step_collect_finance)
 
-    # ── 월초 + 15일: 유니버스 재구축 (biweekly 대응) ──
-    if is_monthly or datetime.now().day in range(15, 18):
-        run("유니버스 재구축", step_build_universe)
+    # ── 유니버스 재구축 (매 실행 시) ──
+    run("유니버스 재구축", step_build_universe)
 
     # ── 매일 (주가/시총은 LG 그램에서 PG로 별도 업로드) ──
     run("Forward/Consensus 수집", step_collect_consensus)
 
-    # PG → SQLite 동기화 제거 (모든 데이터를 PG에서 직접 읽음)
-
     if not args.skip_backtest:
         run("백테스트", step_backtest)
         run("강건성 검증", step_robustness)
-
-    # ── 배포 ──
-    run("Railway 배포", step_deploy_railway)
 
     # ── 요약 ──
     elapsed = time.time() - t0
