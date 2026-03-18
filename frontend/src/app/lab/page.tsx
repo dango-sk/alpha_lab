@@ -26,7 +26,7 @@ const FACTOR_CATEGORIES: Record<string, { factors: string[]; color: string }> = 
   },
   '차별화': {
     factors: ['F_EPS_M', 'PRICE_M', 'NDEBT_EBITDA', 'CURRENT'],
-    color: '#FF9800',
+    color: '#f59e0b',
   },
 };
 
