@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover } from '@/lib/api';
+import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/KpiCard';
@@ -74,6 +74,14 @@ function formatMarketCap(value: number): string {
   return `${value}`;
 }
 
+interface AttributionRow {
+  종목명: string;
+  섹터: string;
+  '비중(%)': number;
+  '종목수익률(%)': number;
+  '기여도(%)': number;
+}
+
 export default function PortfolioPage() {
   const [universe, setUniverse] = useState<'KOSPI' | 'KOSPI+KOSDAQ'>('KOSPI');
   const [rebalType, setRebalType] = useState<'monthly' | 'biweekly'>('monthly');
@@ -86,6 +94,7 @@ export default function PortfolioPage() {
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [attrMap, setAttrMap] = useState<Record<string, Record<string, number>>>({});
 
   // Load config and results
   useEffect(() => {
@@ -146,6 +155,14 @@ export default function PortfolioPage() {
     return idx > 0 ? availableDates[idx - 1] : '';
   }, [availableDates, selectedDate]);
 
+  // Next date for attribution (selectedDate ~ nextDate 기간의 종목 수익률)
+  const nextDate = useMemo(() => {
+    const base = results['A0']?.rebalance_dates;
+    if (!base) return '';
+    const idx = base.indexOf(selectedDate);
+    return idx >= 0 && idx < base.length - 1 ? base[idx + 1] : '';
+  }, [results, selectedDate]);
+
   // Stable key for useEffect dependency
   const strategyKeysStr = strategyKeys.join(',');
 
@@ -172,12 +189,21 @@ export default function PortfolioPage() {
         )
       : [];
 
+    const attrPromises = nextDate
+      ? strategyKeys.map((key) =>
+          getAttribution(key, selectedDate, nextDate, universe, rebalType)
+            .then((data) => ({ key, data: data as AttributionRow[] }))
+            .catch(() => ({ key, data: [] as AttributionRow[] }))
+        )
+      : [];
+
     Promise.all([
       Promise.all(holdingsPromises),
       Promise.all(charsPromises),
       Promise.all(turnoverPromises),
+      Promise.all(attrPromises),
     ])
-      .then(([holdingsResults, charsResults, turnoverResults]) => {
+      .then(([holdingsResults, charsResults, turnoverResults, attrResults]) => {
         const hMap: Record<string, Holding[]> = {};
         holdingsResults.forEach(({ key, data }) => { hMap[key] = data; });
         setHoldingsMap(hMap);
@@ -189,11 +215,20 @@ export default function PortfolioPage() {
         const tMap: Record<string, TurnoverData> = {};
         turnoverResults.forEach(({ key, data }) => { if (data) tMap[key] = data; });
         setTurnoverMap(tMap);
+
+        // attribution: 종목명 → 수익률(%) 매핑
+        const aMap: Record<string, Record<string, number>> = {};
+        attrResults.forEach(({ key, data }) => {
+          const m: Record<string, number> = {};
+          data.forEach((row) => { m[row['종목명']] = row['종목수익률(%)']; });
+          aMap[key] = m;
+        });
+        setAttrMap(aMap);
       })
       .catch(console.error)
       .finally(() => setDetailLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, strategyKeysStr, universe, rebalType, prevDate]);
+  }, [selectedDate, strategyKeysStr, universe, rebalType, prevDate, nextDate]);
 
   const bmName = universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200';
   const labels: Record<string, string> = { ...(config?.strategy_labels || {}), KOSPI: `벤치마크 (${bmName})` };
@@ -387,6 +422,14 @@ export default function PortfolioPage() {
       align: 'right' as const,
       mono: true,
       format: (v: unknown) => typeof v === 'number' ? v.toFixed(1) : String(v ?? ''),
+    },
+    {
+      key: '월수익률(%)',
+      label: '월수익률(%)',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => typeof v === 'number' ? fmtPct(v / 100) : '-',
+      colorFn: (v: unknown) => typeof v === 'number' ? valueColor(v / 100) : 'text-muted',
     },
   ];
 
@@ -659,7 +702,10 @@ export default function PortfolioPage() {
               {strategyKeys.map((key) => {
                 const holdings = holdingsMap[key] || [];
                 if (holdings.length === 0) return null;
-                const sorted = [...holdings].sort((a, b) => b['비중(%)'] - a['비중(%)']);
+                const returnMap = attrMap[key] || {};
+                const sorted = [...holdings]
+                  .map((h) => ({ ...h, '월수익률(%)': returnMap[h.종목명] ?? null }))
+                  .sort((a, b) => b['비중(%)'] - a['비중(%)']);
                 return (
                   <div key={key}>
                     <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">

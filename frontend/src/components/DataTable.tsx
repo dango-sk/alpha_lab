@@ -21,6 +21,7 @@ interface DataTableProps {
   className?: string;
   maxHeight?: string;
   onRowClick?: (row: Row, index: number) => void;
+  onCellClick?: (row: Row, colKey: string, value: unknown) => void;
 }
 
 export default function DataTable({
@@ -29,6 +30,7 @@ export default function DataTable({
   className,
   maxHeight = '400px',
   onRowClick,
+  onCellClick,
 }: DataTableProps) {
   return (
     <div
@@ -74,8 +76,15 @@ export default function DataTable({
                         'px-4 py-2.5 whitespace-nowrap',
                         col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left',
                         col.mono && 'font-num',
-                        colorClass
+                        colorClass,
+                        onCellClick && raw != null && 'cursor-pointer hover:underline'
                       )}
+                      onClick={(e) => {
+                        if (onCellClick && raw != null) {
+                          e.stopPropagation();
+                          onCellClick(row, col.key, raw);
+                        }
+                      }}
                     >
                       {display}
                     </td>

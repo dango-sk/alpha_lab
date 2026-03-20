@@ -365,9 +365,62 @@ def api_attribution(
     universe: Optional[str] = None,
     rebal_type: Optional[str] = None,
 ):
-    df = get_monthly_attribution(strategy, start_date, end_date,
-                                 universe=universe, rebal_type=rebal_type)
-    return _convert_for_json(df.to_dict(orient="records") if not df.empty else [])
+    """holdings 캐시 + daily_price에서 실시간으로 종목별 수익률/기여도 계산."""
+    # 1) holdings 캐시에서 해당 날짜 종목 가져오기
+    holdings_df = get_holdings(strategy, start_date, universe=universe, rebal_type=rebal_type)
+    if holdings_df.empty:
+        return []
+
+    codes = holdings_df["종목코드"].tolist()
+    weights = {row["종목코드"]: row["비중(%)"] for _, row in holdings_df.iterrows()}
+    names = {row["종목코드"]: row["종목명"] for _, row in holdings_df.iterrows()}
+    sectors = {row["종목코드"]: row.get("섹터", "기타") for _, row in holdings_df.iterrows()}
+
+    # 2) daily_price에서 시작/종료 가격 조회 (PG)
+    from lib.db import get_conn
+    conn = get_conn()
+    placeholders = ",".join(["%s"] * len(codes))
+    cur = conn.execute(f"""
+        SELECT stock_code,
+               MIN(CASE WHEN rn_start = 1 THEN adj_close END) as start_price,
+               MIN(CASE WHEN rn_end = 1 THEN adj_close END) as end_price
+        FROM (
+            SELECT stock_code, adj_close,
+                   ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date ASC) as rn_start,
+                   ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date DESC) as rn_end
+            FROM daily_price
+            WHERE stock_code IN ({placeholders})
+              AND trade_date >= %s AND trade_date <= %s
+              AND adj_close > 0
+        ) sub
+        WHERE rn_start = 1 OR rn_end = 1
+        GROUP BY stock_code
+    """, (*codes, start_date, end_date))
+    price_rows = cur.fetchall()
+    price_map = {r[0]: (r[1], r[2]) for r in price_rows}
+    conn.close()
+
+    # 3) 수익률/기여도 계산
+    result = []
+    for code in codes:
+        sp, ep = price_map.get(code, (None, None))
+        if not sp or sp <= 0:
+            continue
+        ret = (ep - sp) / sp if ep and ep > 0 else -1.0
+        w = weights.get(code, 0) / 100
+        sector = sectors.get(code, "기타")
+        if sector:
+            sector = sector.replace("코스피 ", "").replace("코스닥 ", "")
+        result.append({
+            "종목명": names.get(code, code),
+            "섹터": sector,
+            "비중(%)": round(w * 100, 1),
+            "종목수익률(%)": round(ret * 100, 1),
+            "기여도(%)": round(ret * w * 100, 2),
+        })
+
+    result.sort(key=lambda x: x["기여도(%)"], reverse=True)
+    return _convert_for_json(result)
 
 
 # ══════════════════════════════════════════════
