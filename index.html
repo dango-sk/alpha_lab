@@ -3,373 +3,670 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alpha Lab — 퀀트 전략 대시보드 기획서</title>
+<title>Alpha Lab — 퀀트 전략 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #ffffff;
-    --text: #1a1a2e;
-    --accent: #2563eb;
-    --accent-light: #eff6ff;
-    --border: #e2e8f0;
-    --gray: #64748b;
-    --section-bg: #f8fafc;
-    --tag-bg: #e0e7ff;
-    --tag-text: #3730a3;
-  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: var(--text);
-    background: var(--bg);
-    line-height: 1.7;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 48px 32px 80px;
+    font-family: 'Noto Sans KR', 'Inter', -apple-system, sans-serif;
+    background: #0a0a0f;
+    color: #e2e8f0;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
   }
-  h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    letter-spacing: -0.5px;
+
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    padding: 100px 40px 80px;
+    text-align: center;
+    overflow: hidden;
+    background: linear-gradient(180deg, #0f1029 0%, #0a0a0f 100%);
   }
-  .subtitle {
-    color: var(--gray);
-    font-size: 15px;
-    margin-bottom: 48px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--border);
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -200px; left: 50%; transform: translateX(-50%);
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+    pointer-events: none;
   }
-  h2 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-top: 48px;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  .hero-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #818cf8;
+    border: 1px solid rgba(129,140,248,0.3);
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 24px;
   }
-  h2 .route {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--accent);
-    background: var(--accent-light);
-    padding: 2px 10px;
-    border-radius: 4px;
-    font-family: 'SF Mono', 'Consolas', monospace;
-  }
-  .purpose {
-    color: var(--gray);
-    font-size: 14px;
+  .hero h1 {
+    font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    color: #fff;
     margin-bottom: 16px;
   }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 32px;
-    font-size: 14px;
+  .hero h1 span {
+    background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
-  th {
-    text-align: left;
-    padding: 10px 14px;
-    background: var(--section-bg);
-    border-bottom: 2px solid var(--border);
-    font-weight: 600;
+  .hero p {
+    font-size: 17px;
+    color: #94a3b8;
+    max-width: 560px;
+    margin: 0 auto 40px;
+    line-height: 1.8;
+  }
+  .hero-meta {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
     font-size: 13px;
-    color: var(--gray);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #64748b;
   }
-  td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
+  .hero-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
-  td:first-child {
-    font-weight: 600;
-    white-space: nowrap;
-    width: 180px;
-    color: var(--text);
-  }
-  td:last-child {
-    color: #374151;
-  }
-  tr:last-child td { border-bottom: none; }
-  .section-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 24px;
-    margin-bottom: 12px;
-  }
-  hr {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 48px 0;
-  }
-  .flow-box {
-    background: var(--section-bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 28px 32px;
-    font-family: 'SF Mono', 'Consolas', monospace;
-    font-size: 14px;
-    line-height: 2;
-    text-align: center;
-    margin: 16px 0 32px;
-  }
-  .flow-box .arrow {
-    color: var(--accent);
-    font-size: 18px;
-  }
-  .flow-box .layer {
-    display: block;
-    color: var(--text);
-  }
-  .flow-box .desc {
-    color: var(--gray);
-    font-size: 12px;
-    font-family: 'Pretendard', sans-serif;
-  }
-  .tag {
+  .hero-meta .dot {
+    width: 6px; height: 6px;
+    background: #6366f1;
+    border-radius: 50%;
     display: inline-block;
-    background: var(--tag-bg);
-    color: var(--tag-text);
-    font-size: 12px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-right: 4px;
-    font-family: 'SF Mono', 'Consolas', monospace;
   }
-  .factor-table td:first-child {
-    width: 120px;
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 40px;
   }
-  .factor-note {
-    color: var(--gray);
-    font-size: 13px;
-    margin-top: -20px;
-    margin-bottom: 32px;
-    padding: 12px 16px;
-    background: var(--accent-light);
+
+  /* ── Nav (page index) ── */
+  .page-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 48px 0 64px;
+  }
+  .page-nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    text-decoration: none;
+    color: #cbd5e1;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .page-nav a:hover {
+    background: rgba(99,102,241,0.08);
+    border-color: rgba(99,102,241,0.3);
+    color: #fff;
+  }
+  .nav-num {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6366f1;
+    background: rgba(99,102,241,0.15);
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
     border-radius: 8px;
-    border-left: 3px solid var(--accent);
+    flex-shrink: 0;
   }
-  .toc {
-    background: var(--section-bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 28px;
-    margin-bottom: 40px;
+
+  /* ── Section ── */
+  .section {
+    margin-bottom: 80px;
   }
-  .toc-title {
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .section-num {
+    font-family: 'Inter', sans-serif;
     font-size: 13px;
     font-weight: 700;
-    color: var(--gray);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
+    color: #6366f1;
+    background: rgba(99,102,241,0.15);
+    padding: 4px 12px;
+    border-radius: 6px;
   }
-  .toc ol {
-    padding-left: 20px;
+  .section h2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: -0.5px;
   }
-  .toc li {
+  .section .route {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: #818cf8;
+    margin-left: 4px;
+  }
+  .section-purpose {
+    font-size: 15px;
+    color: #94a3b8;
+    margin-bottom: 24px;
+    padding-left: 1px;
+  }
+
+  /* ── Feature Grid ── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .feature-card {
+    padding: 20px 22px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    transition: border-color 0.2s;
+  }
+  .feature-card:hover {
+    border-color: rgba(99,102,241,0.25);
+  }
+  .feature-card.wide {
+    grid-column: 1 / -1;
+  }
+  .feature-title {
     font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .feature-title .icon {
+    font-size: 15px;
+    opacity: 0.7;
+  }
+  .feature-desc {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.7;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent);
+    margin: 80px 0;
+  }
+
+  /* ── Bottom sections ── */
+  .info-section {
+    margin-bottom: 64px;
+  }
+  .info-section h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 20px;
+  }
+
+  /* ── Tech Stack ── */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  .stack-item {
+    text-align: center;
+    padding: 24px 16px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+  }
+  .stack-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+  .stack-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+
+  /* ── Flow ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 40px 0;
+  }
+  .flow-node {
+    text-align: center;
+    padding: 20px 28px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    min-width: 200px;
+  }
+  .flow-node strong {
+    display: block;
+    font-size: 14px;
+    color: #e2e8f0;
     margin-bottom: 4px;
   }
-  .toc a {
-    color: var(--accent);
-    text-decoration: none;
+  .flow-node small {
+    font-size: 12px;
+    color: #64748b;
   }
-  .toc a:hover { text-decoration: underline; }
-  .meta {
+  .flow-arrow {
+    font-size: 20px;
+    color: #6366f1;
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+
+  /* ── Factor Tags ── */
+  .factor-group {
+    margin-bottom: 20px;
+  }
+  .factor-group-head {
     display: flex;
-    gap: 24px;
-    font-size: 13px;
-    color: var(--gray);
-    margin-bottom: 32px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
   }
-  .meta span { display: flex; align-items: center; gap: 4px; }
+  .factor-category {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+  .factor-meaning {
+    font-size: 13px;
+    color: #64748b;
+  }
+  .factor-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .factor-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #c7d2fe;
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(99,102,241,0.2);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .factor-note {
+    margin-top: 24px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: #a5b4fc;
+    background: rgba(99,102,241,0.08);
+    border-left: 3px solid #6366f1;
+    border-radius: 0 8px 8px 0;
+    line-height: 1.8;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 48px 0;
+    font-size: 12px;
+    color: #475569;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    margin-top: 40px;
+  }
+
+  @media (max-width: 768px) {
+    .hero { padding: 64px 24px 48px; }
+    .hero h1 { font-size: 36px; }
+    .container { padding: 0 20px; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .stack-grid { grid-template-columns: repeat(2, 1fr); }
+    .flow { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); padding: 8px 0; }
+    .page-nav { grid-template-columns: 1fr 1fr; }
+  }
+
   @media print {
-    body { padding: 24px; max-width: 100%; }
-    .section-card { break-inside: avoid; }
+    body { background: #fff; color: #1a1a2e; }
+    .hero { background: none; padding: 40px 0; }
+    .hero h1 { color: #1a1a2e; font-size: 32px; }
+    .hero h1 span { -webkit-text-fill-color: #4f46e5; }
+    .hero p, .section-purpose, .feature-desc, .factor-meaning { color: #64748b; }
+    .section h2, .feature-title, .factor-category, .flow-node strong, .stack-value, .info-section h3 { color: #1a1a2e; }
+    .feature-card, .stack-item, .flow-node, .page-nav a { border-color: #e2e8f0; background: #f8fafc; }
+    .section { break-inside: avoid; }
   }
 </style>
 </head>
 <body>
 
-<h1>Alpha Lab</h1>
-<p class="subtitle">이현자산운용 퀀트팀 내부용 대시보드 &mdash; 멀티팩터 전략의 백테스트 결과를 시각화하고, 포트폴리오를 분석하며, AI 챗을 통해 데이터를 탐색하는 도구.</p>
-
-<div class="meta">
-  <span>작성일: 2026-03-20</span>
-  <span>버전: 1.0</span>
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="hero">
+  <div class="hero-badge">Internal Tool</div>
+  <h1><span>Alpha Lab</span></h1>
+  <p>멀티팩터 퀀트 전략의 백테스트 결과를 시각화하고,<br>포트폴리오를 분석하며, AI로 데이터를 탐색하는 대시보드</p>
+  <div class="hero-meta">
+    <span><span class="dot"></span>이현자산운용 퀀트팀</span>
+    <span><span class="dot"></span>2026.03</span>
+    <span><span class="dot"></span>v1.0</span>
+  </div>
 </div>
 
-<div class="toc">
-  <div class="toc-title">목차</div>
-  <ol>
-    <li><a href="#performance">퍼포먼스</a></li>
-    <li><a href="#portfolio">포트폴리오</a></li>
-    <li><a href="#statistics">통계 검증</a></li>
-    <li><a href="#lab">실험실</a></li>
-    <li><a href="#chat">AI 챗</a></li>
-    <li><a href="#common">공통 UI 요소</a></li>
-    <li><a href="#stack">기술 스택</a></li>
-    <li><a href="#flow">데이터 흐름</a></li>
-    <li><a href="#factors">전략 팩터 구조</a></li>
-  </ol>
+<div class="container">
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav class="page-nav">
+  <a href="#performance"><span class="nav-num">01</span>퍼포먼스</a>
+  <a href="#portfolio"><span class="nav-num">02</span>포트폴리오</a>
+  <a href="#statistics"><span class="nav-num">03</span>통계 검증</a>
+  <a href="#lab"><span class="nav-num">04</span>실험실</a>
+  <a href="#chat"><span class="nav-num">05</span>AI 챗</a>
+</nav>
+
+<!-- ═══════════════ 01. PERFORMANCE ═══════════════ -->
+<div class="section" id="performance">
+  <div class="section-head">
+    <span class="section-num">01</span>
+    <h2>퍼포먼스 <span class="route">/performance</span></h2>
+  </div>
+  <p class="section-purpose">전략별 성과 비교 — 메인 화면</p>
+  <div class="feature-grid">
+    <div class="feature-card wide">
+      <div class="feature-title"><span class="icon">⚙</span> 필터 바</div>
+      <div class="feature-desc">유니버스(KOSPI / KOSPI+KOSDAQ), 리밸런싱 주기(월간 / 격주), 날짜 범위 선택</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> KPI 카드</div>
+      <div class="feature-desc">전략별 누적 수익률, MDD, Sharpe</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 성과 요약 테이블</div>
+      <div class="feature-desc">CAGR, MDD, Sharpe, 평균 턴오버, 평균 종목 수</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 누적 수익률 차트</div>
+      <div class="feature-desc">포트폴리오 가치 성장 곡선, IS/OOS 구간 표시</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 드로다운 차트</div>
+      <div class="feature-desc">최대 낙폭 추이</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 연도별 월간 수익률</div>
+      <div class="feature-desc">캘린더 히트맵 (연도 × 12개월 + YTD) + 연간 통계</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> IS/OOS 비교</div>
+      <div class="feature-desc">인샘플 vs 아웃오브샘플 수익률, Sharpe</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 롤링 12개월 초과수익률</div>
+      <div class="feature-desc">벤치마크 대비 초과수익 추이</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 레짐 분석</div>
+      <div class="feature-desc">상승/횡보/하락장 구간 분류 + 구간별 전략 성과 + 평균 월간 수익률</div>
+    </div>
+  </div>
 </div>
 
-<!-- ─────────────────────────────────── -->
-<h2 id="performance">1. 퍼포먼스 <span class="route">/performance</span></h2>
-<p class="purpose">전략별 성과 비교 — 메인 화면</p>
-<div class="section-card">
-<table>
-  <tr><th>영역</th><th>설명</th></tr>
-  <tr><td>필터 바</td><td>유니버스(KOSPI / KOSPI+KOSDAQ), 리밸런싱 주기(월간 / 격주), 날짜 범위 선택</td></tr>
-  <tr><td>KPI 카드</td><td>전략별 누적 수익률, MDD, Sharpe</td></tr>
-  <tr><td>성과 요약 테이블</td><td>CAGR, MDD, Sharpe, 평균 턴오버, 평균 종목 수</td></tr>
-  <tr><td>누적 수익률 차트</td><td>포트폴리오 가치 성장 곡선 (IS/OOS 구간 표시)</td></tr>
-  <tr><td>드로다운 차트</td><td>최대 낙폭 추이</td></tr>
-  <tr><td>연도별 월간 수익률</td><td>캘린더 히트맵 (연도 &times; 12개월 + YTD) + 연간 통계</td></tr>
-  <tr><td>IS/OOS 비교</td><td>인샘플 vs 아웃오브샘플 수익률, Sharpe</td></tr>
-  <tr><td>롤링 12개월 초과수익률</td><td>벤치마크 대비 초과수익 추이</td></tr>
-  <tr><td>레짐 분석</td><td>상승/횡보/하락장 구간 분류 + 구간별 전략 성과 테이블 + 평균 월간 수익률 바 차트</td></tr>
-</table>
+<!-- ═══════════════ 02. PORTFOLIO ═══════════════ -->
+<div class="section" id="portfolio">
+  <div class="section-head">
+    <span class="section-num">02</span>
+    <h2>포트폴리오 <span class="route">/portfolio</span></h2>
+  </div>
+  <p class="section-purpose">특정 리밸런싱 시점의 보유 종목, 섹터, 시총 분석</p>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 날짜 / 전략 선택</div>
+      <div class="feature-desc">리밸런싱 날짜 드롭다운 + 복수 전략 체크 비교</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 포트폴리오 특성</div>
+      <div class="feature-desc">가중평균 PER, PBR, EV/EBITDA</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 집중도 분석</div>
+      <div class="feature-desc">HHI, Top 5 비중, 종목 수</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> Top 5 보유 비교</div>
+      <div class="feature-desc">전략 간 상위 5개 종목 스캐터</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 섹터 배분</div>
+      <div class="feature-desc">가로 바 차트 — 전략별 섹터 비중</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 시총 분포</div>
+      <div class="feature-desc">초대형/대형/중형/소형 분류 + 요약 테이블</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 리밸런싱 턴오버</div>
+      <div class="feature-desc">신규 편입/제외/유지 종목 수, 턴오버율, 상세 테이블</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 보유 종목 상세</div>
+      <div class="feature-desc">전 종목 리스트 — 점수, PER, PBR, EV/EBITDA, 월간 수익률</div>
+    </div>
+  </div>
 </div>
 
-<!-- ─────────────────────────────────── -->
-<h2 id="portfolio">2. 포트폴리오 <span class="route">/portfolio</span></h2>
-<p class="purpose">특정 리밸런싱 시점의 보유 종목, 섹터, 시총 분석</p>
-<div class="section-card">
-<table>
-  <tr><th>영역</th><th>설명</th></tr>
-  <tr><td>날짜 선택</td><td>리밸런싱 날짜 드롭다운</td></tr>
-  <tr><td>전략 선택</td><td>복수 전략 체크 비교</td></tr>
-  <tr><td>포트폴리오 특성</td><td>가중평균 PER, PBR, EV/EBITDA</td></tr>
-  <tr><td>집중도 분석</td><td>HHI, Top 5 비중, 종목 수</td></tr>
-  <tr><td>Top 5 보유 비교</td><td>전략 간 상위 5개 종목 스캐터</td></tr>
-  <tr><td>섹터 배분</td><td>가로 바 차트 (전략별 섹터 비중)</td></tr>
-  <tr><td>시총 분포</td><td>초대형/대형/중형/소형 분류 바 차트 + 요약 테이블</td></tr>
-  <tr><td>리밸런싱 턴오버</td><td>신규 편입/제외/유지 종목 수 + 턴오버율 + 상세 테이블</td></tr>
-  <tr><td>보유 종목 상세</td><td>전략별 전 종목 리스트 (점수, PER, PBR, EV/EBITDA, 월간 수익률)</td></tr>
-</table>
+<!-- ═══════════════ 03. STATISTICS ═══════════════ -->
+<div class="section" id="statistics">
+  <div class="section-head">
+    <span class="section-num">03</span>
+    <h2>통계 검증 <span class="route">/statistics</span></h2>
+  </div>
+  <p class="section-purpose">전략 성과의 통계적 유의성 검증</p>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> IS vs OOS</div>
+      <div class="feature-desc">인샘플/아웃오브샘플 Sharpe 비교 바 차트 + 상세 테이블</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 부트스트랩 유의성</div>
+      <div class="feature-desc">t-통계량 (±1.96 기준선), p-value, 95% CI, 승률</div>
+    </div>
+    <div class="feature-card wide">
+      <div class="feature-title"><span class="icon">◼</span> 롤링 24개월 윈도우</div>
+      <div class="feature-desc">24개월 롤링 초과수익 차트 + 양의 구간 비율 (win rate)</div>
+    </div>
+  </div>
 </div>
 
-<!-- ─────────────────────────────────── -->
-<h2 id="statistics">3. 통계 검증 <span class="route">/statistics</span></h2>
-<p class="purpose">전략 성과의 통계적 유의성 검증</p>
-<div class="section-card">
-<table>
-  <tr><th>영역</th><th>설명</th></tr>
-  <tr><td>IS vs OOS</td><td>인샘플/아웃오브샘플 Sharpe 비교 바 차트 + 상세 테이블</td></tr>
-  <tr><td>부트스트랩 유의성</td><td>t-통계량 바 차트 (&plusmn;1.96 기준선) + 평균 월간 초과수익률, p-value, 95% CI, 승률</td></tr>
-  <tr><td>롤링 24개월 윈도우</td><td>24개월 롤링 초과수익 차트 + 양의 구간 비율 (win rate)</td></tr>
-</table>
+<!-- ═══════════════ 04. LAB ═══════════════ -->
+<div class="section" id="lab">
+  <div class="section-head">
+    <span class="section-num">04</span>
+    <h2>실험실 <span class="route">/lab</span></h2>
+  </div>
+  <p class="section-purpose">커스텀 전략 생성, 편집, 백테스트</p>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 전략 관리</div>
+      <div class="feature-desc">저장된 전략 불러오기/삭제</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 전략 설정</div>
+      <div class="feature-desc">유니버스, 비중 상한(%), Top N, 거래비용(bp), 리밸런싱 주기</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 팩터 가중치 에디터</div>
+      <div class="feature-desc">카테고리별 슬라이더로 개별 팩터 비중 조절 (밸류에이션, 회귀매력도, 성장성, 차별화)</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 백테스트 실행</div>
+      <div class="feature-desc">진행률 바 + 기존 vs 수정 vs 벤치마크 비교 테이블 + 누적 수익률 차트</div>
+    </div>
+  </div>
 </div>
 
-<!-- ─────────────────────────────────── -->
-<h2 id="lab">4. 실험실 <span class="route">/lab</span></h2>
-<p class="purpose">커스텀 전략 생성, 편집, 백테스트</p>
-<div class="section-card">
-<table>
-  <tr><th>영역</th><th>설명</th></tr>
-  <tr><td>저장 전략 로드</td><td>이전에 저장한 전략 불러오기/삭제</td></tr>
-  <tr><td>전략 설정</td><td>유니버스, 비중 상한(%), Top N 종목 수, 거래비용(bp), 리밸런싱 주기</td></tr>
-  <tr><td>팩터 가중치 에디터</td><td>카테고리별(밸류에이션, 회귀매력도, 성장성, 차별화) 슬라이더로 개별 팩터 비중 조절</td></tr>
-  <tr><td>전략 코드 뷰어</td><td>생성된 Python 전략 코드 확인/수정</td></tr>
-  <tr><td>백테스트 실행</td><td>진행률 바 + 결과 비교 테이블 (기존 vs 수정 vs 벤치마크) + 누적 수익률 차트</td></tr>
-  <tr><td>저장</td><td>전략명, 설명 입력 후 저장</td></tr>
-</table>
+<!-- ═══════════════ 05. CHAT ═══════════════ -->
+<div class="section" id="chat">
+  <div class="section-head">
+    <span class="section-num">05</span>
+    <h2>AI 챗 <span class="route">/chat</span></h2>
+  </div>
+  <p class="section-purpose">자연어로 전략 분석, 데이터 조회, 전략 추천</p>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 대화 관리</div>
+      <div class="feature-desc">세션 이력 — 신규 생성, 목록, 삭제</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> SQL 실행</div>
+      <div class="feature-desc">AI가 SQL 쿼리 생성 → 결과를 인라인 테이블로 표시</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 전략 추천</div>
+      <div class="feature-desc">Python 전략 코드 제안 → "실험실에서 열기" 버튼</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-title"><span class="icon">◼</span> 추천 프롬프트</div>
+      <div class="feature-desc">새 세션 시 분석 예시 질문 표시</div>
+    </div>
+  </div>
 </div>
 
-<!-- ─────────────────────────────────── -->
-<h2 id="chat">5. AI 챗 <span class="route">/chat</span></h2>
-<p class="purpose">자연어로 전략 분석, 데이터 조회, 전략 추천</p>
-<div class="section-card">
-<table>
-  <tr><th>영역</th><th>설명</th></tr>
-  <tr><td>세션 사이드바</td><td>대화 이력 관리 (신규 생성, 목록, 삭제)</td></tr>
-  <tr><td>채팅 영역</td><td>마크다운 렌더링 (표, 코드, 차트), SQL 실행 결과 인라인 표시</td></tr>
-  <tr><td>전략 추천</td><td>AI가 Python 전략 코드를 제안하면 "실험실에서 열기" 버튼 표시</td></tr>
-  <tr><td>추천 프롬프트</td><td>새 세션 시 분석 예시 질문 표시</td></tr>
-</table>
+<div class="divider"></div>
+
+<!-- ═══════════════ TECH STACK ═══════════════ -->
+<div class="info-section">
+  <h3>기술 스택</h3>
+  <div class="stack-grid">
+    <div class="stack-item">
+      <div class="stack-label">Frontend</div>
+      <div class="stack-value">Next.js 14<br><small style="color:#64748b;font-size:12px">React · TypeScript · Tailwind</small></div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-label">Charts</div>
+      <div class="stack-value">Plotly.js</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-label">Backend</div>
+      <div class="stack-value">FastAPI<br><small style="color:#64748b;font-size:12px">Python</small></div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-label">Database</div>
+      <div class="stack-value">PostgreSQL</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-label">AI</div>
+      <div class="stack-value">Claude API<br><small style="color:#64748b;font-size:12px">Anthropic</small></div>
+    </div>
+  </div>
 </div>
 
-<hr>
-
-<!-- ─────────────────────────────────── -->
-<h2 id="common">공통 UI 요소</h2>
-<div class="section-card">
-<table>
-  <tr><th>컴포넌트</th><th>설명</th></tr>
-  <tr><td>Navigation</td><td>좌측 접이식 사이드바 (퍼포먼스, 포트폴리오, 통계, 실험실, 챗)</td></tr>
-  <tr><td>FilterBar</td><td>유니버스/리밸런싱 토글 (전 페이지 공통)</td></tr>
-  <tr><td>KpiCard</td><td>핵심 지표 카드 (타이틀, 메인 값, 서브 지표, 컬러 보더)</td></tr>
-  <tr><td>DataTable</td><td>정렬 가능 테이블, 컬러 하이라이트, 클릭 핸들러</td></tr>
-  <tr><td>PlotlyChart</td><td>Plotly.js 래퍼 (다크 테마)</td></tr>
-  <tr><td>LazyChart</td><td>Intersection Observer 기반 지연 로딩 (성능 최적화)</td></tr>
-</table>
+<!-- ═══════════════ DATA FLOW ═══════════════ -->
+<div class="info-section">
+  <h3>데이터 흐름</h3>
+  <div class="flow">
+    <div class="flow-node">
+      <strong>PostgreSQL</strong>
+      <small>일별 시세 · 재무 · 컨센서스</small>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <strong>FastAPI</strong>
+      <small>/api/results, /api/holdings, ...</small>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <strong>Next.js</strong>
+      <small>Plotly 차트 + 테이블</small>
+    </div>
+  </div>
 </div>
 
-<hr>
+<!-- ═══════════════ FACTORS ═══════════════ -->
+<div class="info-section">
+  <h3>전략 팩터 구조</h3>
 
-<!-- ─────────────────────────────────── -->
-<h2 id="stack">기술 스택</h2>
-<div class="section-card">
-<table>
-  <tr><th>레이어</th><th>기술</th></tr>
-  <tr><td>프론트엔드</td><td>Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS</td></tr>
-  <tr><td>차트</td><td>Plotly.js</td></tr>
-  <tr><td>백엔드</td><td>FastAPI (Python)</td></tr>
-  <tr><td>DB</td><td>PostgreSQL</td></tr>
-  <tr><td>AI</td><td>Anthropic Claude API</td></tr>
-</table>
+  <div class="factor-group">
+    <div class="factor-group-head">
+      <span class="factor-category">밸류에이션</span>
+      <span class="factor-meaning">— 트레일링(T) / 포워드(F) 밸류에이션 매력도</span>
+    </div>
+    <div class="factor-tags">
+      <span class="factor-tag">T_PER</span>
+      <span class="factor-tag">F_PER</span>
+      <span class="factor-tag">T_PBR</span>
+      <span class="factor-tag">F_PBR</span>
+      <span class="factor-tag">T_EVEBITDA</span>
+      <span class="factor-tag">F_EVEBITDA</span>
+      <span class="factor-tag">T_PCF</span>
+    </div>
+  </div>
+
+  <div class="factor-group">
+    <div class="factor-group-head">
+      <span class="factor-category">회귀 매력도</span>
+      <span class="factor-meaning">— 회귀선 대비 괴리율 (양수 = 저평가)</span>
+    </div>
+    <div class="factor-tags">
+      <span class="factor-tag">ATT_PBR</span>
+      <span class="factor-tag">ATT_EVIC</span>
+      <span class="factor-tag">ATT_PER</span>
+      <span class="factor-tag">ATT_EVEBIT</span>
+    </div>
+  </div>
+
+  <div class="factor-group">
+    <div class="factor-group-head">
+      <span class="factor-category">성장성</span>
+      <span class="factor-meaning">— 매출 성장률</span>
+    </div>
+    <div class="factor-tags">
+      <span class="factor-tag">T_SPSG</span>
+      <span class="factor-tag">F_SPSG</span>
+    </div>
+  </div>
+
+  <div class="factor-group">
+    <div class="factor-group-head">
+      <span class="factor-category">차별화</span>
+      <span class="factor-meaning">— 컨센서스 EPS 변화율 (모멘텀)</span>
+    </div>
+    <div class="factor-tags">
+      <span class="factor-tag">F_EPS_M</span>
+    </div>
+  </div>
+
+  <div class="factor-note">
+    각 팩터에 0~100% 가중치를 부여하여 종합 점수 산출 → 상위 N개 종목 선정 → 시총 비례 비중 배분 (개별 상한 10%)
+  </div>
 </div>
 
-<hr>
+</div><!-- /container -->
 
-<!-- ─────────────────────────────────── -->
-<h2 id="flow">데이터 흐름</h2>
-<div class="flow-box">
-  <span class="layer"><strong>PostgreSQL</strong> <span class="desc">(일별 시세 / 재무 / 컨센서스)</span></span>
-  <span class="arrow">&#x25BC;</span>
-  <span class="layer"><strong>FastAPI 백엔드</strong> <span class="desc">(/api/results, /api/holdings, /api/attribution, ...)</span></span>
-  <span class="arrow">&#x25BC;</span>
-  <span class="layer"><strong>Next.js 프론트엔드</strong> <span class="desc">(fetch &rarr; state &rarr; Plotly 차트 + 테이블)</span></span>
-</div>
-
-<hr>
-
-<!-- ─────────────────────────────────── -->
-<h2 id="factors">전략 팩터 구조</h2>
-<div class="section-card">
-<table class="factor-table">
-  <tr><th>카테고리</th><th>팩터</th><th>의미</th></tr>
-  <tr>
-    <td>밸류에이션</td>
-    <td><span class="tag">T_PER</span><span class="tag">F_PER</span><span class="tag">T_PBR</span><span class="tag">F_PBR</span><span class="tag">T_EVEBITDA</span><span class="tag">F_EVEBITDA</span><span class="tag">T_PCF</span></td>
-    <td>12개월 트레일링(T) / 포워드(F) 밸류에이션 지표의 매력도</td>
-  </tr>
-  <tr>
-    <td>회귀 매력도</td>
-    <td><span class="tag">ATT_PBR</span><span class="tag">ATT_EVIC</span><span class="tag">ATT_PER</span><span class="tag">ATT_EVEBIT</span></td>
-    <td>ROE-PBR, ROIC-EV/IC 등 회귀선 대비 괴리율 (양수 = 저평가)</td>
-  </tr>
-  <tr>
-    <td>성장성</td>
-    <td><span class="tag">T_SPSG</span><span class="tag">F_SPSG</span></td>
-    <td>매출 성장률 (트레일링 / 포워드)</td>
-  </tr>
-  <tr>
-    <td>차별화</td>
-    <td><span class="tag">F_EPS_M</span></td>
-    <td>컨센서스 EPS 변화율 (모멘텀)</td>
-  </tr>
-</table>
-</div>
-<div class="factor-note">
-  각 팩터에 0~100% 가중치를 부여하여 종합 점수 산출 &rarr; 상위 N개 종목 선정 &rarr; 시총 비례 비중 배분 (개별 상한 10%)
+<div class="footer">
+  Alpha Lab · 이현자산운용 퀀트팀 · 2026
 </div>
 
 </body>
