@@ -311,6 +311,11 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
         title="시장 국면 분석 (Regime Analysis)"
         subtitle={`KOSPI 200 50일 MA ±3% 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Sideways: ${regimeData.regime_counts?.Sideways ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
       />
+      <div className="flex gap-6 text-xs text-muted bg-surface/50 rounded-lg px-4 py-2.5 border border-border">
+        <span><span className="text-green-400 font-medium">Bull</span> — KOSPI 200이 50일 평균보다 3% 이상 위 (강세장)</span>
+        <span><span className="text-gray-400 font-medium">Sideways</span> — 50일 평균 ±3% 이내 (횡보장)</span>
+        <span><span className="text-red-400 font-medium">Bear</span> — KOSPI 200이 50일 평균보다 3% 이상 아래 (약세장)</span>
+      </div>
       <LazyChart height={120}>
         <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
       </LazyChart>
