@@ -252,21 +252,29 @@ def _slice_period_single(val: dict, s: str, e: str) -> dict | None:
         ps_indices = [i for i in indices if i < len(ps)]
         v["portfolio_sizes"] = [ps[i] for i in ps_indices]
 
-    # 통계 재계산
+    # 통계 재계산 (날짜 기반 연환산 — 월간/격주 모두 정확)
     new_pv = v.get("portfolio_values", [])
     new_mr = v.get("monthly_returns", [])
-    if new_pv and len(new_pv) >= 2:
+    rb_dates = v.get("rebalance_dates", [])
+    if new_pv and len(new_pv) >= 2 and len(rb_dates) >= 2:
+        from datetime import datetime as _dt
+        _d0 = _dt.strptime(rb_dates[0], "%Y-%m-%d")
+        _d1 = _dt.strptime(rb_dates[-1], "%Y-%m-%d")
+        n_years = max((_d1 - _d0).days / 365.25, 0.5)
+        periods_per_year = len(new_mr) / n_years if n_years > 0 else 12
+
         v["total_return"] = new_pv[-1] / new_pv[0] - 1
-        n_years = max((len(v["rebalance_dates"]) - 1) / 12, 0.5)
         tr = v["total_return"]
         v["cagr"] = (1 + tr) ** (1 / n_years) - 1 if tr > -1 else 0
+    else:
+        periods_per_year = 12
     if new_mr:
         mr_arr = np.array(new_mr)
-        v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(12)) if np.std(mr_arr) > 1e-8 else 0
+        v["sharpe"] = float(np.mean(mr_arr) / np.std(mr_arr) * np.sqrt(periods_per_year)) if np.std(mr_arr) > 1e-8 else 0
         v["months"] = len(new_mr)
         v["avg_monthly_return"] = float(np.mean(mr_arr))
         v["monthly_std"] = float(np.std(mr_arr))
-        cum_arr = np.cumprod(1 + mr_arr)
+        cum_arr = np.concatenate([[1.0], np.cumprod(1 + mr_arr)])
         peak = np.maximum.accumulate(cum_arr)
         dd = (cum_arr - peak) / peak
         v["mdd"] = float(abs(np.min(dd)))  # 양수로 통일 (step7과 일치)
@@ -549,20 +557,22 @@ def _compute_robustness(start, end, is_end, oos_start):
     oos_ret = None
 
     baseline = next((k for k in ["A0"] if k in is_results), None)
-    is_months = len(is_results.get(baseline, {}).get("monthly_returns", [])) if baseline else 1
-    oos_months = len(oos_results.get(baseline, {}).get("monthly_returns", [])) if baseline else 1
+    # 날짜 기반 연환산 (is_ret/oos_ret은 현재 None이지만 추후 사용 대비)
+    from datetime import datetime as _dt
+    _is_nyears = max((_dt.strptime(is_end, "%Y-%m-%d") - _dt.strptime(start, "%Y-%m-%d")).days / 365.25, 0.5)
+    _oos_nyears = max((_dt.strptime(end, "%Y-%m-%d") - _dt.strptime(oos_start, "%Y-%m-%d")).days / 365.25, 0.5)
 
     bm_results = {"is": {}, "oos": {}}
     if is_ret is not None:
         bm_results["is"]["KOSPI"] = {
             "total_return": is_ret,
-            "cagr": ((1 + is_ret) ** (12.0 / max(is_months, 1)) - 1.0),
+            "cagr": ((1 + is_ret) ** (1.0 / _is_nyears) - 1.0),
             "name": _bm_name,
         }
     if oos_ret is not None:
         bm_results["oos"]["KOSPI"] = {
             "total_return": oos_ret,
-            "cagr": ((1 + oos_ret) ** (12.0 / max(oos_months, 1)) - 1.0),
+            "cagr": ((1 + oos_ret) ** (1.0 / _oos_nyears) - 1.0),
             "name": _bm_name,
         }
 
@@ -721,17 +731,27 @@ def load_all_robustness_results(start: str = None, end: str = None,
         is_rets = strat_rets[:split_idx]
         oos_rets = strat_rets[split_idx:]
 
+        # 날짜 기반 연환산 계수 계산
+        from datetime import datetime as _dt
+        _all_dates = strat_rb_dates
+        if len(_all_dates) >= 2:
+            _total_days = (_dt.strptime(_all_dates[-1], "%Y-%m-%d") - _dt.strptime(_all_dates[0], "%Y-%m-%d")).days
+            _ppy = len(monthly_rets) / max(_total_days / 365.25, 0.5)  # periods per year
+        else:
+            _ppy = 12
+
         if len(is_rets) > 0:
             is_cum = float(np.prod(1 + is_rets) - 1)
             n_is = len(is_rets)
+            _is_years = max(n_is / _ppy, 0.5)
             cum_arr = np.cumprod(1 + is_rets)
             peak = np.maximum.accumulate(cum_arr)
             dd = (cum_arr - peak) / peak
             is_oos_data["is_results"][name] = {
                 "strategy": name,
                 "total_return": is_cum,
-                "cagr": float((1 + is_cum) ** (12.0 / max(n_is, 1)) - 1),
-                "sharpe": float(is_rets.mean() / is_rets.std() * np.sqrt(12))
+                "cagr": float((1 + is_cum) ** (1.0 / _is_years) - 1),
+                "sharpe": float(is_rets.mean() / is_rets.std() * np.sqrt(_ppy))
                     if n_is > 1 and is_rets.std() > 0 else 0,
                 "mdd": float(dd.min()),
                 "monthly_returns": is_rets.tolist(),
@@ -740,14 +760,15 @@ def load_all_robustness_results(start: str = None, end: str = None,
         if len(oos_rets) > 0:
             oos_cum = float(np.prod(1 + oos_rets) - 1)
             n_oos = len(oos_rets)
+            _oos_years = max(n_oos / _ppy, 0.5)
             cum_arr = np.cumprod(1 + oos_rets)
             peak = np.maximum.accumulate(cum_arr)
             dd = (cum_arr - peak) / peak
             is_oos_data["oos_results"][name] = {
                 "strategy": name,
                 "total_return": oos_cum,
-                "cagr": float((1 + oos_cum) ** (12.0 / max(n_oos, 1)) - 1),
-                "sharpe": float(oos_rets.mean() / oos_rets.std() * np.sqrt(12))
+                "cagr": float((1 + oos_cum) ** (1.0 / _oos_years) - 1),
+                "sharpe": float(oos_rets.mean() / oos_rets.std() * np.sqrt(_ppy))
                     if n_oos > 1 and oos_rets.std() > 0 else 0,
                 "mdd": float(dd.min()),
                 "monthly_returns": oos_rets.tolist(),
@@ -892,6 +913,20 @@ def get_holdings(strategy: str, calc_date: str, top_n: int = 30,
         if rows:
             return pd.DataFrame(rows)
     return pd.DataFrame()
+
+
+@st.cache_data(ttl=3600)
+def get_first_entry_dates(strategy: str, universe: str = None, rebal_type: str = None) -> dict:
+    """전략 전체 기간에서 각 종목코드의 최초 편입일 반환. {종목코드: 날짜문자열}"""
+    cache = _load_holdings_cache(universe, rebal_type)
+    strat_cache = cache.get(strategy, {})
+    first_dates = {}
+    for date in sorted(strat_cache.keys()):
+        for row in strat_cache[date]:
+            code = row.get("종목코드")
+            if code and code not in first_dates:
+                first_dates[code] = date
+    return first_dates
 
 
 @st.cache_data(ttl=3600)
@@ -1372,13 +1407,13 @@ def compute_regime_analysis(
     universe: str = None,
     rebal_type: str = None,
 ) -> dict:
-    """KOSPI 6개월 롤링 누적수익률로 시장 국면(Bull/Sideways/Bear)을 분류하고,
+    """KOSPI 200 50일 이동평균 기준으로 시장 국면(Bull/Sideways/Bear)을 분류하고,
     각 전략의 국면별 성과 통계를 반환한다.
 
-    국면 기준 (6개월 누적수익률):
-        Bull     : > +5%
-        Sideways : -5% ~ +5%
-        Bear     : < -5%
+    국면 기준 (리밸런싱 시점, 50일 MA 대비 괴리율):
+        Bull     : 괴리율 > +3%
+        Sideways : -3% ~ +3%
+        Bear     : 괴리율 < -3%
 
     Returns:
         {
@@ -1387,6 +1422,7 @@ def compute_regime_analysis(
             "regime_counts": {regime: int, ...},             # 전체 국면 월 수
         }
     """
+    from lib.db import get_conn as _get_conn
     results = load_all_results(start, end, universe=universe, rebal_type=rebal_type)
 
     bm = results.get("KOSPI", {})
@@ -1396,39 +1432,46 @@ def compute_regime_analysis(
     if len(bm_dates) < 2 or not bm_returns:
         return {"regimes": {}, "summary": {}, "regime_counts": {}}
 
+    # 날짜 기반 periods_per_year (월간/격주 자동 대응)
+    from datetime import datetime as _dt
+    _total_days = (_dt.strptime(bm_dates[-1], "%Y-%m-%d") - _dt.strptime(bm_dates[0], "%Y-%m-%d")).days
+    _ppy_regime = len(bm_returns) / max(_total_days / 365.25, 0.5) if _total_days > 0 else 12
+
     # monthly_returns[i] → 기간: bm_dates[i] ~ bm_dates[i+1]
-    # 날짜 레이블은 bm_dates[i+1] (해당 월말/리밸런싱일)
     n = len(bm_returns)
-    ret_dates = bm_dates[1 : n + 1]          # len == n
+    ret_dates = bm_dates[1 : n + 1]   # len == n (각 기간의 종료일)
+    start_dates = bm_dates[:n]         # len == n (각 기간의 시작일, 신호 판단 기준)
 
     bm_arr = np.array(bm_returns, dtype=float)
 
-    # 6개월 롤링 누적수익률: 현재 포함 직전 6개월
-    WINDOW = 6
-    rolling_cum = np.full(n, np.nan)
-    for i in range(WINDOW - 1, n):
-        window = bm_arr[i - WINDOW + 1 : i + 1]
-        rolling_cum[i] = float(np.prod(1 + window) - 1)
-
-    # 국면 분류
-    def _classify(rc):
-        if np.isnan(rc):
-            return None
-        if rc > 0.05:
-            return "Bull"
-        if rc < -0.05:
-            return "Bear"
-        return "Sideways"
-
+    # KOSPI 200 50일 MA 신호: 각 리밸런싱 시작일 기준
+    _conn = _get_conn()
     regimes_by_date = {}
-    for i, d in enumerate(ret_dates):
-        r = _classify(rolling_cum[i])
-        if r is not None:
-            regimes_by_date[str(d)] = r
+    for i, (start_d, end_d) in enumerate(zip(start_dates, ret_dates)):
+        rows = _conn.execute(
+            "SELECT close FROM daily_price WHERE stock_code = '069500' "
+            "AND trade_date <= ? ORDER BY trade_date DESC LIMIT 51",
+            (start_d,)
+        ).fetchall()
+        prices = [r[0] for r in rows if r[0]]
+        if len(prices) < 51:
+            regime = "Bull"  # 데이터 부족 시 Bull로 처리
+        else:
+            current = prices[0]
+            ma50 = float(np.mean(prices[1:51]))
+            gap = (current - ma50) / ma50  # 괴리율
+            if gap > 0.03:
+                regime = "Bull"
+            elif gap < -0.03:
+                regime = "Bear"
+            else:
+                regime = "Sideways"
+        regimes_by_date[str(end_d)] = regime
+    _conn.close()
 
     regime_counts = {"Bull": 0, "Sideways": 0, "Bear": 0}
     for r in regimes_by_date.values():
-        regime_counts[r] += 1
+        regime_counts[r] = regime_counts.get(r, 0) + 1
 
     # 전략별 국면 성과 계산
     REGIMES = ["Bull", "Sideways", "Bear"]
@@ -1449,7 +1492,7 @@ def compute_regime_analysis(
         # 날짜 → 인덱스 맵 (bm 기준)
         bm_date_idx = {str(d): i for i, d in enumerate(ret_dates)}
 
-        per_regime: dict[str, dict] = {r: {"rets": [], "bm_rets": []} for r in REGIMES}
+        per_regime: dict[str, dict] = {r: {"rets": [], "bm_rets": []} for r in ["Bull", "Sideways", "Bear"]}
 
         for j, sd in enumerate(strat_ret_dates):
             regime = regimes_by_date.get(str(sd))
@@ -1481,7 +1524,7 @@ def compute_regime_analysis(
             win_rate = float((rets > 0).mean())
 
             if cnt >= 3 and rets.std() > 0:
-                sharpe = float(rets.mean() / rets.std() * np.sqrt(12))
+                sharpe = float(rets.mean() / rets.std() * np.sqrt(_ppy_regime))
             else:
                 sharpe = None
 

@@ -62,6 +62,7 @@ from lib.data import (
     get_portfolio_characteristics,
     get_portfolio_turnover,
     get_latest_price_date,
+    get_first_entry_dates,
     list_strategies,
     save_strategy,
     delete_strategy,
@@ -937,6 +938,99 @@ def api_regime(
         ttl=600,
     )
     return _convert_for_json(result)
+
+
+# ══════════════════════════════════════════════
+# 17. GET /api/first-entry-dates
+# ══════════════════════════════════════════════
+@app.get("/api/first-entry-dates")
+def api_first_entry_dates(
+    strategy: str,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    cache_key = f"first_entry:{strategy}:{universe}:{rebal_type}"
+    result = _cached(
+        cache_key,
+        lambda: get_first_entry_dates(strategy, universe=universe, rebal_type=rebal_type),
+        ttl=3600,
+    )
+    return result
+
+
+# ══════════════════════════════════════════════
+# 18. GET /api/regime-combo
+# ══════════════════════════════════════════════
+@app.get("/api/regime-combo")
+def api_regime_combo(
+    bull_key: str,
+    bear_key: str,
+    universe: Optional[str] = "KOSPI",
+    rebal_type: Optional[str] = "monthly",
+):
+    import numpy as np
+    from lib.db import get_conn
+
+    cache_key = f"regime_combo:{bull_key}:{bear_key}:{universe}:{rebal_type}"
+
+    def _compute():
+        all_results = load_all_results(universe=universe, rebal_type=rebal_type)
+        if bull_key not in all_results or bear_key not in all_results:
+            return {"error": "전략을 찾을 수 없습니다."}
+
+        rb_dates = all_results[bull_key]["rebalance_dates"]
+        n = len(rb_dates) - 1
+
+        # KOSPI 200 50일 MA 신호
+        conn = get_conn()
+        signals = []
+        for d in rb_dates[:-1]:
+            rows = conn.execute(
+                "SELECT close FROM daily_price WHERE stock_code = '069500' "
+                "AND trade_date <= %s ORDER BY trade_date DESC LIMIT 51"
+                if hasattr(conn, '_conn') else
+                "SELECT close FROM daily_price WHERE stock_code = '069500' "
+                "AND trade_date <= ? ORDER BY trade_date DESC LIMIT 51",
+                (d,)
+            ).fetchall()
+            prices = [r[0] for r in rows if r[0]]
+            if len(prices) < 51:
+                signals.append("bull")
+            else:
+                signals.append("bear" if prices[0] < float(np.mean(prices[1:51])) else "bull")
+        conn.close()
+
+        bull_rets = np.array(all_results[bull_key]["monthly_returns"][:n], dtype=float)
+        bear_rets = np.array(all_results[bear_key]["monthly_returns"][:n], dtype=float)
+        combined = [float(bull_rets[i]) if signals[i] == "bull" else float(bear_rets[i]) for i in range(len(signals))]
+
+        rets = np.array(combined)
+        cum = np.cumprod(1 + rets)
+        peak = np.maximum.accumulate(cum)
+        dd = (cum - peak) / peak
+        total = float(cum[-1] - 1)
+        n_years = len(rets) / 12
+        cagr = float((1 + total) ** (1 / n_years) - 1) if n_years > 0 else 0
+        sharpe = float(rets.mean() / rets.std() * np.sqrt(12)) if rets.std() > 0 else 0
+
+        bull_count = signals.count("bull")
+        bear_count = signals.count("bear")
+
+        return {
+            "total_return": total,
+            "cagr": cagr,
+            "sharpe": sharpe,
+            "mdd": float(dd.min()),
+            "win_rate": float((rets > 0).mean()),
+            "monthly_returns": combined,
+            "portfolio_values": [float(v) for v in cum],
+            "rebalance_dates": rb_dates,
+            "signals": signals,
+            "bull_count": bull_count,
+            "bear_count": bear_count,
+        }
+
+    return _cached(cache_key, _compute, ttl=600)
 
 
 # ══════════════════════════════════════════════

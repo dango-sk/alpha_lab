@@ -12,6 +12,7 @@ from lib.data import (
     load_all_robustness_results,
     get_holdings, get_monthly_attribution,
     get_portfolio_characteristics, get_portfolio_turnover, _load_holdings_cache,
+    get_first_entry_dates,
     run_strategy_backtest, save_strategy, load_strategy, list_strategies, delete_strategy,
     STRATEGY_KEYS, ALL_KEYS, STRATEGY_LABELS, STRATEGY_COLORS, BACKTEST_CONFIG,
     BASE_STRATEGY_WEIGHTS,
@@ -749,9 +750,11 @@ def render_portfolio():
     # ── 6. 종목 상세 ──
     section_header("종목 상세")
     for key in active_keys:
-        h_df = holdings[key]
+        h_df = holdings[key].copy()
+        first_dates = get_first_entry_dates(key, universe=universe, rebal_type=rebal_type)
+        h_df["최초편입일"] = h_df["종목코드"].map(first_dates)
         display_cols = [c for c in ["종목코드", "종목명", "섹터", "비중(%)", "점수",
-                                     "PER", "PBR", "EV/EBITDA"] if c in h_df.columns]
+                                     "최초편입일", "PER", "PBR", "EV/EBITDA"] if c in h_df.columns]
         st.subheader(f"{STRATEGY_LABELS.get(key, key)} ({len(h_df)}종목)")
         st.dataframe(
             h_df[display_cols].sort_values("비중(%)", ascending=False),
@@ -1444,3 +1447,253 @@ def render_lab_content():
                     st.success(f"'{save_name}' 저장 완료 — 백테스트를 실행하면 다른 탭에도 표시됩니다.")
             else:
                 st.warning("전략 이름을 입력하세요.")
+
+    # ─── 4. 레짐 조합 백테스트 ───
+    st.markdown("---")
+    _render_regime_combo()
+
+
+# ═══════════════════════════════════════════════════════
+# 레짐 조합 백테스트 (전략 실험실 내부 섹션)
+# ═══════════════════════════════════════════════════════
+def _get_kospi200_50d_signals(rb_dates: list) -> list:
+    """리밸런싱 날짜 기준 KOSPI 200 50일 MA 신호 반환. (캐시 적용)"""
+    from lib.db import get_conn
+    conn = get_conn()
+    signals = []
+    for d in rb_dates:
+        rows = conn.execute("""
+            SELECT close FROM daily_price
+            WHERE stock_code = '069500'
+              AND trade_date <= ?
+            ORDER BY trade_date DESC
+            LIMIT 51
+        """, (d,)).fetchall()
+        prices = [r[0] for r in rows if r[0]]
+        if len(prices) < 51:
+            signals.append("bull")
+            continue
+        current = prices[0]
+        ma50 = np.mean(prices[1:51])
+        signals.append("bear" if current < ma50 else "bull")
+    conn.close()
+    return signals
+
+
+def _calc_combo_stats(monthly_returns: list) -> dict:
+    rets = np.array(monthly_returns)
+    if len(rets) == 0:
+        return {}
+    cum = np.cumprod(1 + rets)
+    peak = np.maximum.accumulate(cum)
+    dd = (cum - peak) / peak
+    total = float(cum[-1] - 1)
+    n_years = len(rets) / 12
+    cagr = float((1 + total) ** (1 / n_years) - 1) if n_years > 0 else 0
+    sharpe = float(rets.mean() / rets.std() * np.sqrt(12)) if rets.std() > 0 else 0
+    mdd = float(dd.min())
+    win_rate = float((rets > 0).mean())
+    return {
+        "total_return": total, "cagr": cagr, "sharpe": sharpe,
+        "mdd": mdd, "win_rate": win_rate,
+        "monthly_returns": list(rets), "portfolio_values": list(cum),
+    }
+
+
+def _render_regime_combo():
+    section_header("레짐 조합 백테스트")
+    st.caption("KOSPI 200 50일 이동평균 기준으로 상승/하락장을 구분하고, 각 장세마다 다른 전략을 적용합니다.")
+
+    _ap = get_active_params()
+    universe = _ap.get("universe", "KOSPI")
+    rebal_type = "monthly"
+
+    # 전략 목록 로드
+    all_results = load_all_results(universe=universe, rebal_type=rebal_type)
+    strat_keys = [k for k in all_results if k not in ("KOSPI", "KOSDAQ")]
+    if len(strat_keys) < 1:
+        st.info("저장된 전략이 없습니다. 먼저 전략을 실행/저장해주세요.")
+        return
+
+    strat_labels = {k: STRATEGY_LABELS.get(k, k) for k in strat_keys}
+
+    # ── 전략 선택 UI ──
+    col1, col2 = st.columns(2)
+    with col1:
+        bull_key = st.selectbox(
+            "상승장 전략",
+            options=strat_keys,
+            format_func=lambda k: strat_labels[k],
+            key="regime_bull_key",
+        )
+    with col2:
+        bear_key = st.selectbox(
+            "하락장 전략",
+            options=strat_keys,
+            format_func=lambda k: strat_labels[k],
+            key="regime_bear_key",
+            index=min(1, len(strat_keys) - 1),
+        )
+
+    if st.button("레짐 조합 실행", key="btn_regime_combo", use_container_width=False):
+        st.session_state["regime_combo_result"] = None  # 초기화 후 재계산
+
+    # ── 계산 ──
+    cache_key = f"regime_combo_{universe}_{bull_key}_{bear_key}"
+    if st.session_state.get("regime_combo_result_key") != cache_key or \
+       st.session_state.get("regime_combo_result") is None:
+
+        with st.spinner("레짐 신호 계산 중..."):
+            ref_key = strat_keys[0]
+            rb_dates = all_results[ref_key]["rebalance_dates"]
+            n = len(rb_dates) - 1
+            signals = _get_kospi200_50d_signals(rb_dates[:-1])
+
+            bull_rets = np.array(all_results[bull_key]["monthly_returns"][:n])
+            bear_rets_arr = np.array(all_results[bear_key]["monthly_returns"][:n])
+
+            combined = [
+                float(bull_rets[i]) if signals[i] == "bull" else float(bear_rets_arr[i])
+                for i in range(len(signals))
+            ]
+            combo_stats = _calc_combo_stats(combined)
+            combo_stats["rebalance_dates"] = rb_dates
+
+            bull_count = sum(1 for s in signals if s == "bull")
+            bear_count = sum(1 for s in signals if s == "bear")
+
+            st.session_state["regime_combo_result"] = {
+                "stats": combo_stats,
+                "signals": signals,
+                "bull_count": bull_count,
+                "bear_count": bear_count,
+                "rb_dates": rb_dates,
+                "n": n,
+                "bull_key": bull_key,
+                "bear_key": bear_key,
+            }
+            st.session_state["regime_combo_result_key"] = cache_key
+
+    result = st.session_state.get("regime_combo_result")
+    if not result:
+        return
+
+    s = result["stats"]
+    signals = result["signals"]
+    n = result["n"]
+
+    # ── 레짐 구분 현황 ──
+    st.caption(
+        f"상승장: {result['bull_count']}개월 ({result['bull_count']/n:.0%})  |  "
+        f"하락장: {result['bear_count']}개월 ({result['bear_count']/n:.0%})"
+    )
+
+    # ── KPI 카드 비교 ──
+    ref_stats = {
+        "bull": all_results[bull_key],
+        "bear": all_results[bear_key],
+    }
+    c1, c2, c3 = st.columns(3)
+    labels_map = {
+        "bull": f"상승장: {strat_labels[bull_key]}",
+        "bear": f"하락장: {strat_labels[bear_key]}",
+        "combo": f"조합 결과",
+    }
+    for col, (tag, data, color) in zip(
+        [c1, c2, c3],
+        [
+            ("bull", ref_stats["bull"], "#1976D2"),
+            ("bear", ref_stats["bear"], "#E53935"),
+            ("combo", s, "#43A047"),
+        ],
+    ):
+        with col:
+            kpi_card(
+                label=labels_map[tag],
+                value=f"CAGR {data['cagr']:+.1%}" if tag != "combo" else f"CAGR {s['cagr']:+.1%}",
+                sub_items=[
+                    ("Sharpe", f"{data['sharpe']:.2f}" if tag != "combo" else f"{s['sharpe']:.2f}"),
+                    ("MDD", f"{data['mdd']:.1%}" if tag != "combo" else f"{s['mdd']:.1%}"),
+                ],
+                color=color,
+            )
+
+    # ── 누적 수익률 차트 ──
+    combo_label = f"레짐조합({strat_labels[bull_key][:6]}↑/{strat_labels[bear_key][:6]}↓)"
+    chart_data = {
+        bull_key: all_results[bull_key],
+        bear_key: all_results[bear_key],
+        "COMBO": {**s, "strategy": combo_label},
+    }
+    if "KOSPI" in all_results:
+        chart_data["KOSPI"] = all_results["KOSPI"]
+
+    # STRATEGY_LABELS에 임시 추가
+    _tmp_labels = {**STRATEGY_LABELS, "COMBO": combo_label}
+    _tmp_colors = {**STRATEGY_COLORS, "COMBO": "#43A047"}
+
+    import plotly.graph_objects as go
+    fig = go.Figure()
+    for key, res in chart_data.items():
+        pv = res.get("portfolio_values") or list(np.cumprod(1 + np.array(res["monthly_returns"])))
+        dates = res.get("rebalance_dates", result["rb_dates"])[:len(pv)]
+        color = _tmp_colors.get(key, "#999")
+        lw = 2.5 if key == "COMBO" else 1.5
+        dash = "solid" if key == "COMBO" else ("dot" if key == "KOSPI" else "solid")
+        fig.add_trace(go.Scatter(
+            x=dates, y=[v * 100 for v in pv],
+            mode="lines", name=_tmp_labels.get(key, key),
+            line=dict(color=color, width=lw, dash=dash),
+        ))
+    fig.update_layout(
+        height=360, margin=dict(l=0, r=0, t=20, b=0),
+        yaxis_title="누적수익률 (%)", xaxis_title=None,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        plot_bgcolor="#0e1117", paper_bgcolor="#0e1117",
+        font=dict(color="#e0e0e0"),
+        yaxis=dict(gridcolor="#2a2a2a"), xaxis=dict(gridcolor="#2a2a2a"),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ── 성과 비교 테이블 ──
+    table_rows = []
+    for key, label in [
+        (bull_key, strat_labels[bull_key]),
+        (bear_key, strat_labels[bear_key]),
+        ("COMBO", combo_label),
+    ]:
+        data = s if key == "COMBO" else all_results[key]
+        table_rows.append({
+            "전략": label,
+            "수익률": f"{data['total_return']:+.1%}",
+            "CAGR": f"{data['cagr']:+.1%}",
+            "Sharpe": f"{data['sharpe']:.2f}",
+            "MDD": f"{data['mdd']:.1%}",
+            "승률": f"{data['win_rate']:.0%}",
+        })
+    df_t = pd.DataFrame(table_rows)
+    styled_t = df_t.style.map(color_value, subset=["수익률", "CAGR", "Sharpe"]).map(
+        lambda v: color_value(v, reverse=True), subset=["MDD"]
+    )
+    st.dataframe(styled_t, width="stretch", hide_index=True)
+
+    # ── 저장 ──
+    st.markdown("")
+    save_cols = st.columns([4, 2])
+    with save_cols[0]:
+        regime_save_name = st.text_input(
+            "저장 이름", value=combo_label, key="regime_save_name",
+            label_visibility="collapsed",
+        )
+    with save_cols[1]:
+        if st.button("조합 전략 저장", key="btn_regime_save", use_container_width=True):
+            if regime_save_name:
+                save_strategy(
+                    name=regime_save_name,
+                    code="",
+                    description=f"레짐 조합: 상승({strat_labels[bull_key]}) × 하락({strat_labels[bear_key]})",
+                    results=s,
+                    universe=universe,
+                    rebal_type=rebal_type,
+                )
+                st.success(f"'{regime_save_name}' 저장 완료 — 다른 탭에서도 표시됩니다.")

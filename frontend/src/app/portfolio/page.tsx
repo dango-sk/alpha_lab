@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution } from '@/lib/api';
+import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution, getFirstEntryDates } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/KpiCard';
@@ -95,6 +95,7 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [attrMap, setAttrMap] = useState<Record<string, Record<string, number>>>({});
+  const [firstEntryMap, setFirstEntryMap] = useState<Record<string, Record<string, string>>>({});
 
   // Load config and results
   useEffect(() => {
@@ -197,13 +198,20 @@ export default function PortfolioPage() {
         )
       : [];
 
+    const firstEntryPromises = strategyKeys.map((key) =>
+      getFirstEntryDates(key, universe, rebalType)
+        .then((data) => ({ key, data: data as Record<string, string> }))
+        .catch(() => ({ key, data: {} as Record<string, string> }))
+    );
+
     Promise.all([
       Promise.all(holdingsPromises),
       Promise.all(charsPromises),
       Promise.all(turnoverPromises),
       Promise.all(attrPromises),
+      Promise.all(firstEntryPromises),
     ])
-      .then(([holdingsResults, charsResults, turnoverResults, attrResults]) => {
+      .then(([holdingsResults, charsResults, turnoverResults, attrResults, firstEntryResults]) => {
         const hMap: Record<string, Holding[]> = {};
         holdingsResults.forEach(({ key, data }) => { hMap[key] = data; });
         setHoldingsMap(hMap);
@@ -224,6 +232,10 @@ export default function PortfolioPage() {
           aMap[key] = m;
         });
         setAttrMap(aMap);
+
+        const feMap: Record<string, Record<string, string>> = {};
+        firstEntryResults.forEach(({ key, data }) => { feMap[key] = data; });
+        setFirstEntryMap(feMap);
       })
       .catch(console.error)
       .finally(() => setDetailLoading(false));
@@ -380,6 +392,7 @@ export default function PortfolioPage() {
     { key: '종목코드', label: '종목코드', align: 'left' as const, width: '90px' },
     { key: '종목명', label: '종목명', align: 'left' as const },
     { key: '섹터', label: '섹터', align: 'left' as const },
+    { key: '최초편입일', label: '최초편입일', align: 'left' as const, width: '110px' },
     {
       key: '비중(%)',
       label: '비중(%)',
@@ -703,8 +716,13 @@ export default function PortfolioPage() {
                 const holdings = holdingsMap[key] || [];
                 if (holdings.length === 0) return null;
                 const returnMap = attrMap[key] || {};
+                const entryMap = firstEntryMap[key] || {};
                 const sorted = [...holdings]
-                  .map((h) => ({ ...h, '월수익률(%)': returnMap[h.종목명] ?? null }))
+                  .map((h) => ({
+                    ...h,
+                    '월수익률(%)': returnMap[h.종목명] ?? null,
+                    '최초편입일': entryMap[h.종목코드] ?? '-',
+                  }))
                   .sort((a, b) => b['비중(%)'] - a['비중(%)']);
                 return (
                   <div key={key}>

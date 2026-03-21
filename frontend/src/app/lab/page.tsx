@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getResults, getConfig, getStrategies, runBacktest, fetchApi } from '@/lib/api';
+import { getResults, getConfig, getStrategies, runBacktest, fetchApi, getRegimeCombo } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/KpiCard';
@@ -124,6 +124,13 @@ export default function LabPage() {
   const [saveDesc, setSaveDesc] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+
+  // ─── Regime Combo ───
+  const [regimeBullKey, setRegimeBullKey] = useState('');
+  const [regimeBearKey, setRegimeBearKey] = useState('');
+  const [regimeResult, setRegimeResult] = useState<Record<string, unknown> | null>(null);
+  const [regimeLoading, setRegimeLoading] = useState(false);
+  const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
@@ -733,6 +740,185 @@ export default function LabPage() {
             )}
           </>
         )}
+      </div>
+
+      {/* ─── 레짐 조합 백테스트 ─── */}
+      <div className="space-y-4 border border-border rounded-xl p-5">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">레짐 조합 백테스트</h2>
+          <p className="text-xs text-muted mt-0.5">KOSPI 200 50일 이동평균 기준 상승/하락장 구분 — 각 장세마다 다른 전략 적용</p>
+        </div>
+
+        {/* 전략 선택 */}
+        {(() => {
+          const stratKeys = baseResults
+            ? Object.keys(baseResults).filter((k) => k !== 'KOSPI' && k !== 'KOSDAQ')
+            : [];
+          const labels: Record<string, string> = baseResults
+            ? Object.fromEntries(stratKeys.map((k) => [k, (baseResults[k] as StrategyResult & { strategy?: string }).strategy || k]))
+            : {};
+
+          const handleRun = async () => {
+            if (!regimeBullKey || !regimeBearKey) return;
+            setRegimeLoading(true);
+            setRegimeResult(null);
+            setRegimeSaveMsg('');
+            try {
+              const res = await getRegimeCombo(regimeBullKey, regimeBearKey, universe, rebalType);
+              setRegimeResult(res);
+            } catch (e) {
+              console.error(e);
+            } finally {
+              setRegimeLoading(false);
+            }
+          };
+
+          const handleSaveCombo = async () => {
+            if (!regimeResult || !regimeBullKey || !regimeBearKey) return;
+            const name = `레짐조합_${(labels[regimeBullKey] || regimeBullKey).slice(0, 8)}↑_${(labels[regimeBearKey] || regimeBearKey).slice(0, 8)}↓`;
+            try {
+              await fetchApi('/api/strategies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name,
+                  code: '',
+                  description: `레짐 조합: 상승(${labels[regimeBullKey] || regimeBullKey}) × 하락(${labels[regimeBearKey] || regimeBearKey})`,
+                  results: regimeResult,
+                  universe,
+                  rebal_type: rebalType,
+                }),
+              });
+              setRegimeSaveMsg(`'${name}' 저장 완료 — 성과 비교 탭에서 확인 가능합니다.`);
+            } catch {
+              setRegimeSaveMsg('저장 실패');
+            }
+          };
+
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted font-medium">상승장 전략</label>
+                  <select
+                    value={regimeBullKey}
+                    onChange={(e) => setRegimeBullKey(e.target.value)}
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">선택</option>
+                    {stratKeys.map((k) => (
+                      <option key={k} value={k}>{labels[k] || k}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted font-medium">하락장 전략</label>
+                  <select
+                    value={regimeBearKey}
+                    onChange={(e) => setRegimeBearKey(e.target.value)}
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">선택</option>
+                    {stratKeys.map((k) => (
+                      <option key={k} value={k}>{labels[k] || k}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleRun}
+                disabled={!regimeBullKey || !regimeBearKey || regimeLoading}
+                className="px-4 py-2 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {regimeLoading ? '계산 중...' : '레짐 조합 실행'}
+              </button>
+
+              {regimeResult && (() => {
+                const r = regimeResult as Record<string, unknown>;
+                const bullRes = baseResults?.[regimeBullKey];
+                const bearRes = baseResults?.[regimeBearKey];
+                const bullCount = r.bull_count as number;
+                const bearCount = r.bear_count as number;
+                const total = bullCount + bearCount;
+
+                const comboChartData = [
+                  ...(bullRes && bullRes !== bearRes ? [{
+                    type: 'scatter' as const, mode: 'lines' as const,
+                    name: labels[regimeBullKey] || regimeBullKey,
+                    x: bullRes.rebalance_dates?.slice(0, bullRes.portfolio_values?.length),
+                    y: bullRes.portfolio_values?.map((v: number) => v * 100),
+                    line: { width: 1.5, dash: 'dot' as const, color: '#6366f1' },
+                  }] : []),
+                  ...(bearRes ? [{
+                    type: 'scatter' as const, mode: 'lines' as const,
+                    name: labels[regimeBearKey] || regimeBearKey,
+                    x: bearRes.rebalance_dates?.slice(0, bearRes.portfolio_values?.length),
+                    y: bearRes.portfolio_values?.map((v: number) => v * 100),
+                    line: { width: 1.5, dash: 'dot' as const, color: '#E91E63' },
+                  }] : []),
+                  {
+                    type: 'scatter' as const, mode: 'lines' as const,
+                    name: '레짐 조합',
+                    x: (r.rebalance_dates as string[])?.slice(0, (r.portfolio_values as number[])?.length),
+                    y: (r.portfolio_values as number[])?.map((v) => v * 100),
+                    line: { width: 2.5, color: '#43A047' },
+                  },
+                ];
+
+                const tableData = [
+                  { 전략: labels[regimeBullKey] || regimeBullKey, ...bullRes ? { 수익률: `${((bullRes.total_return || 0) * 100).toFixed(1)}%`, CAGR: `${((bullRes.cagr || 0) * 100).toFixed(1)}%`, Sharpe: (bullRes.sharpe || 0).toFixed(2), MDD: `${((bullRes.mdd || 0) * 100).toFixed(1)}%` } : {} },
+                  { 전략: labels[regimeBearKey] || regimeBearKey, ...bearRes ? { 수익률: `${((bearRes.total_return || 0) * 100).toFixed(1)}%`, CAGR: `${((bearRes.cagr || 0) * 100).toFixed(1)}%`, Sharpe: (bearRes.sharpe || 0).toFixed(2), MDD: `${((bearRes.mdd || 0) * 100).toFixed(1)}%` } : {} },
+                  { 전략: '레짐 조합', 수익률: `${((r.total_return as number) * 100).toFixed(1)}%`, CAGR: `${((r.cagr as number) * 100).toFixed(1)}%`, Sharpe: (r.sharpe as number).toFixed(2), MDD: `${((r.mdd as number) * 100).toFixed(1)}%` },
+                ];
+
+                return (
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted">
+                      상승장 {bullCount}개월 ({total > 0 ? Math.round(bullCount / total * 100) : 0}%) | 하락장 {bearCount}개월 ({total > 0 ? Math.round(bearCount / total * 100) : 0}%)
+                    </p>
+
+                    <DataTable
+                      columns={[
+                        { key: '전략', label: '전략', align: 'left' },
+                        { key: '수익률', label: '수익률', align: 'right', mono: true },
+                        { key: 'CAGR', label: 'CAGR', align: 'right', mono: true },
+                        { key: 'Sharpe', label: 'Sharpe', align: 'right', mono: true },
+                        { key: 'MDD', label: 'MDD', align: 'right', mono: true },
+                      ]}
+                      data={tableData}
+                      maxHeight="200px"
+                    />
+
+                    <PlotlyChart
+                      data={comboChartData}
+                      layout={{
+                        yaxis: { title: { text: '누적수익률 (%)' }, ticksuffix: '%' },
+                        xaxis: { title: { text: '' } },
+                        legend: { orientation: 'h', y: -0.15 },
+                      }}
+                      height={360}
+                    />
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleSaveCombo}
+                        className="px-4 py-2 rounded-lg bg-accent-green/20 text-accent-green text-sm font-medium hover:bg-accent-green/30 transition-colors"
+                      >
+                        조합 전략 저장
+                      </button>
+                      {regimeSaveMsg && (
+                        <p className={`text-xs ${regimeSaveMsg.includes('실패') ? 'text-accent-red' : 'text-accent-green'}`}>
+                          {regimeSaveMsg}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

@@ -309,7 +309,7 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
     <div className="space-y-4">
       <SectionHeader
         title="시장 국면 분석 (Regime Analysis)"
-        subtitle={`Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Sideways: ${regimeData.regime_counts?.Sideways ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
+        subtitle={`KOSPI 200 50일 MA ±3% 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Sideways: ${regimeData.regime_counts?.Sideways ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
       />
       <LazyChart height={120}>
         <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
