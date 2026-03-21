@@ -220,6 +220,8 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
   labels: Record<string, string>;
   colors: Record<string, string>;
 }) {
+  const [activeRegime, setActiveRegime] = useState<string>('Bull');
+
   const regimeTimelineTraces = useMemo<Plotly.Data[]>(() => {
     const regimeDates = Object.keys(regimeData.regimes).sort();
     return REGIME_ORDER.map((regime) => ({
@@ -269,24 +271,26 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
     for (const key of strategyKeys) {
       const stratSummary = regimeData.summary?.[key];
       if (!stratSummary) continue;
-      for (const regime of REGIME_ORDER) {
-        const m = stratSummary[regime];
-        if (!m) continue;
-        const isBm = key === 'KOSPI';
-        rows.push({
-          strategy: labels[key] || key,
-          regime,
-          count: m.count,
-          avg_monthly_return: m.avg_monthly_return,
-          total_return: m.total_return,
-          sharpe: m.sharpe,
-          win_rate: isBm ? null : m.win_rate,
-          avg_excess: isBm ? null : m.avg_excess,
-        });
-      }
+      const m = stratSummary[activeRegime];
+      if (!m) continue;
+      const isBm = key === 'KOSPI';
+      rows.push({
+        strategy: labels[key] || key,
+        regime: activeRegime,
+        count: m.count,
+        avg_monthly_return: m.avg_monthly_return,
+        total_return: m.total_return,
+        sharpe: m.sharpe,
+        win_rate: isBm ? null : m.win_rate,
+        avg_excess: isBm ? null : m.avg_excess,
+        _key: key,
+      });
     }
-    return rows;
-  }, [regimeData.summary, strategyKeys, labels]);
+    // Sort by Sharpe descending
+    rows.sort((a, b) => ((b.sharpe as number) ?? -Infinity) - ((a.sharpe as number) ?? -Infinity));
+    // Mark rank
+    return rows.map((r, i) => ({ ...r, _rank: i + 1 }));
+  }, [regimeData.summary, strategyKeys, labels, activeRegime]);
 
   const regimeBarTraces = useMemo<Plotly.Data[]>(() => REGIME_ORDER.map((regime) => ({
     type: 'bar' as const,
@@ -320,7 +324,31 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
         <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
       </LazyChart>
       {regimePerfRows.length > 0 && (
-        <DataTable columns={regimePerfColumns} data={regimePerfRows} maxHeight="none" />
+        <div className="space-y-2">
+          <div className="flex gap-1">
+            {REGIME_ORDER.map((r) => (
+              <button
+                key={r}
+                onClick={() => setActiveRegime(r)}
+                className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                  activeRegime === r
+                    ? r === 'Bull' ? 'bg-green-500/20 text-green-400 border border-green-500/40'
+                      : r === 'Bear' ? 'bg-red-500/20 text-red-400 border border-red-500/40'
+                      : 'bg-gray-500/20 text-gray-300 border border-gray-500/40'
+                    : 'text-muted hover:text-foreground border border-transparent'
+                }`}
+              >
+                {r === 'Bull' ? '강세장 (Bull)' : r === 'Bear' ? '약세장 (Bear)' : '횡보장 (Sideways)'}
+                <span className="ml-1.5 text-xs opacity-60">{regimeData.regime_counts?.[r] ?? 0}개월</span>
+              </button>
+            ))}
+          </div>
+          <DataTable
+            columns={regimePerfColumns.filter((c) => c.key !== 'regime')}
+            data={regimePerfRows}
+            maxHeight="none"
+          />
+        </div>
       )}
       {regimeBarTraces.length > 0 && (
         <LazyChart height={300}>

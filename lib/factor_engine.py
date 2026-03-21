@@ -164,7 +164,7 @@ def prefetch_all_data(conn):
                eps, bps, per, psr, ev_ebitda,
                revenue, operating_income, net_income,
                oi_margin, div_yield, pcf
-        FROM fnspace_finance WHERE fiscal_quarter = 'Annual'
+        FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM')
     """, conn)
 
     _prefetch_cache["forward"] = read_sql("""
@@ -193,14 +193,45 @@ def clear_prefetch_cache():
 
 
 def _get_fin_for_year(max_year: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """프리페치 캐시에서 재무 데이터 추출."""
+    """프리페치 캐시에서 재무 데이터 추출. TTM 우선, 없으면 Annual fallback."""
     fin_all = _prefetch_cache["finance"]
-    # 종목별 max_year 이하 최신 연도
-    valid = fin_all[(fin_all["fiscal_year"] <= max_year) & fin_all["roe"].notna()].copy()
-    idx = valid.groupby("stock_code")["fiscal_year"].idxmax()
-    fin_df = valid.loc[idx].drop(columns=["fiscal_quarter"], errors="ignore")
-    prev_rev = fin_all[fin_all["fiscal_year"] == max_year - 1][["stock_code", "revenue"]].copy()
+
+    # TTM 우선 조회
+    ttm = fin_all[(fin_all["fiscal_quarter"] == "TTM") & (fin_all["fiscal_year"] <= max_year)].copy()
+    if not ttm.empty:
+        idx = ttm.groupby("stock_code")["fiscal_year"].idxmax()
+        ttm_df = ttm.loc[idx]
+    else:
+        ttm_df = pd.DataFrame()
+
+    # Annual fallback (TTM 없는 종목)
+    annual = fin_all[(fin_all["fiscal_quarter"] == "Annual") & (fin_all["fiscal_year"] <= max_year) & fin_all["roe"].notna()].copy()
+    if not annual.empty:
+        idx = annual.groupby("stock_code")["fiscal_year"].idxmax()
+        annual_df = annual.loc[idx]
+    else:
+        annual_df = pd.DataFrame()
+
+    if not ttm_df.empty and not annual_df.empty:
+        fallback = annual_df[~annual_df["stock_code"].isin(ttm_df["stock_code"])]
+        fin_df = pd.concat([ttm_df, fallback], ignore_index=True)
+    elif not ttm_df.empty:
+        fin_df = ttm_df
+    else:
+        fin_df = annual_df
+
+    fin_df = fin_df.drop(columns=["fiscal_quarter"], errors="ignore")
+
+    # prev_revenue: TTM 전년도 우선, 없으면 Annual
+    prev_ttm = fin_all[(fin_all["fiscal_quarter"] == "TTM") & (fin_all["fiscal_year"] == max_year - 1)][["stock_code", "revenue"]].copy()
+    prev_annual = fin_all[(fin_all["fiscal_quarter"] == "Annual") & (fin_all["fiscal_year"] == max_year - 1)][["stock_code", "revenue"]].copy()
+    if not prev_ttm.empty:
+        fallback = prev_annual[~prev_annual["stock_code"].isin(prev_ttm["stock_code"])]
+        prev_rev = pd.concat([prev_ttm, fallback], ignore_index=True)
+    else:
+        prev_rev = prev_annual
     prev_rev = prev_rev.rename(columns={"revenue": "prev_revenue"})
+
     return fin_df, prev_rev
 
 
@@ -274,8 +305,28 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         price_df, price_3m_df = _get_price_for_date(calc_date)
         master_df = _get_master_for_date(calc_date)
     else:
-        # ── 기존 DB 쿼리 로직 (프리페치 없을 때) ──
-        fin_df = read_sql("""
+        # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
+        # TTM 데이터 조회
+        ttm_df = read_sql("""
+            SELECT ff.stock_code, ff.fiscal_year,
+                   ff.pbr, ff.roe, ff.roic,
+                   ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                   ff.net_debt, ff.interest_debt, ff.total_equity,
+                   ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                   ff.revenue, ff.operating_income, ff.net_income,
+                   ff.oi_margin, ff.div_yield, ff.pcf
+            FROM fnspace_finance ff
+            INNER JOIN (
+                SELECT stock_code, MAX(fiscal_year) as max_year
+                FROM fnspace_finance
+                WHERE fiscal_quarter = 'TTM' AND fiscal_year <= ?
+                GROUP BY stock_code
+            ) latest ON ff.stock_code = latest.stock_code
+                AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'TTM'
+        """, conn, params=(max_usable_year,))
+
+        # Annual fallback (TTM 없는 종목)
+        annual_df = read_sql("""
             SELECT ff.stock_code, ff.fiscal_year,
                    ff.pbr, ff.roe, ff.roic,
                    ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
@@ -293,13 +344,29 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
                 AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
         """, conn, params=(max_usable_year,))
 
+        if not ttm_df.empty:
+            fallback = annual_df[~annual_df["stock_code"].isin(ttm_df["stock_code"])] if not annual_df.empty else pd.DataFrame()
+            fin_df = pd.concat([ttm_df, fallback], ignore_index=True)
+        else:
+            fin_df = annual_df
+
         if fin_df.empty:
             return None
 
-        prev_rev_df = read_sql("""
+        # prev_revenue: TTM 전년도 우선
+        prev_ttm = read_sql("""
+            SELECT stock_code, revenue as prev_revenue
+            FROM fnspace_finance WHERE fiscal_quarter='TTM' AND fiscal_year=?
+        """, conn, params=(max_usable_year - 1,))
+        prev_annual = read_sql("""
             SELECT stock_code, revenue as prev_revenue
             FROM fnspace_finance WHERE fiscal_quarter='Annual' AND fiscal_year=?
         """, conn, params=(max_usable_year - 1,))
+        if not prev_ttm.empty:
+            fallback = prev_annual[~prev_annual["stock_code"].isin(prev_ttm["stock_code"])] if not prev_annual.empty else pd.DataFrame()
+            prev_rev_df = pd.concat([prev_ttm, fallback], ignore_index=True)
+        else:
+            prev_rev_df = prev_annual
 
         fwd_date = conn.execute(
             "SELECT MAX(trade_date) FROM fnspace_forward WHERE trade_date < ?",

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alpha Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', 'Inter', sans-serif;
+    color: #334155;
+    background: #fff;
+    line-height: 1.8;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 32px 80px;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+  header p {
+    font-size: 14px;
+    color: #94a3b8;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 40px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .section-title .route {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6366f1;
+  }
+  .section-desc {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+
+  /* Feature list */
+  .features {
+    list-style: none;
+  }
+  .features li {
+    font-size: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    gap: 12px;
+  }
+  .features li:last-child { border-bottom: none; }
+  .feat-name {
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 160px;
+    flex-shrink: 0;
+  }
+  .feat-desc {
+    color: #64748b;
+  }
+
+  /* Divider */
+  hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 40px 0;
+  }
+
+  /* Sub section */
+  .sub-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+  }
+
+  /* Stack row */
+  .stack-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .stack-chip {
+    font-size: 13px;
+    padding: 4px 12px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    color: #475569;
+  }
+  .stack-chip .label {
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  /* Flow */
+  .flow {
+    font-size: 14px;
+    color: #64748b;
+    padding: 16px 0;
+  }
+  .flow-step {
+    display: inline;
+  }
+  .flow-arrow {
+    color: #cbd5e1;
+    margin: 0 8px;
+  }
+
+  /* Factor */
+  .factor-group {
+    margin-bottom: 12px;
+  }
+  .factor-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    display: inline;
+  }
+  .factor-meaning {
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .factor-tags {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #4f46e5;
+    background: #eef2ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .note {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-left: 3px solid #e2e8f0;
+    border-radius: 0 6px 6px 0;
+  }
+
+  @media print {
+    body { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Alpha Lab — 스크리닝 대시보드</h1>
+  <p>이현자산운용 · 2025.02.28</p>
+</header>
+
+<!-- 1 -->
+<div class="section">
+  <div class="section-title">퍼포먼스 <span class="route">/performance</span></div>
+  <div class="section-desc">전략별 성과 비교 — 메인 화면</div>
+  <ul class="features">
+    <li><span class="feat-name">필터 바</span><span class="feat-desc">유니버스(KOSPI / KOSPI+KOSDAQ), 리밸런싱 주기(월간 / 격주), 날짜 범위</span></li>
+    <li><span class="feat-name">KPI 카드</span><span class="feat-desc">전략별 누적 수익률, MDD, Sharpe</span></li>
+    <li><span class="feat-name">성과 요약 테이블</span><span class="feat-desc">CAGR, MDD, Sharpe, 평균 턴오버, 평균 종목 수</span></li>
+    <li><span class="feat-name">누적 수익률 차트</span><span class="feat-desc">포트폴리오 가치 성장 곡선, IS/OOS 구간 표시</span></li>
+    <li><span class="feat-name">드로다운 차트</span><span class="feat-desc">최대 낙폭 추이</span></li>
+    <li><span class="feat-name">연도별 월간 수익률</span><span class="feat-desc">캘린더 히트맵 (연도 × 12개월 + YTD) + 연간 통계</span></li>
+    <li><span class="feat-name">IS/OOS 비교</span><span class="feat-desc">인샘플 vs 아웃오브샘플 수익률, Sharpe</span></li>
+    <li><span class="feat-name">롤링 초과수익률</span><span class="feat-desc">벤치마크 대비 12개월 롤링 초과수익</span></li>
+    <li><span class="feat-name">레짐 분석</span><span class="feat-desc">상승/횡보/하락장 구간 분류 + 구간별 성과 + 평균 월간 수익률</span></li>
+  </ul>
+</div>
+
+<!-- 2 -->
+<div class="section">
+  <div class="section-title">포트폴리오 <span class="route">/portfolio</span></div>
+  <div class="section-desc">특정 리밸런싱 시점의 보유 종목, 섹터, 시총 분석</div>
+  <ul class="features">
+    <li><span class="feat-name">날짜 / 전략 선택</span><span class="feat-desc">리밸런싱 날짜 드롭다운 + 복수 전략 체크 비교</span></li>
+    <li><span class="feat-name">포트폴리오 특성</span><span class="feat-desc">가중평균 PER, PBR, EV/EBITDA</span></li>
+    <li><span class="feat-name">집중도 분석</span><span class="feat-desc">HHI, Top 5 비중, 종목 수</span></li>
+    <li><span class="feat-name">Top 5 보유 비교</span><span class="feat-desc">전략 간 상위 5개 종목 스캐터</span></li>
+    <li><span class="feat-name">섹터 배분</span><span class="feat-desc">가로 바 차트 — 전략별 섹터 비중</span></li>
+    <li><span class="feat-name">시총 분포</span><span class="feat-desc">초대형/대형/중형/소형 분류 + 요약 테이블</span></li>
+    <li><span class="feat-name">리밸런싱 턴오버</span><span class="feat-desc">신규 편입/제외/유지 종목 수, 턴오버율, 상세 테이블</span></li>
+    <li><span class="feat-name">보유 종목 상세</span><span class="feat-desc">전 종목 리스트 — 점수, PER, PBR, EV/EBITDA, 월간 수익률</span></li>
+  </ul>
+</div>
+
+<!-- 3 -->
+<div class="section">
+  <div class="section-title">통계 검증 <span class="route">/statistics</span></div>
+  <div class="section-desc">전략 성과의 통계적 유의성 검증</div>
+  <ul class="features">
+    <li><span class="feat-name">IS vs OOS</span><span class="feat-desc">인샘플/아웃오브샘플 Sharpe 비교 + 상세 테이블</span></li>
+    <li><span class="feat-name">부트스트랩 유의성</span><span class="feat-desc">t-통계량 (±1.96 기준선), p-value, 95% CI, 승률</span></li>
+    <li><span class="feat-name">롤링 24개월 윈도우</span><span class="feat-desc">24개월 롤링 초과수익 + 양의 구간 비율 (win rate)</span></li>
+  </ul>
+</div>
+
+<!-- 4 -->
+<div class="section">
+  <div class="section-title">실험실 <span class="route">/lab</span></div>
+  <div class="section-desc">커스텀 전략 생성, 편집, 백테스트</div>
+  <ul class="features">
+    <li><span class="feat-name">전략 관리</span><span class="feat-desc">저장된 전략 불러오기 / 삭제</span></li>
+    <li><span class="feat-name">전략 설정</span><span class="feat-desc">유니버스, 비중 상한(%), Top N, 거래비용(bp), 리밸런싱 주기</span></li>
+    <li><span class="feat-name">팩터 가중치 에디터</span><span class="feat-desc">카테고리별 슬라이더 — 밸류에이션, 회귀매력도, 성장성, 차별화</span></li>
+    <li><span class="feat-name">백테스트 실행</span><span class="feat-desc">기존 vs 수정 vs 벤치마크 비교 테이블 + 누적 수익률 차트</span></li>
+  </ul>
+</div>
+
+<!-- 5 -->
+<div class="section">
+  <div class="section-title">AI 챗 <span class="route">/chat</span></div>
+  <div class="section-desc">자연어로 전략 분석, 데이터 조회, 전략 추천</div>
+  <ul class="features">
+    <li><span class="feat-name">대화 관리</span><span class="feat-desc">세션 이력 — 신규 생성, 목록, 삭제</span></li>
+    <li><span class="feat-name">SQL 실행</span><span class="feat-desc">AI가 SQL 쿼리 생성 → 결과를 인라인 테이블로 표시</span></li>
+    <li><span class="feat-name">전략 추천</span><span class="feat-desc">Python 전략 코드 제안 → "실험실에서 열기" 버튼</span></li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- Tech Stack -->
+<div class="section">
+  <div class="sub-title">기술 스택</div>
+  <div class="stack-row">
+    <span class="stack-chip"><span class="label">Frontend</span> Next.js · React · TypeScript · Tailwind</span>
+    <span class="stack-chip"><span class="label">Chart</span> Plotly.js</span>
+    <span class="stack-chip"><span class="label">Backend</span> FastAPI</span>
+    <span class="stack-chip"><span class="label">DB</span> PostgreSQL</span>
+    <span class="stack-chip"><span class="label">AI</span> Claude API</span>
+  </div>
+</div>
+
+<!-- Data Flow -->
+<div class="section">
+  <div class="sub-title">데이터 흐름</div>
+  <div class="flow">
+    <span class="flow-step"><strong>PostgreSQL</strong> (시세·재무·컨센서스)</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step"><strong>FastAPI</strong> (/api/results, /api/holdings, ...)</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step"><strong>Next.js</strong> (차트 + 테이블)</span>
+  </div>
+</div>
+
+<!-- Factors -->
+<div class="section">
+  <div class="sub-title">전략 팩터 구조</div>
+
+  <div class="factor-group">
+    <span class="factor-label">밸류에이션</span>
+    <span class="factor-meaning">— 트레일링(T) / 포워드(F) 밸류에이션 매력도</span>
+    <div class="factor-tags">
+      <span class="tag">T_PER</span><span class="tag">F_PER</span><span class="tag">T_PBR</span><span class="tag">F_PBR</span><span class="tag">T_EVEBITDA</span><span class="tag">F_EVEBITDA</span><span class="tag">T_PCF</span>
+    </div>
+  </div>
+
+  <div class="factor-group">
+    <span class="factor-label">회귀 매력도</span>
+    <span class="factor-meaning">— 회귀선 대비 괴리율 (양수 = 저평가)</span>
+    <div class="factor-tags">
+      <span class="tag">ATT_PBR</span><span class="tag">ATT_EVIC</span><span class="tag">ATT_PER</span><span class="tag">ATT_EVEBIT</span>
+    </div>
+  </div>
+
+  <div class="factor-group">
+    <span class="factor-label">성장성</span>
+    <span class="factor-meaning">— 매출 성장률</span>
+    <div class="factor-tags">
+      <span class="tag">T_SPSG</span><span class="tag">F_SPSG</span>
+    </div>
+  </div>
+
+  <div class="factor-group">
+    <span class="factor-label">차별화</span>
+    <span class="factor-meaning">— 컨센서스 EPS 변화율 (모멘텀)</span>
+    <div class="factor-tags">
+      <span class="tag">F_EPS_M</span>
+    </div>
+  </div>
+
+  <div class="note">각 팩터에 0~100% 가중치를 부여하여 종합 점수 산출 → 상위 N개 종목 선정 → 시총 비례 비중 배분 (개별 상한 10%)</div>
+</div>
+
+</body>
+</html>

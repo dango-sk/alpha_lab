@@ -207,7 +207,6 @@ export default function LabPage() {
 
   // ─── Load strategy ───
   const loadStrategy = useCallback(async (name: string) => {
-    setSelectedStrategy(name);
     if (!name) {
       setCode(defaultCode);
       return;
@@ -243,11 +242,6 @@ export default function LabPage() {
   }, [selectedStrategy, defaultCode]);
 
   // ─── Reset ───
-  const resetCode = useCallback(() => {
-    setSelectedStrategy('');
-    setCode(defaultCode);
-    setBacktestResults(null);
-  }, [defaultCode]);
 
   // ─── Run backtest ───
   const PROGRESS_STEPS = [
@@ -296,6 +290,15 @@ export default function LabPage() {
     }
   }, [code, universe, rebalType, weightCapPct, topN, txCostBp]);
 
+  // ─── Inject actual params into code before saving ───
+  const codeWithParams = useMemo(() => {
+    let c = code;
+    c = c.replace(/(["']?top_n["']?\s*:\s*)\d+/, `$1${topN}`);
+    c = c.replace(/(["']?tx_cost_bp["']?\s*:\s*)\d+/, `$1${txCostBp}`);
+    c = c.replace(/(["']?weight_cap_pct["']?\s*:\s*)\d+/, `$1${weightCapPct}`);
+    return c;
+  }, [code, topN, txCostBp, weightCapPct]);
+
   // ─── Save strategy ───
   const handleSave = useCallback(async () => {
     if (!saveName.trim()) {
@@ -309,7 +312,7 @@ export default function LabPage() {
         method: 'POST',
         body: JSON.stringify({
           name: saveName.trim(),
-          code,
+          code: codeWithParams,
           description: saveDesc,
           results: backtestResults,
           universe,
@@ -327,7 +330,7 @@ export default function LabPage() {
     } finally {
       setSaving(false);
     }
-  }, [saveName, saveDesc, code, backtestResults, universe, rebalType]);
+  }, [saveName, saveDesc, codeWithParams, backtestResults, universe, rebalType]);
 
   // ─── Parse weights ───
   const weights = useMemo(() => parseWeights(code), [code]);
@@ -467,15 +470,22 @@ export default function LabPage() {
           <select
             className="bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground min-w-[200px] focus:outline-none focus:ring-1 focus:ring-primary"
             value={selectedStrategy}
-            onChange={(e) => loadStrategy(e.target.value)}
+            onChange={(e) => setSelectedStrategy(e.target.value)}
           >
-            <option value="">기본 전략</option>
+            <option value="">-- 전략 선택 --</option>
             {savedStrategies.map((s) => (
               <option key={s.name} value={s.name}>
                 {s.name}
               </option>
             ))}
           </select>
+          <button
+            onClick={() => loadStrategy(selectedStrategy)}
+            disabled={!selectedStrategy}
+            className="px-3 py-2 text-xs rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            불러오기
+          </button>
           {selectedStrategy && (
             <button
               onClick={deleteStrategy}
@@ -484,12 +494,6 @@ export default function LabPage() {
               삭제
             </button>
           )}
-          <button
-            onClick={resetCode}
-            className="px-3 py-2 text-xs rounded-lg bg-surface border border-border text-muted hover:text-foreground transition-colors"
-          >
-            초기화
-          </button>
         </div>
       </div>
 
@@ -816,6 +820,9 @@ export default function LabPage() {
 
           const handleSaveCombo = async () => {
             if (!regimeResult || !regimeBullKey || !regimeBearKey) return;
+            const allRes = regimeResult as Record<string, unknown>;
+            const combo = allRes['REGIME_COMBO'] as Record<string, unknown> | undefined;
+            if (!combo) return;
             const name = `레짐조합_${(labels[regimeBullKey] || regimeBullKey).slice(0, 8)}↑_${(labels[regimeBearKey] || regimeBearKey).slice(0, 8)}↓`;
             try {
               await fetchApi('/api/strategies', {
@@ -825,7 +832,7 @@ export default function LabPage() {
                   name,
                   code: '',
                   description: `레짐 조합: 상승(${labels[regimeBullKey] || regimeBullKey}) × 하락(${labels[regimeBearKey] || regimeBearKey})`,
-                  results: regimeResult,
+                  results: combo,
                   universe,
                   rebal_type: rebalType,
                 }),
@@ -872,52 +879,51 @@ export default function LabPage() {
                 disabled={!regimeBullKey || !regimeBearKey || regimeLoading}
                 className="px-4 py-2 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {regimeLoading ? '계산 중...' : '레짐 조합 실행'}
+                {regimeLoading ? '백테스트 실행 중... (3~5분 소요)' : '레짐 조합 실행'}
               </button>
 
               {regimeResult && (() => {
-                const r = regimeResult as Record<string, unknown>;
-                const bullRes = baseResults?.[regimeBullKey];
-                const bearRes = baseResults?.[regimeBearKey];
-                const bullCount = r.bull_count as number;
-                const bearCount = r.bear_count as number;
-                const total = bullCount + bearCount;
+                const allRes = regimeResult as Record<string, unknown>;
+                const combo = allRes['REGIME_COMBO'] as Record<string, unknown> | undefined;
+                if (!combo) return null;
 
-                const comboChartData = [
-                  ...(bullRes && bullRes !== bearRes ? [{
-                    type: 'scatter' as const, mode: 'lines' as const,
-                    name: labels[regimeBullKey] || regimeBullKey,
-                    x: bullRes.rebalance_dates?.slice(0, bullRes.portfolio_values?.length),
-                    y: bullRes.portfolio_values?.map((v: number) => v * 100),
-                    line: { width: 1.5, dash: 'dot' as const, color: '#6366f1' },
-                  }] : []),
-                  ...(bearRes ? [{
-                    type: 'scatter' as const, mode: 'lines' as const,
-                    name: labels[regimeBearKey] || regimeBearKey,
-                    x: bearRes.rebalance_dates?.slice(0, bearRes.portfolio_values?.length),
-                    y: bearRes.portfolio_values?.map((v: number) => v * 100),
-                    line: { width: 1.5, dash: 'dot' as const, color: '#E91E63' },
-                  }] : []),
-                  {
-                    type: 'scatter' as const, mode: 'lines' as const,
-                    name: '레짐 조합',
-                    x: (r.rebalance_dates as string[])?.slice(0, (r.portfolio_values as number[])?.length),
-                    y: (r.portfolio_values as number[])?.map((v) => v * 100),
-                    line: { width: 2.5, color: '#43A047' },
-                  },
-                ];
+                // 원전략 결과: 새 백테스트 결과 우선, 없으면 캐시
+                const bullRes = (allRes[regimeBullKey] as Record<string, unknown>) || baseResults?.[regimeBullKey];
+                const bearRes = (allRes[regimeBearKey] as Record<string, unknown>) || baseResults?.[regimeBearKey];
+
+                const statsRow = (res: Record<string, unknown> | undefined, name: string) => ({
+                  전략: name,
+                  수익률: res ? `${((res.total_return as number || 0) * 100).toFixed(1)}%` : '-',
+                  CAGR: res ? `${((res.cagr as number || 0) * 100).toFixed(1)}%` : '-',
+                  Sharpe: res ? (res.sharpe as number || 0).toFixed(2) : '-',
+                  MDD: res ? `${((res.mdd as number || 0) * 100).toFixed(1)}%` : '-',
+                });
 
                 const tableData = [
-                  { 전략: labels[regimeBullKey] || regimeBullKey, ...bullRes ? { 수익률: `${((bullRes.total_return || 0) * 100).toFixed(1)}%`, CAGR: `${((bullRes.cagr || 0) * 100).toFixed(1)}%`, Sharpe: (bullRes.sharpe || 0).toFixed(2), MDD: `${((bullRes.mdd || 0) * 100).toFixed(1)}%` } : {} },
-                  { 전략: labels[regimeBearKey] || regimeBearKey, ...bearRes ? { 수익률: `${((bearRes.total_return || 0) * 100).toFixed(1)}%`, CAGR: `${((bearRes.cagr || 0) * 100).toFixed(1)}%`, Sharpe: (bearRes.sharpe || 0).toFixed(2), MDD: `${((bearRes.mdd || 0) * 100).toFixed(1)}%` } : {} },
-                  { 전략: '레짐 조합', 수익률: `${((r.total_return as number) * 100).toFixed(1)}%`, CAGR: `${((r.cagr as number) * 100).toFixed(1)}%`, Sharpe: (r.sharpe as number).toFixed(2), MDD: `${((r.mdd as number) * 100).toFixed(1)}%` },
+                  statsRow(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey),
+                  statsRow(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey),
+                  statsRow(combo, '레짐 조합 (실제 재백테스트)'),
                 ];
+
+                const makeTrace = (res: Record<string, unknown> | undefined, name: string, color: string, dash?: string) => {
+                  if (!res) return null;
+                  return {
+                    type: 'scatter' as const, mode: 'lines' as const, name,
+                    x: (res.rebalance_dates as string[])?.slice(0, (res.portfolio_values as number[])?.length),
+                    y: (res.portfolio_values as number[])?.map((v) => v * 100),
+                    line: { width: dash ? 1.5 : 2.5, ...(dash ? { dash: dash as 'dot' } : {}), color },
+                  };
+                };
+
+                const comboChartData = [
+                  makeTrace(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey, '#6366f1', 'dot'),
+                  ...(regimeBearKey !== regimeBullKey ? [makeTrace(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey, '#E91E63', 'dot')] : []),
+                  makeTrace(combo, '레짐 조합', '#43A047'),
+                ].filter((x): x is NonNullable<typeof x> => x !== null);
 
                 return (
                   <div className="space-y-4">
-                    <p className="text-xs text-muted">
-                      상승장 {bullCount}개월 ({total > 0 ? Math.round(bullCount / total * 100) : 0}%) | 하락장 {bearCount}개월 ({total > 0 ? Math.round(bearCount / total * 100) : 0}%)
-                    </p>
+                    <p className="text-xs text-muted">실제 종목 선택 기반 완전 재백테스트 — 레짐 전환 시 거래비용 자동 반영</p>
 
                     <DataTable
                       columns={[

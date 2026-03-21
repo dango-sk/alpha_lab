@@ -23,7 +23,7 @@ import argparse
 import os
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -84,45 +84,129 @@ def timeit(label):
 # Forward / Consensus 수집 (PG 증분)
 # ═══════════════════════════════════════════════════════════
 
-def step_collect_consensus():
-    """step7_collect_consensus의 증분 모드 호출 → PG에 저장"""
-    from step7_collect_consensus import (
-        get_pg_conn, create_tables, get_universe_stocks,
-        collect_forward, collect_consensus_daily,
-    )
-
+def _get_consensus_conn_and_range():
+    """공통: PG 연결 + 최근 2거래일 기준 수집 범위 반환"""
+    from step7_collect_consensus import get_pg_conn, create_tables, get_universe_stocks
     conn = get_pg_conn()
     cur = conn.cursor()
     create_tables(cur)
     conn.commit()
-
     stocks = get_universe_stocks(cur)
+    to_date = datetime.now().strftime("%Y%m%d")
+    cur.execute("""
+        SELECT DISTINCT trade_date FROM alpha_lab.daily_price
+        ORDER BY trade_date DESC LIMIT 2
+    """)
+    recent_dates = [r[0] for r in cur.fetchall()]
+    from_date = min(recent_dates).replace("-", "") if recent_dates else to_date
+    from_dash = f"{from_date[:4]}-{from_date[4:6]}-{from_date[6:]}"
+    return conn, cur, stocks, from_date, to_date, from_dash
+
+
+def step_collect_forward():
+    """Forward 지표만 수집 (최근 2거래일 DELETE + 재수집)"""
+    from step7_collect_consensus import collect_forward, save_progress
+    conn, cur, stocks, from_date, to_date, from_dash = _get_consensus_conn_and_range()
     print(f"  universe 종목: {len(stocks)}개")
 
-    to_date = datetime.now().strftime("%Y%m%d")
-
-    # 증분: DB 마지막 날짜 + 1일
-    cur.execute("SELECT MAX(trade_date) FROM alpha_lab.fnspace_forward")
-    last_fwd = cur.fetchone()[0]
-    cur.execute("SELECT MAX(trade_date) FROM alpha_lab.fnspace_consensus_daily")
-    last_con = cur.fetchone()[0]
-
-    if last_fwd or last_con:
-        last = max(filter(None, [last_fwd, last_con]))
-        last_dt = datetime.strptime(last, "%Y-%m-%d") + timedelta(days=1)
-        from_date = last_dt.strftime("%Y%m%d")
-    else:
-        from_date = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
-
-    if from_date > to_date:
-        print("  이미 최신 상태")
-        conn.close()
-        return
+    cur.execute("DELETE FROM alpha_lab.fnspace_forward WHERE trade_date >= %s", (from_dash,))
+    print(f"  forward 삭제: {from_dash} ~ ({cur.rowcount}건)")
+    conn.commit()
+    save_progress({})
 
     print(f"  수집 기간: {from_date} ~ {to_date}")
     collect_forward(conn, cur, stocks, from_date, to_date)
-    collect_consensus_daily(conn, cur, stocks, from_date, to_date)
     conn.close()
+
+
+def step_collect_consensus_daily():
+    """Consensus Daily만 수집 (최근 2거래일 DELETE + 재수집)"""
+    import time as _time
+    from psycopg2.extras import execute_values
+    from step7_collect_consensus import (
+        api_call, chunk_list,
+        CONSENSUS_DAILY_ITEMS, CONSENSUS_COLS, MAX_CODES_PER_CALL, API_DELAY,
+    )
+    conn, cur, stocks, from_date, to_date, from_dash = _get_consensus_conn_and_range()
+    print(f"  universe 종목: {len(stocks)}개")
+
+    cur.execute("DELETE FROM alpha_lab.fnspace_consensus_daily WHERE trade_date >= %s", (from_dash,))
+    print(f"  consensus daily 삭제: {from_dash} ~ ({cur.rowcount}건)")
+    conn.commit()
+
+    current_year = datetime.now().year
+    target_years = [str(current_year), str(current_year + 1)]
+    items_str = ",".join(CONSENSUS_DAILY_ITEMS.keys())
+    total_saved = 0
+
+    print(f"  수집 기간: {from_date} ~ {to_date}, 연도 {target_years}")
+    for target_year in target_years:
+        for code_chunk in chunk_list(stocks, MAX_CODES_PER_CALL):
+            codes_str = ",".join(code_chunk)
+            data = api_call("Consensus3Api", {
+                "code": codes_str,
+                "item": items_str,
+                "consolgb": "M",
+                "annualgb": "A",
+                "accdategb": "C",
+                "fraccyear": target_year,
+                "toaccyear": target_year,
+                "frdate": from_date,
+                "todate": to_date,
+            })
+
+            rows = []
+            if data and data.get("dataset"):
+                for sd in data["dataset"]:
+                    code = sd.get("CODE", "")
+                    code6 = code[1:] if code.startswith("A") else code
+                    for row_data in sd.get("DATA", []):
+                        dt = row_data.get("DT", "").strip()
+                        fy = row_data.get("FS_YEAR")
+                        if not dt or not fy:
+                            continue
+                        trade_date = dt[:10] if "-" in dt else f"{dt[:4]}-{dt[4:6]}-{dt[6:8]}"
+                        values = {}
+                        for item_cd, col_name in CONSENSUS_DAILY_ITEMS.items():
+                            val = row_data.get(item_cd)
+                            if val is not None:
+                                values[col_name] = val
+                        if values:
+                            row = [code6, trade_date, fy] + [values.get(c) for c in CONSENSUS_COLS]
+                            rows.append(tuple(row))
+
+            # 중복 제거 (stock_code, trade_date, fiscal_year)
+            seen = {}
+            for r in rows:
+                seen[(r[0], r[1], r[2])] = r
+            rows = list(seen.values())
+
+            if rows:
+                cols_sql = ", ".join(CONSENSUS_COLS)
+                placeholders = ", ".join(["%s"] * (3 + len(CONSENSUS_COLS)))
+                update_set = ", ".join(f"{c} = EXCLUDED.{c}" for c in CONSENSUS_COLS)
+                execute_values(cur, f"""
+                    INSERT INTO alpha_lab.fnspace_consensus_daily
+                    (stock_code, trade_date, fiscal_year, {cols_sql})
+                    VALUES %s
+                    ON CONFLICT (stock_code, trade_date, fiscal_year) DO UPDATE SET
+                    {update_set}, updated_at = NOW()
+                """, rows, template=f"({placeholders})")
+                total_saved += len(rows)
+                conn.commit()
+
+            _time.sleep(API_DELAY)
+
+        print(f"    {target_year}년 완료: 누적 {total_saved:,}건")
+
+    print(f"  Consensus Daily 완료: {total_saved:,}건")
+    conn.close()
+
+
+def step_collect_consensus():
+    """Forward + Consensus Daily 둘 다 수집"""
+    step_collect_forward()
+    step_collect_consensus_daily()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -382,6 +466,17 @@ def step_collect_finance():
 
 
 # ═══════════════════════════════════════════════════════════
+# 월초: TTM 계산
+# ═══════════════════════════════════════════════════════════
+
+def step_calc_ttm():
+    """분기 재무 → TTM 계산 → fnspace_finance에 저장 → PG 업로드"""
+    from step5b_calc_ttm import calc_ttm, upload_ttm_to_pg
+    calc_ttm()
+    upload_ttm_to_pg()
+
+
+# ═══════════════════════════════════════════════════════════
 # 월초: 유니버스 재구축
 # ═══════════════════════════════════════════════════════════
 
@@ -438,10 +533,11 @@ def main():
             failed.append((name, str(e)))
             print(f"  ✗ {name} 실패: {e}")
 
-    # ── 월초: 마스터 + 재무 ──
+    # ── 월초: 마스터 + 재무 + TTM ──
     if is_monthly:
         run("마스터 스냅샷 수집", step_collect_master)
         run("재무 보충 수집", step_collect_finance)
+        run("TTM 계산", step_calc_ttm)
 
     # ── 유니버스 재구축 (매 실행 시) ──
     run("유니버스 재구축", step_build_universe)

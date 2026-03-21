@@ -69,6 +69,7 @@ from lib.data import (
     delete_strategy,
     run_strategy_backtest,
     compute_regime_analysis,
+    run_regime_combo_backtest,
     STRATEGY_LABELS,
     STRATEGY_COLORS,
     ALL_KEYS,
@@ -970,78 +971,47 @@ def api_first_entry_dates(
 
 
 # ══════════════════════════════════════════════
-# 18. GET /api/regime-combo
+# 18. POST /api/regime-combo  (async job)
 # ══════════════════════════════════════════════
-@app.get("/api/regime-combo")
-def api_regime_combo(
+def _run_regime_combo_job(job_id: str, bull_key: str, bear_key: str, universe: str, rebal_type: str):
+    import traceback as _tb
+    try:
+        result = run_regime_combo_backtest(bull_key, bear_key, universe=universe, rebal_type=rebal_type)
+        if result is None:
+            _backtest_jobs[job_id] = {"status": "error", "detail": "결과 없음"}
+        elif "error" in result:
+            _backtest_jobs[job_id] = {"status": "error", "detail": result["error"]}
+        else:
+            _backtest_jobs[job_id] = {"status": "done", "result": result}
+    except Exception as e:
+        _backtest_jobs[job_id] = {"status": "error", "detail": f"{type(e).__name__}: {e}"}
+        print(f"[REGIME COMBO ERROR] {_tb.format_exc()}", flush=True)
+
+
+@app.post("/api/regime-combo")
+def api_regime_combo_start(
     bull_key: str,
     bear_key: str,
     universe: Optional[str] = "KOSPI",
     rebal_type: Optional[str] = "monthly",
 ):
-    import numpy as np
-    from lib.db import get_conn
+    job_id = str(_uuid.uuid4())[:8]
+    _backtest_jobs[job_id] = {"status": "running"}
+    t = threading.Thread(
+        target=_run_regime_combo_job,
+        args=(job_id, bull_key, bear_key, universe, rebal_type),
+        daemon=True,
+    )
+    t.start()
+    return {"job_id": job_id, "status": "running"}
 
-    cache_key = f"regime_combo:{bull_key}:{bear_key}:{universe}:{rebal_type}"
 
-    def _compute():
-        all_results = load_all_results(universe=universe, rebal_type=rebal_type)
-        if bull_key not in all_results or bear_key not in all_results:
-            return {"error": "전략을 찾을 수 없습니다."}
-
-        rb_dates = all_results[bull_key]["rebalance_dates"]
-        n = len(rb_dates) - 1
-
-        # KOSPI 200 50일 MA 신호
-        conn = get_conn()
-        signals = []
-        for d in rb_dates[:-1]:
-            rows = conn.execute(
-                "SELECT close FROM daily_price WHERE stock_code = '069500' "
-                "AND trade_date <= %s ORDER BY trade_date DESC LIMIT 51"
-                if hasattr(conn, '_conn') else
-                "SELECT close FROM daily_price WHERE stock_code = '069500' "
-                "AND trade_date <= ? ORDER BY trade_date DESC LIMIT 51",
-                (d,)
-            ).fetchall()
-            prices = [r[0] for r in rows if r[0]]
-            if len(prices) < 51:
-                signals.append("bull")
-            else:
-                signals.append("bear" if prices[0] < float(np.mean(prices[1:51])) else "bull")
-        conn.close()
-
-        bull_rets = np.array(all_results[bull_key]["monthly_returns"][:n], dtype=float)
-        bear_rets = np.array(all_results[bear_key]["monthly_returns"][:n], dtype=float)
-        combined = [float(bull_rets[i]) if signals[i] == "bull" else float(bear_rets[i]) for i in range(len(signals))]
-
-        rets = np.array(combined)
-        cum = np.cumprod(1 + rets)
-        peak = np.maximum.accumulate(cum)
-        dd = (cum - peak) / peak
-        total = float(cum[-1] - 1)
-        n_years = len(rets) / 12
-        cagr = float((1 + total) ** (1 / n_years) - 1) if n_years > 0 else 0
-        sharpe = float(rets.mean() / rets.std() * np.sqrt(12)) if rets.std() > 0 else 0
-
-        bull_count = signals.count("bull")
-        bear_count = signals.count("bear")
-
-        return {
-            "total_return": total,
-            "cagr": cagr,
-            "sharpe": sharpe,
-            "mdd": float(dd.min()),
-            "win_rate": float((rets > 0).mean()),
-            "monthly_returns": combined,
-            "portfolio_values": [float(v) for v in cum],
-            "rebalance_dates": rb_dates,
-            "signals": signals,
-            "bull_count": bull_count,
-            "bear_count": bear_count,
-        }
-
-    return _cached(cache_key, _compute, ttl=600)
+@app.get("/api/regime-combo/{job_id}")
+def api_regime_combo_poll(job_id: str):
+    job = _backtest_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="job not found")
+    return job
 
 
 # ══════════════════════════════════════════════

@@ -1401,6 +1401,147 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         BACKTEST_CONFIG["rebal_type"] = orig["rebal_type"]
 
 
+def run_regime_combo_backtest(
+    bull_key: str,
+    bear_key: str,
+    universe: str = None,
+    rebal_type: str = None,
+) -> dict | None:
+    """
+    레짐 조합 백테스트: 장세마다 다른 전략을 실제로 적용해 완전 재실행.
+
+    - Bull (KOSPI 200 > 50일 MA +3%) → bull_key 전략 종목 선택
+    - Bear (KOSPI 200 < 50일 MA -3%) → bear_key 전략 종목 선택
+    - Sideways (±3% 이내)            → bear_key 전략 종목 선택
+
+    turnover 및 거래비용은 step7_backtest 루프가 자동으로 정확히 계산.
+    """
+    from step7_backtest import (
+        run_backtest, calc_all_benchmarks,
+        get_db, get_rebalance_dates, _numpy_to_python,
+    )
+    from lib.factor_engine import prefetch_all_data, clear_prefetch_cache, score_stocks_from_strategy
+    from step7_backtest import get_universe_stocks
+    from lib.db import get_conn as _get_conn
+
+    # 1. 두 전략 코드 로드
+    bull_data = load_strategy(bull_key, rebal_type=rebal_type, universe=universe)
+    bear_data = load_strategy(bear_key, rebal_type=rebal_type, universe=universe)
+    if not bull_data.get("code") or not bear_data.get("code"):
+        return {"error": "전략 코드를 찾을 수 없습니다."}
+
+    # 2. 코드 → 모듈 변환 및 검증
+    for code_str, label in [(bull_data["code"], "Bull"), (bear_data["code"], "Bear")]:
+        ok, err = validate_strategy_code(code_str)
+        if not ok:
+            return {"error": f"{label} 전략 오류: {err}"}
+
+    bull_module = code_to_module(bull_data["code"])
+    bear_module = code_to_module(bear_data["code"])
+
+    # 3. 파라미터 (bull 전략 기준, tx_cost는 두 전략 평균)
+    bull_params = getattr(bull_module, "PARAMS", {})
+    bear_params = getattr(bear_module, "PARAMS", {})
+    top_n = bull_params.get("top_n", 30)
+    tx_cost_bp = int((bull_params.get("tx_cost_bp", 30) + bear_params.get("tx_cost_bp", 30)) / 2)
+    weight_cap_pct = bull_params.get("weight_cap_pct", 15)
+    _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    _universe = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
+
+    # 4. 레짐 신호 사전 계산 (전체 날짜 범위)
+    _conn_regime = _get_conn()
+    regime_cache: dict[str, str] = {}
+
+    def _get_regime(calc_date: str) -> str:
+        if calc_date in regime_cache:
+            return regime_cache[calc_date]
+        rows = _conn_regime.execute(
+            "SELECT close FROM daily_price WHERE stock_code = '069500' "
+            "AND trade_date <= ? ORDER BY trade_date DESC LIMIT 51",
+            (calc_date,)
+        ).fetchall()
+        prices = [r[0] for r in rows if r[0]]
+        if len(prices) < 51:
+            result_regime = "Bull"
+        else:
+            current = prices[0]
+            ma50 = float(np.mean(prices[1:51]))
+            gap = (current - ma50) / ma50
+            if gap > 0.03:
+                result_regime = "Bull"
+            elif gap < -0.03:
+                result_regime = "Bear"
+            else:
+                result_regime = "Sideways"
+        regime_cache[calc_date] = result_regime
+        return result_regime
+
+    # 5. 레짐 기반 stock_selector
+    def regime_stock_selector(conn, calc_date, _top_n):
+        regime = _get_regime(calc_date)
+        module = bull_module if regime == "Bull" else bear_module
+        universe_set = get_universe_stocks(conn, calc_date)
+        candidates = score_stocks_from_strategy(conn, calc_date, module)
+        return [(c, s) for c, s in candidates if c in universe_set][:_top_n]
+
+    orig = {
+        "top_n_stocks": BACKTEST_CONFIG["top_n_stocks"],
+        "transaction_cost_bp": BACKTEST_CONFIG["transaction_cost_bp"],
+        "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 15),
+        "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
+        "rebal_type": BACKTEST_CONFIG.get("rebal_type", "monthly"),
+    }
+    try:
+        BACKTEST_CONFIG["top_n_stocks"] = top_n
+        BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
+        BACKTEST_CONFIG["weight_cap_pct"] = weight_cap_pct
+        BACKTEST_CONFIG["rebal_type"] = _rebal
+        BACKTEST_CONFIG["universe"] = _universe
+
+        _pf_conn = get_db()
+        prefetch_all_data(_pf_conn)
+        _pf_conn.close()
+
+        result = run_backtest(
+            "regime_combo",
+            stock_selector=regime_stock_selector,
+            rebal_type=_rebal,
+        )
+
+        results = {}
+        if result:
+            result["strategy"] = "레짐 조합"
+            result["bull_key"] = bull_key
+            result["bear_key"] = bear_key
+            results["REGIME_COMBO"] = result
+
+        # 벤치마크 + 두 원전략 결과 포함
+        conn_bm = get_db()
+        rb_dates = get_rebalance_dates(conn_bm, _rebal)
+        if len(rb_dates) >= 2:
+            bm = calc_all_benchmarks(conn_bm, rb_dates)
+            results.update(bm)
+        conn_bm.close()
+
+        # 두 원전략 결과도 함께 반환 (비교용)
+        all_cached = load_all_results(universe=_universe, rebal_type=_rebal)
+        for key in [bull_key, bear_key]:
+            if key in all_cached:
+                results[key] = all_cached[key]
+
+        clear_factor_cache()
+        return _numpy_to_python(results)
+
+    finally:
+        _conn_regime.close()
+        clear_prefetch_cache()
+        BACKTEST_CONFIG["top_n_stocks"] = orig["top_n_stocks"]
+        BACKTEST_CONFIG["transaction_cost_bp"] = orig["transaction_cost_bp"]
+        BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]
+        BACKTEST_CONFIG["universe"] = orig["universe"]
+        BACKTEST_CONFIG["rebal_type"] = orig["rebal_type"]
+
+
 def compute_regime_analysis(
     start: str = None,
     end: str = None,

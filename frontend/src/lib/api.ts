@@ -109,7 +109,21 @@ export async function getRegimeCombo(
   if (universe) params.universe = universe;
   if (rebal_type) params.rebal_type = rebal_type;
   const qs = new URLSearchParams(params).toString();
-  return fetchApi(`/api/regime-combo?${qs}`);
+
+  // Start async job (real backtest, not splice)
+  const { job_id } = await fetchApi(`/api/regime-combo?${qs}`, { method: 'POST' });
+
+  // Poll until done (max 15 min)
+  const maxWait = 900_000;
+  const interval = 3_000;
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    await new Promise((r) => setTimeout(r, interval));
+    const res = await fetchApi(`/api/regime-combo/${job_id}`);
+    if (res.status === 'done') return res.result;
+    if (res.status === 'error') throw new Error(res.detail || '레짐 조합 백테스트 실패');
+  }
+  throw new Error('레짐 조합 백테스트 시간 초과');
 }
 
 export async function getStrategies(universe?: string, rebal_type?: string) {

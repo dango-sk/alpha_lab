@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>V-Rainmaker Content Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0B0F1A; overflow-x: hidden; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0B0F1A; }
+  ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+const {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ComposedChart, ScatterChart, Scatter, ZAxis, Cell, Line, Area, Legend, ReferenceLine,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+} = Recharts;
+
+/* ═══ TOKEN
+S ═══ */
+const ME="#3B82F6",COMP="#EF4444",MKT="#8B5CF6";
+const SC={pos:"#10B981",neg:"#EF4444",neu:"#94A3B8"};
+const BG="#0B0F1A",CBG="#111827",CB="#1E293B";
+const TX={p:"#F1F5F9",s:"#94A3B8",m:"#64748B"};
+const ttS={background:"#1E293B",border:"1px solid #334155",borderRadius:8,fontSize:12,color:"#F1F5F9",padding:"10px 14px"};
+const ACC={tiktok:"#69C9D0",instagram:"#C13584",action:"#F59E0B"};
+
+/* ═══ DATA ═══ */
+
+/* 30일 추이 — 일별 / 주별 / 월별 */
+/* spike: true = 조회수 또는 ER이 평균의 1.5배 이상 */
+var trendDaily = [
+  {d:"1/14",vol:38,er:4.1,reach:5.8,fol:142},
+  {d:"1/15",vol:41,er:4.2,reach:5.9,fol:143},
+  {d:"1/16",vol:42,er:4.3,reach:6.0,fol:143},
+  {d:"1/17",vol:36,er:4.4,reach:6.1,fol:144},
+  {d:"1/18",vol:35,er:4.5,reach:6.2,fol:144},
+  {d:"1/19",vol:40,er:4.3,reach:6.0,fol:145},
+  {d:"1/20",vol:48,er:4.2,reach:5.9,fol:145},
+  {d:"1/21",vol:50,er:4.4,reach:6.1,fol:146},
+  {d:"1/22",vol:52,er:4.6,reach:6.4,fol:147},
+  {d:"1/23",vol:45,er:4.5,reach:6.2,fol:147},
+  {d:"1/24",vol:44,er:4.4,reach:6.1,fol:148},
+  {d:"1/25",vol:53,er:4.7,reach:6.4,fol:149},
+  {d:"1/26",vol:56,er:4.8,reach:6.5,fol:150},
+  {d:"1/27",vol:58,er:4.9,reach:6.7,fol:151},
+  {d:"1/28",vol:62,er:5.1,reach:7.0,fol:155,spike:true},
+  {d:"1/29",vol:85,er:5.4,reach:7.5,fol:160,spike:true},
+  {d:"1/30",vol:158,er:5.8,reach:8.2,fol:168,spike:true},
+  {d:"1/31",vol:172,er:6.0,reach:8.8,fol:172,spike:true},
+  {d:"2/1",vol:180,er:6.2,reach:9.1,fol:176,spike:true},
+  {d:"2/2",vol:165,er:5.9,reach:8.5,fol:175,spike:true},
+  {d:"2/3",vol:142,er:5.5,reach:7.8,fol:173,spike:true},
+  {d:"2/4",vol:95,er:5.1,reach:7.2,fol:168},
+  {d:"2/5",vol:68,er:4.9,reach:6.8,fol:165},
+  {d:"2/6",vol:60,er:4.7,reach:6.5,fol:163},
+  {d:"2/7",vol:52,er:4.6,reach:6.3,fol:161},
+  {d:"2/8",vol:48,er:4.5,reach:6.2,fol:159},
+  {d:"2/9",vol:45,er:4.5,reach:6.1,fol:158},
+  {d:"2/10",vol:42,er:4.4,reach:6.0,fol:157},
+  {d:"2/11",vol:38,er:4.3,reach:5.9,fol:156},
+  {d:"2/12",vol:37,er:4.2,reach:5.8,fol:155},
+];
+
+
+
+var trendWeekly = [
+  {d:"W1 (1/14-1/20)",vol:280,er:4.3,reach:6.0,fol:144},
+  {d:"W2 (1/21-1/27)",vol:300,er:4.6,reach:6.3,fol:149},
+  {d:"W3 (1/28-2/3)",vol:964,er:5.7,reach:8.1,fol:170,spike:true},
+  {d:"W4 (2/4-2/12)",vol:485,er:4.6,reach:6.3,fol:160},
+];
+
+var trendMonthly = [
+  {d:"1월 (1/14-1/31)",vol:928,er:4.7,reach:6.5,fol:148},
+  {d:"2월 (2/1-2/12)",vol:972,er:5.0,reach:6.9,fol:165},
+];
+
+var health = {
+  avgER:4.72, mktER:3.80, erDelta:0.92, erRank:2, erRankOf:5, pctile:78,
+  avgReach:6733, mktReach:5200, reachDelta:1533, reachRank:1, totalContent:1247,
+  totalViews:"18.2M", totalFollowers:"2.4M", sov:18.4,
+};
+
+/* L1: 조건 분석 — 조회수 · ER */
+var erByDuration = {
+  "전체":[{range:"<15s",er:5.8,reach:8.5,eng:493,count:349},{range:"15-30s",er:4.9,reach:7.2,eng:353,count:535},{range:"30-60s",er:3.4,reach:5.1,eng:173,count:243},{range:"60s+",er:1.9,reach:3.2,eng:61,count:120}],
+  "TikTok":[{range:"<15s",er:6.4,reach:9.8,eng:627,count:245},{range:"15-30s",er:5.3,reach:8.1,eng:429,count:380},{range:"30-60s",er:3.8,reach:5.6,eng:213,count:155},{range:"60s+",er:2.1,reach:3.5,eng:74,count:68}],
+  "Instagram":[{range:"<15s",er:4.6,reach:5.8,eng:267,count:104},{range:"15-30s",er:4.2,reach:5.4,eng:227,count:155},{range:"30-60s",er:2.8,reach:4.2,eng:118,count:88},{range:"60s+",er:1.6,reach:2.7,eng:43,count:52}]
+};
+var erByFormat = {
+  "전체":[{format:"GRWM",er:5.6,reach:8.2,eng:459,count:182},{format:"Short Review",er:5.2,reach:7.1,eng:369,count:215},{format:"Tutorial",er:4.4,reach:6.0,eng:264,count:168},{format:"Before/After",er:4.1,reach:5.4,eng:221,count:95},{format:"Unboxing",er:3.2,reach:4.5,eng:144,count:124},{format:"Vlog/일상",er:2.8,reach:3.8,eng:106,count:463}],
+  "TikTok":[{format:"GRWM",er:6.2,reach:9.5,eng:589,count:128},{format:"Short Review",er:5.8,reach:8.2,eng:476,count:152},{format:"Tutorial",er:4.9,reach:6.8,eng:333,count:105},{format:"Before/After",er:4.5,reach:6.1,eng:275,count:62},{format:"Unboxing",er:3.6,reach:5.0,eng:180,count:78},{format:"Vlog/일상",er:3.1,reach:4.2,eng:130,count:323}],
+  "Instagram":[{format:"GRWM",er:4.5,reach:5.8,eng:261,count:54},{format:"Short Review",er:4.1,reach:5.1,eng:209,count:63},{format:"Tutorial",er:3.5,reach:4.6,eng:161,count:63},{format:"Before/After",er:3.4,reach:4.2,eng:143,count:33},{format:"Unboxing",er:2.5,reach:3.6,eng:90,count:46},{format:"Vlog/일상",er:2.2,reach:3.0,eng:66,count:140}]
+};
+
+
+
+var erByTime = {
+  "전체":[{hour:"06-09",er:3.2,reach:4.1,count:95},{hour:"09-12",er:3.8,reach:5.0,count:142},{hour:"12-15",er:4.1,reach:5.8,count:178},{hour:"15-18",er:4.5,reach:6.3,count:215},{hour:"18-21",er:5.6,reach:8.4,count:312},{hour:"21-24",er:5.1,reach:7.5,count:198},{hour:"00-06",er:3.5,reach:4.5,count:107}],
+  "TikTok":[{hour:"06-09",er:3.6,reach:4.6,count:62},{hour:"09-12",er:4.2,reach:5.6,count:98},{hour:"12-15",er:4.6,reach:6.4,count:122},{hour:"15-18",er:5.0,reach:7.1,count:148},{hour:"18-21",er:6.2,reach:9.5,count:218},{hour:"21-24",er:5.6,reach:8.2,count:135},{hour:"00-06",er:3.9,reach:5.0,count:65}],
+  "Instagram":[{hour:"06-09",er:2.5,reach:3.2,count:33},{hour:"09-12",er:3.1,reach:4.0,count:44},{hour:"12-15",er:3.3,reach:4.8,count:56},{hour:"15-18",er:3.7,reach:5.0,count:67},{hour:"18-21",er:4.5,reach:6.4,count:94},{hour:"21-24",er:4.1,reach:6.0,count:63},{hour:"00-06",er:2.8,reach:3.6,count:42}]
+};
+
+var topContent = [
+  {id:1,title:"이거 진짜 다 쓰고 또 샀어…",creator:"@soyeon_beauty",followers:"324K",duration:"18s",er:12.8,reach:"18.2K",eng:"2,330",views:"2.1M",platform:"TikTok",hashtags:["#GRWM","#스킨케어"],postedAt:"2/3 20:14",emoji:"💄"},
+  {id:2,title:"세럼 하나로 피부결 정리 끝",creator:"@skin_daily_kr",followers:"158K",duration:"24s",er:9.4,reach:"14.1K",eng:"1,325",views:"1.8M",platform:"TikTok",hashtags:["#스킨케어","#뷰티루틴"],postedAt:"1/28 19:32",emoji:"🧴"},
+  {id:3,title:"민감성인데 이건 진짜 괜찮았어",creator:"@glow_hana",followers:"210K",duration:"15s",er:8.7,reach:"11.5K",eng:"1,001",views:"920K",platform:"Instagram",hashtags:["#GRWM","#민감성피부"],postedAt:"2/5 21:05",emoji:"✨"},
+  {id:4,title:"요즘 매일 쓰는 스킨케어 추천템",creator:"@beauty_log_22",followers:"87K",duration:"12s",er:7.9,reach:"10.8K",eng:"853",views:"780K",platform:"TikTok",hashtags:["#추천템","#스킨케어"],postedAt:"2/1 18:47",emoji:"🌸"},
+  {id:5,title:"출근 전 5분 루틴 이것만 하면 됨",creator:"@minjung_picks",followers:"142K",duration:"20s",er:7.2,reach:"9.3K",eng:"670",views:"650K",platform:"TikTok",hashtags:["#GRWM","#피부관리"],postedAt:"1/25 20:22",emoji:"💅"},
+];
+
+/* 날짜 → 콘텐츠 매핑 (바 ���릭 시 해당 기간 콘텐츠 표시) */
+var contentByDate = {
+  "1/25": [topContent[4]],
+  "1/28": [topContent[1]],
+  "1/30": [],
+  "1/31": [],
+  "2/1": [topContent[3]],
+  "2/3": [topContent[0]],
+  "2/5": [topContent[2]],
+};
+var contentByWeek = {
+  "W1 (1/14-1/20)": [],
+  "W2 (1/21-1/27)": [topContent[4]],
+  "W3 (1/28-2/3)": [topContent[0],topContent[1],topContent[3]],
+  "W4 (2/4-2/12)": [topContent[2]],
+};
+var contentByMonth = {
+  "1월 (1/14-1/31)": [topContent[1],topContent[4]],
+  "2월 (2/1-2/12)": [topContent[0],topContent[2],topContent[3]],
+};
+
+/* L2 */
+var erComp = [
+  {brand:"Medicube",er:4.72,reach:6.7,eng:318,isMe:true,views:"18.2M",followersK:385},
+  {brand:"이니스프리",er:3.90,reach:5.1,eng:199,isMe:false,views:"12.4M",followersK:318},
+  {brand:"달바",er:3.21,reach:4.3,eng:138,isMe:false,views:"8.1M",followersK:252},
+  {brand:"아누아",er:2.85,reach:4.0,eng:114,isMe:false,views:"6.8M",followersK:238},
+  {brand:"라운드랩",er:2.44,reach:2.8,eng:68,isMe:false,views:"4.2M",followersK:172},
+  {brand:"토리든",er:3.80,reach:3.5,eng:105,isMe:false,views:"5.2M",followersK:210},
+  {brand:"넘버즈",er:4.40,reach:2.9,eng:87,isMe:false,views:"3.1M",followersK:145},
+  {brand:"코스알엑스",er:3.20,reach:4.8,eng:154,isMe:false,views:"9.5M",followersK:295},
+  {brand:"스킨1004",er:4.00,reach:2.4,eng:58,isMe:false,views:"2.8M",followersK:130},
+  {brand:"비플레인",er:3.70,reach:2.1,eng:45,isMe:false,views:"2.2M",followersK:115},
+  {brand:"에스트라",er:2.95,reach:3.2,eng:96,isMe:false,views:"5.8M",followersK:265},
+  {brand:"닥터지",er:3.15,reach:3.8,eng:120,isMe:false,views:"7.2M",followersK:280},
+  {brand:"마녀공장",er:3.55,reach:3.0,eng:90,isMe:false,views:"4.5M",followersK:195},
+  {brand:"클리오",er:2.70,reach:4.5,eng:122,isMe:false,views:"8.8M",followersK:310},
+  {brand:"롬앤",er:3.45,reach:3.6,eng:108,isMe:false,views:"6.1M",followersK:220},
+  {brand:"VT",er:2.60,reach:3.9,eng:101,isMe:false,views:"7.0M",followersK:290},
+  {brand:"바이오더마",er:2.30,reach:2.5,eng:58,isMe:false,views:"3.5M",followersK:185},
+  {brand:"AHC",er:2.50,reach:3.3,eng:83,isMe:false,views:"5.5M",followersK:250},
+  {brand:"헤라",er:2.15,reach:4.2,eng:90,isMe:false,views:"7.8M",followersK:340},
+  {brand:"설화수",er:1.85,reach:5.5,eng:102,isMe:false,views:"10.2M",followersK:420},
+];
+
+var reachEfficiency = {
+  brands:[
+    {brand:"Medicube",avgReachK:6.7,avgFollowersK:170,reachRatio:3.94,creators:8,isMe:true},
+    {brand:"이니스프리",avgReachK:5.1,avgFollowersK:248,reachRatio:2.06,creators:12,isMe:false},
+    {brand:"달바",avgReachK:4.3,avgFollowersK:109,reachRatio:3.94,creators:7,isMe:false},
+    {brand:"아누아",avgReachK:4.0,avgFollowersK:323,reachRatio:1.24,creators:6,isMe:false},
+    {brand:"라운드랩",avgReachK:2.8,avgFollowersK:330,reachRatio:0.85,creators:4,isMe:false},
+  ],
+  creatorLevel:[
+    {name:"@soyeon_beauty",brand:"Medicube",followersK:324,reachK:11.2,ratio:3.46,platform:"TikTok",isMe:true},
+    {name:"@beauty_log_22",brand:"Medicube",followersK:87,reachK:6.2,ratio:7.13,platform:"TikTok",isMe:true},
+    {name:"@haelee_daily",brand:"Medicube",followersK:98,reachK:5.1,ratio:5.20,platform:"TikTok",isMe:true},
+    {name:"@minj_beauty",brand:"이니스프리",followersK:245,reachK:9.2,ratio:3.76,platform:"TikTok",isMe:false},
+    {name:"@skin_guru_kr",brand:"달바",followersK:182,reachK:8.5,ratio:4.67,platform:"TikTok",isMe:false},
+    {name:"@yj_lifestyle",brand:"아누아",followersK:520,reachK:6.2,ratio:1.19,platform:"TikTok",isMe:false},
+    {name:"@beauty_teacher",brand:"이니스프리",followersK:450,reachK:7.5,ratio:1.67,platform:"Instagram",isMe:false},
+  ],
+};
+
+var portfolioDiversity = [
+  {brand:"Medicube",costEffective:4,premium:1,growth:2,viewsFocus:1,total:8,grade:"가성비 중심",isMe:true},
+  {brand:"이니스프리",costEffective:2,premium:4,growth:3,viewsFocus:3,total:12,grade:"프리미엄 중심",isMe:false},
+  {brand:"달바",costEffective:3,premium:1,growth:2,viewsFocus:1,total:7,grade:"균형",isMe:false},
+  {brand:"아누아",costEffective:1,premium:2,growth:1,viewsFocus:2,total:6,grade:"프리미엄 중심",isMe:false},
+  {brand:"라운드랩",costEffective:0,premium:1,growth:1,viewsFocus:2,total:4,grade:"조회수 중심",isMe:false},
+  {brand:"토리든",costEffective:3,premium:2,growth:1,viewsFocus:1,total:7,grade:"가성비 중심",isMe:false},
+  {brand:"넘버즈",costEffective:2,premium:1,growth:2,viewsFocus:0,total:5,grade:"균형",isMe:false},
+  {brand:"코스알엑스",costEffective:1,premium:3,growth:2,viewsFocus:3,total:9,grade:"프리미엄 중심",isMe:false},
+  {brand:"스킨1004",costEffective:3,premium:1,growth:1,viewsFocus:0,total:5,grade:"가성비 중심",isMe:false},
+  {brand:"비플레인",costEffective:2,premium:0,growth:2,viewsFocus:1,total:5,grade:"균형",isMe:false},
+  {brand:"에스트라",costEffective:1,premium:2,growth:3,viewsFocus:2,total:8,grade:"육성 중심",isMe:false},
+  {brand:"닥터지",costEffective:2,premium:3,growth:1,viewsFocus:2,total:8,grade:"프리미엄 중심",isMe:false},
+  {brand:"마녀공장",costEffective:3,premium:1,growth:2,viewsFocus:1,total:7,grade:"가성비 중심",isMe:false},
+  {brand:"클리오",costEffective:0,premium:3,growth:2,viewsFocus:4,total:9,grade:"조회수 중심",isMe:false},
+  {brand:"롬앤",costEffective:2,premium:2,growth:1,viewsFocus:2,total:7,grade:"균형",isMe:false},
+  {brand:"VT",costEffective:1,premium:2,growth:3,viewsFocus:3,total:9,grade:"조회수 중심",isMe:false},
+  {brand:"바이오더마",costEffective:1,premium:1,growth:2,viewsFocus:1,total:5,grade:"균형",isMe:false},
+  {brand:"AHC",costEffective:1,premium:2,growth:2,viewsFocus:3,total:8,grade:"조회수 중심",isMe:false},
+  {brand:"헤라",costEffective:0,premium:4,growth:1,viewsFocus:3,total:8,grade:"프리미엄 중심",isMe:false},
+  {brand:"설화수",costEffective:0,premium:5,growth:1,viewsFocus:2,total:8,grade:"프리미엄 중심",isMe:false},
+];
+
+var TIER_COLORS = {costEffective:"#34D399",premium:"#F59E0B",growth:"#A78BFA",viewsFocus:"#EF4444"};
+
+var brandBestContent = [
+  {brand:"Medicube",creator:"@soyeon_beauty",followers:"324K",er:12.8,reach:"18.2K",eng:"2,330",views:"2.1M",format:"GRWM",duration:"18s",platform:"TikTok",emoji:"💄",isMe:true},
+  {brand:"이니스프리",creator:"@minj_beauty",followers:"245K",er:9.4,reach:"14.1K",eng:"1,325",views:"1.8M",format:"Tutorial",duration:"24s",platform:"TikTok",emoji:"🧴",isMe:false},
+  {brand:"달바",creator:"@skin_guru_kr",followers:"182K",er:7.1,reach:"8.5K",eng:"604",views:"920K",format:"Before/After",duration:"21s",platform:"Instagram",emoji:"✨",isMe:false},
+  {brand:"아누아",creator:"@yj_lifestyle",followers:"520K",er:4.5,reach:"6.2K",eng:"279",views:"650K",format:"Unboxing",duration:"32s",platform:"TikTok",emoji:"📦",isMe:false},
+];
+
+var erCompDuration = [
+  {range:"<15s",my:5.8,market:5.1,myReach:8.5,marketReach:7.0},
+  {range:"15-30s",my:4.9,market:4.3,myReach:7.2,marketReach:5.9},
+  {range:"30-60s",my:3.4,market:3.1,myReach:5.1,marketReach:4.8},
+  {range:"60s+",my:1.9,market:2.2,myReach:3.2,marketReach:3.5},
+];
+
+var collabs = [
+  {brand:"이니스프리",totalContents:12,avgER:5.8,avgReach:"8.2K",creators:[
+    {name:"@minj_beauty",followers:"245K",count:5,er:6.8,reach:"11.2K",adTag:true,topContent:{er:9.4,views:"1.8M",format:"Tutorial"}},
+    {name:"@haelee_daily",followers:"98K",count:4,er:5.2,reach:"6.8K",adTag:true,topContent:{er:7.1,views:"420K",format:"Short Review"}},
+    {name:"@beauty_teacher",followers:"450K",count:3,er:5.1,reach:"7.9K",adTag:false,topContent:{er:6.2,views:"1.2M",format:"GRWM"}}
+  ]},
+  {brand:"달바",totalContents:8,avgER:6.4,avgReach:"7.5K",creators:[
+    {name:"@skin_guru_kr",followers:"182K",count:5,er:7.1,reach:"8.5K",adTag:true,topContent:{er:9.2,views:"920K",format:"Before/After"}},
+    {name:"@sera_routine",followers:"35K",count:3,er:5.8,reach:"3.4K",adTag:false,topContent:{er:7.8,views:"180K",format:"Short Review"}}
+  ]},
+  {brand:"아누아",totalContents:6,avgER:4.9,avgReach:"6.1K",creators:[
+    {name:"@yj_lifestyle",followers:"520K",count:4,er:4.5,reach:"6.2K",adTag:true,topContent:{er:5.8,views:"650K",format:"Unboxing"}},
+    {name:"@yuna_unbox",followers:"125K",count:2,er:5.4,reach:"5.9K",adTag:false,topContent:{er:6.9,views:"310K",format:"Unboxing"}}
+  ]},
+  {brand:"라운드랩",totalContents:4,avgER:4.2,avgReach:"4.8K",creators:[
+    {name:"@beauty_teacher",followers:"450K",count:2,er:4.8,reach:"5.2K",adTag:true,topContent:{er:5.5,views:"890K",format:"Tutorial"}},
+    {name:"@jisu_glow",followers:"210K",count:2,er:3.6,reach:"4.1K",adTag:false,topContent:{er:4.2,views:"380K",format:"GRWM"}}
+  ]}
+];
+
+var successComparison = {
+  myTop:{creator:"@soyeon_beauty",format:"GRWM",duration:"18s",er:12.8,reach:"18.2K",eng:"2,330",views:"2.1M",hook:"이거 진짜 다 쓰고 또 샀어…",tone:"친근·일상",lighting:"자연광",cta:"댓글 질문유도",url:"https://www.tiktok.com/@soyeon_beauty/video/demo1"},
+  compTop:[
+    {brand:"이니스프리",creator:"@minj_beauty",format:"Tutorial",duration:"24s",er:9.4,reach:"14.1K",eng:"1,325",views:"1.8M",hook:"피부 고민 끝!",tone:"전문가",lighting:"스튜디오",cta:"링크 유도",url:"https://www.tiktok.com/@minj_beauty/video/demo2"},
+    {brand:"달바",creator:"@skin_guru_kr",format:"Before/After",duration:"21s",er:9.2,reach:"8.5K",eng:"604",views:"920K",hook:"3일 만에 달라진 피부",tone:"전문가",lighting:"자연광",cta:"제품태그",url:"https://www.tiktok.com/@skin_guru_kr/video/demo3"},
+    {brand:"아누아",creator:"@yj_lifestyle",format:"Unboxing",duration:"32s",er:5.8,reach:"6.2K",eng:"279",views:"650K",hook:"선물 받은 느낌🎁",tone:"친근",lighting:"자연광",cta:"없음",url:"https://www.tiktok.com/@yj_lifestyle/video/demo4"}
+  ],
+  successFactors:{
+    common:["자연광 촬영","제품 클로즈업 3초+","첫 3초 후킹 문구"],
+    myStrength:["GRWM 친근톤 → 높은 댓글 참여","질문형 CTA → 참여율 ×2.3","숏폼 18s 최적 길이"],
+    compStrength:["전문가 톤 → 신뢰도 확보","Tutorial 포맷 → 정보 전달력","브랜드 해시태그 활용도 높음"],
+    myWeakness:["Tutorial/Before/After 미활용","전문가톤 콘텐츠 부족","30s+ 콘텐츠 ER 급감"],
+    opportunity:["GRWM+Tutorial 하이브리드 포맷","나노 크리에이터 시딩 확대","챌린지 포맷 신규 진입"]
+  }
+};
+
+var volumeComp = [
+  {brand:"My Brand",volume:1247,change:"+18.3%",isMe:true},
+  {brand:"Brand A",volume:892,change:"+12.1%",isMe:false},
+  {brand:"Brand B",volume:1534,change:"+5.4%",isMe:false},
+  {brand:"Brand C",volume:645,change:"-3.2%",isMe:false},
+  {brand:"Brand D",volume:412,change:"+8.7%",isMe:false},
+];
+
+var successCompare = {
+  my:{er:12.8,reach:"18.2K",views:"2.1M",format:"GRWM",hook:"이거 진짜…",creator:"@creator_viral"},
+  comp:{er:9.4,reach:"12.5K",views:"1.8M",format:"Tutorial",hook:"전문가 리뷰",creator:"@minj_beauty",brand:"Brand A"},
+  insight:"내 브랜드: 조회수 18.2K + ER 12.8%로 모두 압도. 친근한 톤 + GRWM + 질문형 후킹이 조회수·참여 동시에 견인. 경쟁사: 전문가 톤 + 튜토리얼로 조회수 12.5K · ER 9.4%."
+};
+
+/* L3 — 시장 데이터 + 갭 분석 */
+var marketDef = {
+  brands:["Medicube (ME)","Brand A (이니스프리)","Brand B (달바)","Brand C (아누아)","Brand D (라운드랩)"],
+  totalContent:5840, totalCreators:312, totalReach:"48.2M",
+  period:"2025.01.07 – 02.06 (30일)"
+};
+
+var socDataRaw = {
+  "전체":[
+    {name:"Medicube",count:1247},{name:"이니스프리",count:1420},{name:"달바",count:1180},{name:"아누아",count:1050},{name:"라운드랩",count:943},
+    {name:"토리든",count:820},{name:"넘버즈",count:680},{name:"코스알엑스",count:910},{name:"스킨1004",count:590},{name:"비플레인",count:480},
+    {name:"에스트라",count:750},{name:"닥터지",count:870},{name:"마녀공장",count:640},{name:"클리오",count:980},{name:"롬앤",count:710},
+    {name:"VT",count:850},{name:"바이오더마",count:520},{name:"AHC",count:760},{name:"헤라",count:690},{name:"설화수",count:580}
+  ],
+  "TikTok":[
+    {name:"Medicube",count:823},{name:"이니스프리",count:890},{name:"달바",count:745},{name:"아누아",count:680},{name:"라운드랩",count:612},
+    {name:"토리든",count:540},{name:"넘버즈",count:420},{name:"코스알엑스",count:580},{name:"스킨1004",count:380},{name:"비플레인",count:310},
+    {name:"에스트라",count:480},{name:"닥터지",count:550},{name:"마녀공장",count:400},{name:"클리오",count:630},{name:"롬앤",count:460},
+    {name:"VT",count:540},{name:"바이오더마",count:330},{name:"AHC",count:490},{name:"헤라",count:430},{name:"설화수",count:360}
+  ],
+  "Instagram":[
+    {name:"Medicube",count:424},{name:"이니스프리",count:530},{name:"달바",count:435},{name:"아누아",count:370},{name:"라운드랩",count:331},
+    {name:"토리든",count:280},{name:"넘버즈",count:260},{name:"코스알엑스",count:330},{name:"스킨1004",count:210},{name:"비플레인",count:170},
+    {name:"에스트라",count:270},{name:"닥터지",count:320},{name:"마녀공장",count:240},{name:"클리오",count:350},{name:"롬앤",count:250},
+    {name:"VT",count:310},{name:"바이오더마",count:190},{name:"AHC",count:270},{name:"헤라",count:260},{name:"설화수",count:220}
+  ]
+};
+/* Top5(콘텐츠 수 기준) + Medicube 개별 표시, 나머지는 "기타"로 묶기 */
+var topColors=["#34D399","#FBBF24","#A78BFA","#F472B6","#06B6D4","#FB923C"];
+function buildSocData(raw){
+  var sorted=raw.slice().sort(function(a,b){return b.count-a.count});
+  var me=sorted.filter(function(d){return d.name==="Medicube"})[0];
+  var others=sorted.filter(function(d){return d.name!=="Medicube"});
+  var top5=others.slice(0,5);
+  var rest=others.slice(5);
+  var restCount=rest.reduce(function(s,d){return s+d.count},0);
+  var result=[{name:me.name,count:me.count,color:ME}];
+  top5.forEach(function(d,i){result.push({name:d.name,count:d.count,color:topColors[i]})});
+  if(restCount>0) result.push({name:"기타 "+rest.length+"개",count:restCount,color:CB});
+  return result;
+}
+var socData = {
+  "전체":buildSocData(socDataRaw["전체"]),
+  "TikTok":buildSocData(socDataRaw["TikTok"]),
+  "Instagram":buildSocData(socDataRaw["Instagram"])
+};
+
+var mktTrend = {
+  "전체":[
+    {week:"W1",meER:4.5,compAvg:3.5,meReach:6.1,compReachAvg:4.5,meFollowers:142,compFollowersAvg:210},
+    {week:"W2",meER:4.3,compAvg:3.3,meReach:5.8,compReachAvg:4.2,meFollowers:148,compFollowersAvg:218},
+    {week:"W3",meER:5.1,compAvg:3.6,meReach:7.2,compReachAvg:4.8,meFollowers:165,compFollowersAvg:235},
+    {week:"W4",meER:5.4,compAvg:3.4,meReach:7.8,compReachAvg:4.6,meFollowers:170,compFollowersAvg:245},
+    {week:"W5",meER:4.8,compAvg:3.7,meReach:6.9,compReachAvg:4.9,meFollowers:158,compFollowersAvg:228}
+  ],
+  "TikTok":[
+    {week:"W1",meER:5.0,compAvg:4.0,meReach:7.5,compReachAvg:5.3,meFollowers:155,compFollowersAvg:240},
+    {week:"W2",meER:4.8,compAvg:3.7,meReach:7.1,compReachAvg:5.0,meFollowers:160,compFollowersAvg:248},
+    {week:"W3",meER:5.8,compAvg:4.2,meReach:8.6,compReachAvg:5.6,meFollowers:172,compFollowersAvg:262},
+    {week:"W4",meER:6.1,compAvg:3.9,meReach:9.2,compReachAvg:5.4,meFollowers:178,compFollowersAvg:270},
+    {week:"W5",meER:5.4,compAvg:4.1,meReach:8.1,compReachAvg:5.7,meFollowers:165,compFollowersAvg:255}
+  ],
+  "Instagram":[
+    {week:"W1",meER:3.5,compAvg:2.8,meReach:4.0,compReachAvg:3.3,meFollowers:128,compFollowersAvg:195},
+    {week:"W2",meER:3.3,compAvg:2.6,meReach:3.7,compReachAvg:3.1,meFollowers:132,compFollowersAvg:200},
+    {week:"W3",meER:3.9,compAvg:2.9,meReach:4.8,compReachAvg:3.5,meFollowers:145,compFollowersAvg:215},
+    {week:"W4",meER:4.2,compAvg:2.7,meReach:5.2,compReachAvg:3.3,meFollowers:152,compFollowersAvg:225},
+    {week:"W5",meER:3.7,compAvg:3.0,meReach:4.5,compReachAvg:3.6,meFollowers:140,compFollowersAvg:208}
+  ]
+};
+
+var contentByL2Week = {
+  "W1":[
+    {title:"AGE-R 부스터 루틴",creator:"@soyeon_beauty",format:"GRWM",er:5.2,views:"180K",platform:"TikTok"},
+    {title:"레드 빌레마이드 후기",creator:"@skin_daily_kr",format:"Short Review",er:4.8,views:"95K",platform:"TikTok"},
+  ],
+  "W2":[
+    {title:"콜라겐 나이트랩 솔직후기",creator:"@glow_hana",format:"Before/After",er:4.1,views:"72K",platform:"Instagram"},
+    {title:"하루 스킨케어 브이로그",creator:"@beauty_log_22",format:"GRWM",er:4.5,views:"110K",platform:"TikTok"},
+  ],
+  "W3":[
+    {title:"제로모공패드 챌린지",creator:"@soyeon_beauty",format:"Short Review",er:6.8,views:"320K",platform:"TikTok"},
+    {title:"AGE-R 비포애프터 2주",creator:"@minjung_picks",format:"Before/After",er:5.4,views:"145K",platform:"TikTok"},
+    {title:"민감성 진정 루틴",creator:"@glow_hana",format:"Tutorial",er:5.0,views:"88K",platform:"Instagram"},
+  ],
+  "W4":[
+    {title:"제로모공패드 GRWM",creator:"@soyeon_beauty",format:"GRWM",er:7.8,views:"420K",platform:"TikTok"},
+    {title:"콜라겐 랩 1달 변화",creator:"@skin_daily_kr",format:"Before/After",er:5.1,views:"160K",platform:"TikTok"},
+    {title:"AGE-R 디바이스 리뷰",creator:"@beauty_log_22",format:"Short Review",er:5.6,views:"195K",platform:"TikTok"},
+  ],
+  "W5":[
+    {title:"레드 빌레마이드 루틴",creator:"@haelee_daily",format:"GRWM",er:4.9,views:"85K",platform:"TikTok"},
+    {title:"데일리 스킨케어 추천",creator:"@jiwoo_beauty",format:"Tutorial",er:4.5,views:"68K",platform:"TikTok"},
+  ],
+};
+
+var mktCreators = [
+  {name:"@skincare_queen",followersK:520,platform:"TikTok",contents:32,avgER:8.2,reach:"12.4K",tier:"메가",format:"GRWM",brand:"이니스프리",collabCount:8,emoji:"👑",growth30d:3.2},
+  {name:"@glowup_daily",followersK:380,platform:"TikTok",contents:28,avgER:7.5,reach:"9.8K",tier:"메가",format:"Short Review",brand:"달바",collabCount:5,emoji:"✨",growth30d:5.8},
+  {name:"@beauty_teacher",followersK:450,platform:"Instagram",contents:24,avgER:6.8,reach:"7.5K",tier:"메가",format:"Tutorial",brand:"이니스프리",collabCount:6,emoji:"📚",growth30d:2.1},
+  {name:"@skin_guru_kr",followersK:290,platform:"TikTok",contents:19,avgER:7.1,reach:"8.2K",tier:"매크로",format:"Before/After",brand:"달바",collabCount:4,emoji:"🧪",growth30d:4.5},
+  {name:"@yj_lifestyle",followersK:520,platform:"TikTok",contents:12,avgER:4.5,reach:"6.2K",tier:"메가",format:"Unboxing",brand:"아누아",collabCount:3,emoji:"📦",growth30d:-1.2},
+];
+
+var ourCollabCreators = ["@skincare_queen","@daily_skinlog","@mina_beauty"];
+
+var creatorDetail = {
+  "@skincare_queen":{organicER:8.9,organicReach:"13.1K",topFormat:"GRWM",category:"K뷰티",ourCollab:{count:4,er:8.5,reach:"12.8K",format:"GRWM"},
+    brandCollab:[{brand:"이니스프리",count:5,er:7.8,reach:"11.2K",format:"GRWM"},{brand:"아누아",count:3,er:6.5,reach:"9.8K",format:"Short Review"}]},
+  "@glowup_daily":{organicER:8.1,organicReach:"10.4K",topFormat:"Short Review",category:"뷰티",
+    brandCollab:[{brand:"달바",count:5,er:6.8,reach:"8.5K",format:"Short Review"}]},
+  "@skin_guru_kr":{organicER:7.8,organicReach:"8.9K",topFormat:"Before/After",category:"스킨케어",
+    brandCollab:[{brand:"달바",count:4,er:6.2,reach:"7.1K",format:"Before/After"}]},
+  "@minj_beauty":{organicER:7.4,organicReach:"11.8K",topFormat:"Tutorial",category:"K뷰티",
+    brandCollab:[{brand:"이니스프리",count:5,er:5.9,reach:"9.2K",format:"Tutorial"}]},
+  "@beauty_teacher":{organicER:7.2,organicReach:"8.3K",topFormat:"Tutorial",category:"K뷰티",
+    brandCollab:[{brand:"이니스프리",count:3,er:5.1,reach:"6.8K",format:"Tutorial"},{brand:"라운드랩",count:3,er:4.2,reach:"5.4K",format:"GRWM"}]},
+  "@yj_lifestyle":{organicER:5.0,organicReach:"6.8K",topFormat:"Unboxing",category:"뷰티",
+    brandCollab:[{brand:"아누아",count:4,er:3.9,reach:"5.4K",format:"Unboxing"}]},
+  "@sera_routine":{organicER:11.0,organicReach:"3.3K",topFormat:"Short Review",category:"민감성피부",
+    brandCollab:[{brand:"달바",count:3,er:5.1,reach:"2.8K",format:"Short Review"}]},
+  "@haelee_daily":{organicER:5.8,organicReach:"7.2K",topFormat:"GRWM",category:"뷰티",
+    brandCollab:[{brand:"이니스프리",count:4,er:4.5,reach:"5.9K",format:"GRWM"}]},
+  "@yuna_unbox":{organicER:6.5,organicReach:"6.4K",topFormat:"Unboxing",category:"K뷰티",
+    brandCollab:[{brand:"아누아",count:2,er:4.8,reach:"5.1K",format:"Unboxing"}]},
+  "@jisu_glow":{organicER:6.5,organicReach:"5.9K",topFormat:"Before/After",category:"뷰티",
+    brandCollab:[{brand:"라운드랩",count:2,er:3.2,reach:"4.0K",format:"Before/After"}]},
+  "@haeni_skin":{organicER:9.8,organicReach:"4.2K",topFormat:"GRWM",category:"스킨케어",brandCollab:[]},
+  "@daily_skinlog":{organicER:8.5,organicReach:"5.8K",topFormat:"Short Review",category:"스킨케어",brandCollab:[],ourCollab:{count:3,er:7.9,reach:"5.2K",format:"Short Review"}},
+  "@mina_beauty":{organicER:6.4,organicReach:"6.1K",topFormat:"Tutorial",category:"스킨케어",brandCollab:[],ourCollab:{count:2,er:6.1,reach:"5.8K",format:"Tutorial"}},
+  "@sora_daily":{organicER:11.2,organicReach:"3.5K",topFormat:"GRWM",category:"민감성피부",brandCollab:[]},
+};
+
+var erStability = {};
+
+var recommendedCreators = [
+  {name:"@haeni_skin",followersK:48,platform:"TikTok",avgER:9.8,reach:"4.2K",tier:"나노",format:"GRWM",contents:41,score:92,reason:"ER 최상위 + K-뷰티 특화 + 높은 참여율",emoji:"🔥",growth30d:12.4,reachRatio:8.75,audienceMatch:82,estCTARate:15.5,female:87,age1834:78},
+  {name:"@daily_skinlog",followersK:82,platform:"TikTok",avgER:8.5,reach:"5.8K",tier:"마이크로",format:"Short Review",contents:35,score:87,reason:"팔로워 대비 조회수 효율 1위 + 스킨케어 전문",emoji:"📝",growth30d:8.2,reachRatio:7.07,audienceMatch:75,estCTARate:13.2,female:84,age1834:72},
+  {name:"@mina_beauty",followersK:165,platform:"TikTok",avgER:6.4,reach:"6.1K",tier:"마이크로",format:"Tutorial",contents:22,score:81,reason:"Tutorial 포맷 최고 효율",emoji:"🌷",growth30d:5.1,reachRatio:3.70,audienceMatch:68,estCTARate:10.8,female:80,age1834:65},
+  {name:"@jisu_glow",followersK:210,platform:"Instagram",avgER:5.9,reach:"5.4K",tier:"마이크로",format:"Before/After",contents:15,score:76,reason:"IG 고효율 + Before/After 강점",emoji:"💫",growth30d:1.8,reachRatio:2.57,audienceMatch:71,estCTARate:8.5,female:90,age1834:68},
+  {name:"@sora_daily",followersK:35,platform:"TikTok",avgER:11.2,reach:"3.5K",tier:"나노",format:"GRWM",contents:52,score:89,reason:"나노 중 ER 최고 + 콘텐츠 다작",emoji:"⭐",growth30d:18.7,reachRatio:10.0,audienceMatch:85,estCTARate:16.2,female:86,age1834:80},
+];
+
+var hashtags = [
+  {tag:"#파데프리",mktCount:1240,mktER:5.8,mktReach:6.2,mktFollowers:"175K",myCount:0,myER:0,myReach:0,myFollowers:null,myUse:false},
+  {tag:"#GRWM",mktCount:3420,mktER:5.6,mktReach:7.1,mktFollowers:"210K",myCount:245,myER:5.9,myReach:7.8,myFollowers:"168K",myUse:true},
+  {tag:"#추천템",mktCount:1680,mktER:5.3,mktReach:5.8,mktFollowers:"160K",myCount:0,myER:0,myReach:0,myFollowers:null,myUse:false},
+  {tag:"#데일리메이크업",mktCount:2150,mktER:5.1,mktReach:5.5,mktFollowers:"185K",myCount:0,myER:0,myReach:0,myFollowers:null,myUse:false},
+  {tag:"#비건뷰티",mktCount:720,mktER:5.0,mktReach:5.2,mktFollowers:"95K",myCount:0,myER:0,myReach:0,myFollowers:null,myUse:false},
+  {tag:"#스킨케어",mktCount:4580,mktER:4.8,mktReach:5.9,mktFollowers:"220K",myCount:312,myER:4.6,myReach:6.3,myFollowers:"175K",myUse:true},
+  {tag:"#클린뷰티",mktCount:640,mktER:4.7,mktReach:4.8,mktFollowers:"110K",myCount:0,myER:0,myReach:0,myFollowers:null,myUse:false},
+  {tag:"#뷰티루틴",mktCount:3210,mktER:4.5,mktReach:5.1,mktFollowers:"195K",myCount:198,myER:4.7,myReach:5.5,myFollowers:"152K",myUse:true},
+  {tag:"#민감성피부",mktCount:1180,mktER:4.4,mktReach:4.6,mktFollowers:"130K",myCount:87,myER:4.2,myReach:4.9,myFollowers:"105K",myUse:true},
+  {tag:"#피부관리",mktCount:2340,mktER:4.2,mktReach:4.4,mktFollowers:"170K",myCount:156,myER:4.5,myReach:4.7,myFollowers:"140K",myUse:true},
+];
+
+
+
+var mktFormats = [
+  {format:"GRWM",mktER:5.8,mktReach:7.8,mktCount:2420,mktFollowers:"180K",myER:6.1,myReach:8.2,myCount:182,myFollowers:"165K",myUse:true},
+  {format:"Short Review",mktER:5.5,mktReach:6.5,mktCount:1850,mktFollowers:"150K",myER:5.8,myReach:7.1,myCount:215,myFollowers:"140K",myUse:true},
+  {format:"Before/After",mktER:5.1,mktReach:6.1,mktCount:1340,mktFollowers:"120K",myER:4.1,myReach:5.4,myCount:95,myFollowers:"132K",myUse:true},
+  {format:"Tutorial",mktER:4.6,mktReach:5.8,mktCount:2180,mktFollowers:"200K",myER:4.4,myReach:6.0,myCount:168,myFollowers:"155K",myUse:true},
+  {format:"챌린지",mktER:6.2,mktReach:9.1,mktCount:980,mktFollowers:"250K",myER:0,myReach:0,myCount:0,myFollowers:null,myUse:false},
+  {format:"듀엣/리액션",mktER:5.4,mktReach:7.5,mktCount:620,mktFollowers:"190K",myER:0,myReach:0,myCount:0,myFollowers:null,myUse:false},
+  {format:"Unboxing",mktER:3.8,mktReach:4.9,mktCount:1560,mktFollowers:"130K",myER:4.0,myReach:4.5,myCount:124,myFollowers:"110K",myUse:true},
+];
+
+var mktTimeGap = [
+  {hour:"06-09",mktCount:680,mktER:3.5,mktReach:3.8,myCount:42,myER:3.2,myReach:3.5},
+  {hour:"09-12",mktCount:920,mktER:4.0,mktReach:4.5,myCount:68,myER:3.8,myReach:4.2},
+  {hour:"12-15",mktCount:1050,mktER:4.4,mktReach:5.0,myCount:95,myER:4.1,myReach:4.8},
+  {hour:"15-18",mktCount:1280,mktER:4.8,mktReach:5.6,myCount:124,myER:4.5,myReach:5.3},
+  {hour:"18-21",mktCount:1520,mktER:5.8,mktReach:7.2,myCount:198,myER:6.0,myReach:7.0},
+  {hour:"21-24",mktCount:1180,mktER:5.3,mktReach:6.5,myCount:145,myER:5.1,myReach:6.2},
+];
+
+
+var mktPlatformGap = [
+  {platform:"TikTok",mktER:5.3,myER:5.1,mktShare:62,myShare:66},
+  {platform:"Instagram",mktER:4.1,myER:3.8,mktShare:38,myShare:34},
+];
+
+var creatorPerf = [
+  {name:"@soyeon_beauty",followers:"324K",platform:"TikTok",contents:18,avgReach:11.2,avgER:7.8,totalViews:"4.2M",emoji:"💄"},
+  {name:"@skin_daily_kr",followers:"158K",platform:"TikTok",contents:14,avgReach:8.5,avgER:6.1,totalViews:"2.8M",emoji:"🧴"},
+  {name:"@glow_hana",followers:"210K",platform:"Instagram",contents:9,avgReach:7.8,avgER:5.4,totalViews:"1.5M",emoji:"✨"},
+  {name:"@beauty_log_22",followers:"87K",platform:"TikTok",contents:22,avgReach:6.2,avgER:5.1,totalViews:"2.1M",emoji:"🌸"},
+  {name:"@minjung_picks",followers:"142K",platform:"TikTok",contents:12,avgReach:5.8,avgER:4.9,totalViews:"1.2M",emoji:"💅"},
+  {name:"@haelee_daily",followers:"98K",platform:"TikTok",contents:8,avgReach:5.1,avgER:4.5,totalViews:"680K",emoji:"🎀"},
+  {name:"@yuna_skinlab",followers:"265K",platform:"Instagram",contents:6,avgReach:4.8,avgER:3.9,totalViews:"520K",emoji:"🔬"},
+  {name:"@jiwoo_beauty",followers:"176K",platform:"TikTok",contents:15,avgReach:4.2,avgER:3.6,totalViews:"890K",emoji:"🪞"},
+];
+
+var creatorAudience = {
+  "@soyeon_beauty":{female:88,male:12,age:{"13-17":8,"18-24":42,"25-34":35,"35-44":12,"45+":3},topCity:"서울",topInterest:"스킨케어"},
+  "@skin_daily_kr":{female:82,male:18,age:{"13-17":12,"18-24":38,"25-34":32,"35-44":14,"45+":4},topCity:"서울",topInterest:"뷰티루틴"},
+  "@glow_hana":{female:91,male:9,age:{"13-17":5,"18-24":28,"25-34":42,"35-44":20,"45+":5},topCity:"서울",topInterest:"민감성피부"},
+  "@beauty_log_22":{female:78,male:22,age:{"13-17":18,"18-24":45,"25-34":25,"35-44":9,"45+":3},topCity:"부산",topInterest:"가성비뷰티"},
+  "@minjung_picks":{female:85,male:15,age:{"13-17":10,"18-24":40,"25-34":33,"35-44":13,"45+":4},topCity:"서울",topInterest:"K뷰티"},
+  "@haelee_daily":{female:80,male:20,age:{"13-17":15,"18-24":42,"25-34":28,"35-44":11,"45+":4},topCity:"인천",topInterest:"데일리메이크업"},
+  "@yuna_skinlab":{female:75,male:25,age:{"13-17":3,"18-24":18,"25-34":38,"35-44":30,"45+":11},topCity:"서울",topInterest:"성분분석"},
+  "@jiwoo_beauty":{female:83,male:17,age:{"13-17":14,"18-24":44,"25-34":28,"35-44":11,"45+":3},topCity:"대구",topInterest:"트렌드뷰티"},
+};
+var targetAudience = {female:85,age1824:35,age2534:40,label:"Medicube 핵심 타겟: 여성 85%+ · 18-34세 75%+"};
+
+
+
+/* ═══ COMPONENTS ═══ */
+function SH({title,sub}){return <div style={{marginBottom:20,display:"flex",alignItems:"baseline",gap:12,flexWrap:"wrap"}}><h2 style={{margin:0,fontSize:18,fontWeight:700,color:TX.p,fontFamily:"'Outfit',sans-serif"}}>{title}</h2>{sub&&<span style={{fontSize:13,color:TX.m}}>{sub}</span>}</div>;}
+function Card({children,style,glow}){return <div style={{background:CBG,borderRadius:14,border:"1px solid "+CB,padding:20,position:"relative",overflow:"hidden",boxShadow:glow?"0 0 30px "+glow+"15":"0 2px 8px rgba(0,0,0,0.3)",...style}}>{children}</div>;}
+function ActionTip({icon,text,color}){return <div style={{margin:"4px 0",padding:"6px 12px",borderRadius:6,background:(color||ACC.action)+"08",borderLeft:"3px solid "+(color||ACC.action)+"44",display:"flex",alignItems:"flex-start",gap:6}}><span style={{fontSize:11,flexShrink:0}}>{icon}</span><span style={{fontSize:11,color:TX.s,lineHeight:1.5}}>{text}</span></div>;}
+function PlatformBadge({platform}){var c=platform==="TikTok"?ACC.tiktok:ACC.instagram;return <span style={{padding:"2px 6px",borderRadius:4,fontSize:9,fontWeight:600,background:c+"18",color:c}}>{platform}</span>;}
+
+
+
+/* ═══ TAB L1 ═══ */
+function TabL1({selectedContent,setSelectedContent}){
+  var [granularity,setGranularity]=useState("week");
+  var [selectedBar,setSelectedBar]=useState(null);
+  var [l1Metric,setL1Metric]=useState("ER");
+  var [platFilter,setPlatFilter]=useState("전체");
+  var [condFilter,setCondFilter]=useState("전체");
+
+  var trendData = granularity==="day"?trendDaily:granularity==="week"?trendWeekly:trendMonthly;
+  var xTickSize = granularity==="day"?8:granularity==="week"?10:11;
+
+  /* 바 클릭 시 해당 기간 콘텐츠 조회 */
+  var contentMap = granularity==="day"?contentByDate:granularity==="week"?contentByWeek:contentByMonth;
+  var barContents = selectedBar ? (contentMap[selectedBar]||[]) : [];
+  var showAll = !selectedBar;
+
+  function handleBarClick(data){
+    if(data && data.activeLabel){
+      setSelectedBar(selectedBar===data.activeLabel?null:data.activeLabel);
+      setSelectedContent(null);
+    }
+  }
+
+  return <div>
+    <div style={{marginBottom:8,marginTop:8}}>
+      <h2 style={{margin:0,fontSize:18,fontWeight:700,color:TX.p,fontFamily:"'Outfit',sans-serif",display:"inline"}}>Brand Health at a Glance</h2>
+      <span style={{fontSize:13,color:TX.m,marginLeft:12}}>Trend · Conditions · Top Content</span>
+    </div>
+    <div style={{fontSize:9,color:TX.m,marginBottom:8,padding:"4px 8px",borderRadius:4,background:CB+"44",display:"inline-block"}}>ER(Engagement Rate) = 조회수 / 팔로워 수 × 100 (팔로워 기반)</div>
+
+    {/* ── 콘텐츠 성과 ── */}
+    <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0 12px"}}>
+      <div style={{flex:1,height:1,background:CB}}></div>
+      <span style={{fontSize:11,fontWeight:700,color:TX.m,letterSpacing:"0.05em"}}>📝 콘텐츠 성과</span>
+      <div style={{flex:1,height:1,background:CB}}></div>
+    </div>
+
+    {/* 30일 추이 차트 — 통합 */}
+    <Card style={{marginBottom:0,borderBottomLeftRadius:barContents.length>0||showAll?0:14,borderBottomRightRadius:barContents.length>0||showAll?0:14}} glow={ME}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div><div style={{fontSize:14,fontWeight:700,color:TX.p}}>📈 30일 추이</div><div style={{fontSize:9,color:TX.m,marginTop:2}}>ER · 조회수 · 팔로워의 시간별 변화를 추적합니다. 스파이크 구간을 발견하면 어떤 콘텐츠가 성과를 만들었는지 역추적할 수 있습니다.</div></div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",gap:2,background:CB,borderRadius:6,padding:2}}>
+            {["ER","조회수","팔로워"].map(function(m){
+              var isA=l1Metric===m;
+              return <button key={m} onClick={function(){setL1Metric(m)}} style={{padding:"4px 10px",borderRadius:4,border:"none",cursor:"pointer",fontSize:10,fontWeight:600,fontFamily:"inherit",background:isA?ME+"22":"transparent",color:isA?ME:TX.m,transition:"all 0.15s"}}>{m==="ER"?"ER %":m}</button>;
+            })}
+          </div>
+          <div style={{display:"flex",gap:2,background:CB,borderRadius:6,padding:2}}>
+            {[{id:"month",label:"월"},{id:"week",label:"주"},{id:"day",label:"일"}].map(function(g){
+              return <button key={g.id} onClick={function(){setGranularity(g.id);setSelectedBar(null)}} style={{padding:"4px 12px",borderRadius:4,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,fontFamily:"inherit",background:granularity===g.id?CBG:"transparent",color:granularity===g.id?TX.p:TX.m,transition:"all 0.15s"}}>{g.label}</button>;
+            })}
+          </div>
+        </div>
+      </div>
+
+      {(function(){
+        var dk=l1Metric==="ER"?"er":l1Metric==="조회수"?"reach":"fol";
+        var clr=l1Metric==="ER"?"#FBBF24":l1Metric==="조회수"?"#60A5FA":"#A78BFA";
+        var yLabel=l1Metric==="ER"?"ER %":l1Metric==="조회수"?"조회수 (K)":"팔로워 (K)";
+        var yDomain=l1Metric==="ER"?[0,8]:l1Metric==="조회수"?[0,"auto"]:[0,"auto"];
+        var fmt=function(v){return l1Metric==="ER"?v+"%":v+"K"};
+        return <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={trendData} onClick={handleBarClick} style={{cursor:"pointer"}}>
+            <CartesianGrid strokeDasharray="3 3" stroke={CB}/>
+            <XAxis dataKey="d" tick={{fill:TX.m,fontSize:xTickSize}} interval={granularity==="day"?2:0} angle={granularity==="day"?-30:0} textAnchor={granularity==="day"?"end":"middle"} height={granularity==="day"?50:30}/>
+            <YAxis tick={{fill:TX.m,fontSize:10}} domain={yDomain} label={{value:yLabel,angle:-90,position:"insideLeft",fill:TX.m,fontSize:9}}/>
+            <Line type="monotone" dataKey={dk} name={yLabel} stroke={clr} strokeWidth={2.5} dot={{r:5,fill:clr,stroke:"#0F172A",strokeWidth:2}} activeDot={{r:7}}/>
+            <Tooltip contentStyle={ttS} formatter={function(v,name){
+              return [fmt(v),name];
+            }} labelStyle={{color:TX.s,fontSize:11}}/>
+          </ComposedChart>
+        </ResponsiveContainer>;
+      })()}
+
+      {/* 스파이크 태그 */}
+      <div style={{marginTop:8,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontSize:10,color:TX.m}}>🔥 스파이크 구간:</span>
+        {trendData.filter(function(t){return t.spike}).map(function(t,i){
+          return <span key={i} onClick={function(){setSelectedBar(selectedBar===t.d?null:t.d);setSelectedContent(null)}} style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:600,cursor:"pointer",background:selectedBar===t.d?ACC.tiktok:ACC.tiktok+"20",color:selectedBar===t.d?"#fff":ACC.tiktok,border:"1px solid "+ACC.tiktok+"44",transition:"all 0.15s"}}>{t.d}</span>;
+        })}
+        {selectedBar && <span onClick={function(){setSelectedBar(null)}} style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:500,cursor:"pointer",background:CB,color:TX.s}}>✕ 선택 해제</span>}
+      </div>
+
+      <div style={{marginTop:8,padding:"8px 14px",borderRadius:8,background:ACC.action+"12",border:"1px solid "+ACC.action+"25",display:"flex",alignItems:"center",gap:8,fontSize:11}}>
+        <span style={{color:ACC.action,fontWeight:700}}>{"📌"}</span>
+        <span style={{color:TX.s}}>{granularity==="day"?"1/30-2/3에 조회수 8.2-9.1K + ER 5.8-6.2%로 동반 피크 — 바이럴이 조회수와 ER을 동시에 끌어올린 구간.":granularity==="week"?"W3(1/28-2/3) 조회수 8.1K + ER 5.7%로 피크 — 바이럴 주. 조회수와 ER이 함께 올라가는 이상적 패턴.":"2월 조회수 6.9K + ER 5.0%로 1월(6.5K · 4.7%) 대비 조회수·ER 모두 상승."}</span>
+      </div>
+    </Card>
+
+    {/* 바 클릭 시 or 기본: 콘텐츠 리스트 */}
+    <Card style={{marginTop:0,borderTopLeftRadius:0,borderTopRightRadius:0,borderTop:"1px solid "+ME+"33",marginBottom:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{fontSize:14,fontWeight:700,color:TX.p}}>
+          {selectedBar ? "📋 "+selectedBar+" 고성과 콘텐츠" : "📋 고성과 콘텐츠 Top 5"}
+          {selectedBar && trendData.find(function(t){return t.d===selectedBar&&t.spike}) && <span style={{marginLeft:8,padding:"2px 8px",borderRadius:4,fontSize:9,fontWeight:700,background:ACC.tiktok+"20",color:ACC.tiktok}}>🔥 스파이크</span>}
+        </div>
+        <span style={{fontSize:10,color:TX.m}}>ER 기준</span>
+      </div>
+      {(showAll?topContent:barContents).length===0 ? 
+        <div style={{textAlign:"center",padding:"24px 0",color:TX.m,fontSize:12}}>해당 기간에 고성과 콘텐츠가 없습니다</div>
+      :
+        (showAll?topContent:barContents).map(function(c){
+          var isOpen=selectedContent===c.id;
+          return <div key={c.id} style={{marginBottom:8}}>
+            <div onClick={function(){setSelectedContent(isOpen?null:c.id)}} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:10,cursor:"pointer",background:isOpen?ME+"10":"transparent",border:"1px solid "+(isOpen?ME+"30":CB+"44")}}>
+              <div style={{width:38,height:48,borderRadius:8,background:"linear-gradient(135deg,"+ME+",#60A5FA)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{c.emoji}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                  <span style={{fontSize:12,fontWeight:700,color:TX.p}}>"{c.title}"</span>
+                  <PlatformBadge platform={c.platform}/>
+                  <span style={{fontSize:10,color:TX.m}}>{c.duration}</span>
+                </div>
+                <div style={{fontSize:10,color:TX.s}}>{c.creator} · {c.followers} · {c.postedAt}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontSize:16,fontWeight:800,color:SC.pos,fontFamily:"'Outfit'"}}>{c.er}%</div>
+                <div style={{fontSize:9,color:TX.m}}>👁 {c.views}</div>
+              </div>
+            </div>
+            {isOpen&&<div style={{padding:"10px 12px",marginTop:4,borderRadius:8,background:CB+"22"}}>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:6}}>
+                {c.hashtags.map(function(h,j){return <span key={j} style={{padding:"2px 7px",borderRadius:4,fontSize:10,background:MKT+"18",color:MKT}}>{h}</span>;})}
+              </div>
+              <div><a href="#" onClick={function(e){e.preventDefault()}} style={{fontSize:11,color:ME,textDecoration:"none",fontWeight:600}}>🔗 원본 콘텐츠 보기 →</a></div>
+            </div>}
+          </div>;
+        })
+      }
+    </Card>
+
+    <div style={{fontSize:13,fontWeight:600,color:TX.s,marginBottom:12,marginTop:24,borderTop:"1px solid "+CB,paddingTop:16}}>📊 Content Analysis</div>
+
+    {/* 조건별 분석 — 플랫폼 필터 */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div style={{fontSize:13,fontWeight:600,color:TX.s}}>Condition Analysis</div>
+      <div style={{display:"flex",gap:4}}>
+        {["전체","TikTok","Instagram"].map(function(f){
+          var isA=condFilter===f;
+          var fC=f==="TikTok"?ACC.tiktok:f==="Instagram"?ACC.instagram:ME;
+          return <div key={f} onClick={function(){setCondFilter(f)}} style={{cursor:"pointer",padding:"4px 12px",borderRadius:6,fontSize:10,fontWeight:600,background:isA?fC+"22":"transparent",color:isA?fC:TX.m,border:"1px solid "+(isA?fC+"55":CB),transition:"all .2s"}}>{f==="전체"?"전체":f==="TikTok"?"🎵 TikTok":"📸 Instagram"}</div>;
+        })}
+      </div>
+    </div>
+
+    {(function(){
+      var cD=erByDuration[condFilter];var cF=erByFormat[condFilter];var cT=erByTime[condFilter];
+      var mD=Math.ceil(Math.max.apply(null,cD.map(function(x){return x.count}))*1.15);
+      var mF=Math.ceil(Math.max.apply(null,cF.map(function(x){return x.count}))*1.15);
+      return <div>
+    <div style={{display:"flex",gap:16,marginBottom:16,flexWrap:"wrap"}}>
+      <Card style={{flex:"1 1 300px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <div style={{fontSize:14,fontWeight:700,color:TX.p}}>⏱️ 길이별 분포</div><div style={{fontSize:9,color:TX.m,marginTop:1}}>어떤 길이의 콘텐츠가 ER이 높은지 파악 → 최적 길이 가이드</div>
+          <div style={{fontSize:9,color:TX.m,background:CB+"66",padding:"2px 8px",borderRadius:4}}>기준: 내 평균 ER {health.avgER}%</div>
+        </div>
+        <div style={{fontSize:10,color:TX.m,marginBottom:14}}>바 = 콘텐츠 수 · <span style={{color:ME}}>■</span> 평균 이상 · <span style={{color:ME+"44"}}>■</span> 평균 이하</div>
+        <ResponsiveContainer width="100%" height={200}>
+          <ComposedChart data={[].concat(cD).sort(function(a,b){return b.count-a.count})} layout="vertical" margin={{left:10,right:10}}>
+            <CartesianGrid strokeDasharray="3 3" stroke={CB} horizontal={false}/>
+            <XAxis type="number" tick={{fill:TX.m,fontSize:10}} domain={[0,mD]}/>
+            <YAxis dataKey="range" type="category" tick={{fill:TX.p,fontSize:11,fontWeight:600}} width={55}/>
+            <Tooltip contentStyle={ttS} formatter={function(v){return [v+"건","콘텐츠 수"]}}/>
+            <Bar dataKey="count" name="콘텐츠 수" radius={[0,4,4,0]} barSize={20}>
+              {[].concat(cD).sort(function(a,b){return b.count-a.count}).map(function(d,i){return <Cell key={i} fill={d.er>=health.avgER?ME:ME+"44"}/>;})}
+            </Bar>
+          </ComposedChart>
+        </ResponsiveContainer>
+        <div style={{fontSize:10,fontWeight:600,color:TX.s,marginTop:10,marginBottom:6}}>Top 3</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {[].concat(cD).sort(function(a,b){return b.er-a.er}).slice(0,3).map(function(d,i){
+            var w=d.count<30;
+            return <div key={i} style={{flex:"1 1 30%",padding:"10px 10px",borderRadius:8,background:w?CB+"33":SC.pos+"10",border:"1px solid "+(w?CB:SC.pos+"25"),display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontSize:11,fontWeight:700,color:TX.p}}>{d.range}</span>
+                  {w&&<span style={{fontSize:7,padding:"1px 4px",borderRadius:3,background:"#F59E0B22",color:"#F59E0B",fontWeight:600}}>⚠️ {d.count}건</span>}
+                </div>
+                <div style={{fontSize:9,color:TX.m}}>{d.count}건 · 조회수 {d.reach}K</div>
+              </div>
+              <div style={{fontSize:20,fontWeight:800,color:w?TX.m:SC.pos,fontFamily:"'Outfit'"}}>{d.er}%</div>
+            </div>;
+          })}
+        </div>
+      </Card>
+      <Card style={{flex:"1 1 300px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <div style={{fontSize:14,fontWeight:700,color:TX.p}}>🎞️ 포맷별 분포</div><div style={{fontSize:9,color:TX.m,marginTop:1}}>GRWM · 리뷰 등 어떤 포맷이 성과가 좋은지 → 콘텐츠 기획 방향</div>
+          <div style={{fontSize:9,color:TX.m,background:CB+"66",padding:"2px 8px",borderRadius:4}}>기준: 내 평균 ER {health.avgER}%</div>
+        </div>
+        <div style={{fontSize:10,color:TX.m,marginBottom:14}}>바 = 콘텐츠 수 · <span style={{color:ME}}>■</span> 평균 이상 · <span style={{color:ME+"44"}}>■</span> 평균 이하</div>
+        <ResponsiveContainer width="100%" height={260}>
+          <ComposedChart data={[].concat(cF).sort(function(a,b){return b.count-a.count})} layout="vertical" margin={{left:10,right:10}}>
+            <CartesianGrid strokeDasharray="3 3" stroke={CB} horizontal={false}/>
+            <XAxis type="number" tick={{fill:TX.m,fontSize:10}} domain={[0,mF]}/>
+            <YAxis dataKey="format" type="category" tick={{fill:TX.p,fontSize:10,fontWeight:600}} width={80}/>
+            <Tooltip contentStyle={ttS} formatter={function(v){return [v+"건","콘텐츠 수"]}}/>
+            <Bar dataKey="count" name="콘텐츠 수" radius={[0,4,4,0]} barSize={18}>
+              {[].concat(cF).sort(function(a,b){return b.count-a.count}).map(function(f,i){return <Cell key={i} fill={f.er>=health.avgER?ME:ME+"44"}/>;})}
+            </Bar>
+          </ComposedChart>
+        </ResponsiveContainer>
+        <div style={{fontSize:10,fontWeight:600,color:TX.s,marginTop:10,marginBottom:6}}>Top 3</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {[].concat(cF).sort(function(a,b){return b.er-a.er}).slice(0,3).map(function(f,i){
+            var w=f.count<30;
+            return <div key={i} style={{flex:"1 1 30%",padding:"10px 10px",borderRadius:8,background:w?CB+"33":SC.pos+"10",border:"1px solid "+(w?CB:SC.pos+"25"),display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontSize:11,fontWeight:700,color:TX.p}}>{f.format}</span>
+                  {w&&<span style={{fontSize:7,padding:"1px 4px",borderRadius:3,background:"#F59E0B22",color:"#F59E0B",fontWeight:600}}>⚠️ {f.count}건</span>}
+                </div>
+                <div style={{fontSize:9,color:TX.m}}>{f.count}건 · 조회수 {f.reach}K</div>
+              </div>
+              <div style={{fontSize:20,fontWeight:800,color:w?TX.m:SC.pos,fontFamily:"'Outfit'"}}>{f.er}%</div>
+            </div>;
+          })}
+        </div>
+      </Card>
+    </div>
+    <Card style={{marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <div style={{fontSize:14,fontWeight:700,color:TX.p}}>🕐 시간대별 분포</div><div style={{fontSize:9,color:TX.m,marginTop:1}}>업로드 시간대별 ER 차이 → 최적 업로드 타이밍 도출</div>
+          <div style={{fontSize:9,color:TX.m,background:CB+"66",padding:"2px 8px",borderRadius:4}}>기준: 내 평균 ER {health.avgER}%</div>
+        </div>
+        <div style={{fontSize:10,color:TX.m,marginBottom:14}}>바 = 콘텐츠 수 · <span style={{color:ME}}>■</span> 평균 이상 · <span style={{color:ME+"44"}}>■</span> 평균 이하</div>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={cT} margin={{left:0,right:10}}>
+            <CartesianGrid strokeDasharray="3 3" stroke={CB}/>
+            <XAxis dataKey="hour" tick={{fill:TX.m,fontSize:10}}/>
+            <YAxis tick={{fill:TX.m,fontSize:10}} label={{value:"콘텐츠 수",angle:-90,position:"insideLeft",fill:TX.m,fontSize:9}}/>
+            <Tooltip contentStyle={ttS} formatter={function(v){return [v+"건","콘텐츠 수"]}}/>
+            <Bar dataKey="count" name="콘텐츠 수" radius={[4,4,0,0]} barSize={32}>
+              {cT.map(function(e,i){return <Cell key={i} fill={e.er>=health.avgER?ME:ME+"44"}/>;})}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <div style={{fontSize:10,fontWeight:600,color:TX.s,marginTop:10,marginBottom:6}}>Top 3</div>
+        <div style={{display:"flex",gap:6}}>
+          {[].concat(cT).sort(function(a,b){return b.er-a.er}).slice(0,3).map(function(t,i){
+            var w=t.count<30;
+            return <div key={i} style={{flex:1,padding:"10px 10px",borderRadius:8,background:w?CB+"33":SC.pos+"10",border:"1px solid "+(w?CB:SC.pos+"25"),textAlign:"center"}}>
+              <div style={{fontSize:12,fontWeight:700,color:TX.p}}>{t.hour}</div>
+              <div style={{fontSize:10,color:TX.m,marginTop:2}}>{t.count}건 {w&&"⚠️"}</div>
+              <div style={{fontSize:20,fontWeight:800,color:w?TX.m:SC.pos,fontFamily:"'Outfit'",marginTop:4}}>{t.er}%</div>
+              <div style={{fontSize:9,color:TX.m,marginTop:2}}>조회수 {t.reach}K</div>
+            </div>;
+          })}
+        </div>
+    </Card>
+      </div>;
+    })()}
+
+    {/* ── 인플루언서 성과 ── */}
+    <div style={{fontSize:13,fontWeight:600,color:TX.s,marginBottom:12,marginTop:24,borderTop:"1px solid "+CB,paddingTop:16}}>👤 Creator Analysis</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div style={{fontSize:13,fontWeight:600,color:TX.s}}>Influencer Performance</div>
+      <div style={{display:"flex",gap:4}}>
+        {["전체","TikTok","Instagram"].map(function(f){
+          var isActive=platFilter===f;
+          var fColor=f==="TikTok"?ACC.tiktok:f==="Instagram"?ACC.instagram:ME;
+          return <div key={f} onClick={function(){setPlatFilter(f)}} style={{cursor:"pointer",padding:"4px 12px",borderRadius:6,fontSize:10,fontWeight:600,background:isActive?fColor+"22":"transparent",color:isActive?fColor:TX.m,border:"1px solid "+(isActive?fColor+"55":CB),transition:"all .2s"}}>{f==="전체"?"전체":f==="TikTok"?"🎵 TikTok":"📸 Instagram"}</div>;
+        })}
+      </div>
+    </div>
+
+    {/* ── 크리에이터 성과 ── */}
+    <div style={{display:"flex",alignItems:"center",gap:12,margin:"24px 0 12px"}}>
+      <div style={{flex:1,height:1,background:CB}}></div>
+      <span style={{fontSize:11,fontWeight:700,color:TX.m,letterSpacing:"0.05em"}}>👤 크리에이터 성과</span>
+      <div style={{flex:1,height:1,background:CB}}></div>
+    </div>
+
+    {(function(){
+      var filtered=platFilter==="전체"?[].concat(creatorPerf):creatorPerf.filter(function(c){return c.platform===platFilter});
+      var sorted=filtered.sort(function(a,b){return b.contents-a.contents});
+      var aboveAvg=sorted.filter(function(c){return c.avgER>=health.avgER});
+      var belowAvg=sorted.filter(function(c){return c.avgER<health.avgER});
+      var activeColor=platFilter==="TikTok"?ACC.tiktok:platFilter==="Instagram"?ACC.instagram:ME;
+
+      return <Card style={{marginBottom:16}} glow={ME}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <div style={{fontSize:14,fontWeight:700,color:TX.p}}>👤 크리에이터별 성과</div><div style={{fontSize:9,color:TX.m,marginTop:1}}>누구의 콘텐츠가 가장 효율적인지 → 크리에이터 선별 기준</div>
+          <div style={{fontSize:9,color:TX.m,background:CB+"66",padding:"2px 8px",borderRadius:4}}>{sorted.length}명 · 기준: 내 평�� ER {health.avgER}%</div>
+        </div>
+        <div style={{fontSize:10,fontWeight:600,color:TX.s,marginTop:4,marginBottom:8}}>ER 기준 Top 3</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {sorted.sort(function(a,b){return b.avgER-a.avgER}).slice(0,3).map(function(c,i){
+            var warn=c.contents<30&&c.avgER>=6;
+            return <div key={i} style={{flex:"1 1 220px",padding:"14px 14px",borderRadius:10,background:warn?CB+"33":SC.pos+"10",border:"1px solid "+(warn?CB:SC.pos+"25")}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,"+ME+","+ME+"88)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>{c.emoji}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:12,fontWeight:700,color:TX.p}}>{c.name}</span>
+                    {platFilter!=="전체"&&<span style={{fontSize:8,padding:"1px 5px",borderRadius:3,background:CB+"66",color:TX.m,fontWeight:600}}>{c.platform}</span>}
+                  </div>
+                  <div style={{fontSize:9,color:TX.m}}>{c.followers} · 👁 {c.totalViews}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <div style={{flex:1,textAlign:"center",padding:"6px 0",borderRadius:6,background:CB+"44"}}>
+                  <div style={{fontSize:9,color:TX.m}}>총 조회수</div>
+                  <div style={{fontSize:16,fontWeight:800,color:"#38BDF8",fontFamily:"'Outfit'"}}>{c.totalViews}</div>
+                </div>
+                <div style={{flex:1,textAlign:"center",padding:"6px 0",borderRadius:6,background:CB+"44"}}>
+                  <div style={{fontSize:9,color:TX.m}}>팔로워</div>
+                  <div style={{fontSize:16,fontWeight:800,color:TX.p,fontFamily:"'Outfit'"}}>{c.followers}</div>
+                </div>
+                <div style={{flex:1,textAlign:"center",padding:"6px 0",borderRadius:6,background:warn?CB+"44":SC.pos+"15"}}>
+                  <div style={{fontSize:9,color:TX.m}}>ER</div>
+                  <div style={{fontSize:16,fontWeight:800,color:warn?TX.m:SC.pos,fontFamily:"'Outfit'"}}>{c.avgER}%</div>
+                </div>
+              </div>
+              {warn&&<div style={{marginTop:6,fontSize:8,color:"#F59E0B",textAlign:"right"}}>⚠️ 고ER이나 콘텐츠 {c.contents}건 — 추가 검증 필요</div>}
+            </div>;
+          })}
+        </div>
+
+        {belowAvg.length>0 && <div>
+          <div style={{marginTop:12,fontSize:11,fontWeight:600,color:TX.m,marginBottom:8}}>평균 ER 이하 ({belowAvg.length}명)</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {belowAvg.sort(function(a,b){return b.avgER-a.avgER}).map(function(c,i){
+              return <div key={i} style={{flex:"1 1 160px",padding:"8px 10px",borderRadius:8,background:CB+"33",border:"1px solid "+CB,display:"flex",alignItems:"center",gap:8}}>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <span style={{fontSize:10,fontWeight:600,color:TX.s}}>{c.name}</span>
+                    {platFilter!=="전체"&&<span style={{fontSize:7,padding:"1px 4px",borderRadius:2,background:CB+"66",color:TX.m,fontWeight:600}}>{c.platform}</span>}
+                  </div>
+                  <div style={{fontSize:9,color:TX.m}}>{c.contents}건 · {c.followers}</div>
+                </div>
+                <div style={{fontSize:14,fontWeight:800,color:TX.m,fontFamily:"'Outfit'"}}>{c.avgER}%</div>
+              </div>;
+            })}
+          </div>
+        </div>}
+      </Card>;
+    })()}
+
+
+
+  </div>;
+}
+
+
+/* ═══ TAB L2: Our Position in the Market ═══ */
+function TabL2({showCollab,setShowCollab}){
+  var [l2Filter,setL2Filter]=useState("전체");
+  var [l2Metric,setL2Metric]=useState("ER");
+  var [selInfluencer,setSelInfluencer]=useState(null);
+  var [selTopCard,setSelTopCard]=useState(null);
+  var [selL2Week,setSelL2Week]=useState(null);
+  var [selMapBrand,setSelMapBrand]=useState(null);
+  var [selDivBrands,setSelDivBrands]=useState(["이니스프리","달바"]);
+  var [selFormats,setSelFormats]=useState(mktFormats.map(function(f){return f.format}));
+  var [selHashtags,setSelHashtags]=useState(hashtags.map(function(h){return h.tag}));
+  var allBrands=[
+    {name:"Medicube",er:4.72,sov:18.4,followersK:2400,isMe:true},
+    {name:"이니스프리",er:3.60,sov:35.2,followersK:4200},
+    {name:"달바",er:4.10,sov:16.8,followersK:1800},
+    {name:"아누아",er:3.90,sov:15.1,followersK:1600},
+    {name:"라운드랩",er:3.50,sov:14.5,followersK:1200},
+    {name:"토리든",er:3.80,sov:8.2,followersK:900},
+    {name:"넘버즈",er:4.40,sov:5.6,followersK:600},
+    {name:"코스알엑스",er:3.20,sov:9.1,followersK:2100},
+    {name:"스킨1004",er:4.00,sov:6.3,followersK:800},
+    {name:"비플레인",er:3.70,sov:4.8,followersK:500},
+  ];
+  var [selBrands,setSelBrands]=useState(["이니스프리","달바"]);
+  function toggleBrand(name){
+    if(selBrands.indexOf(name)>=0) setSelBrands(selBrands.filter(function(b){return b!==name}));
+    else if(selBrands.length<3) setSelBrands(selBrands.concat([name]));
+  }
+  return <div>
+    <div style={{marginBottom:8,marginTop:8}}>
+      <h2 style={{margin:0,fontSize:18,fontWeight:700,color:TX.p,fontFamily:"'Outfit',sans-serif",display:"inline"}}>Our Position in the Market</h2>
+      <span style={{fontSize:13,color:TX.m,marginLeft:12}}>Market Gap · Competitors</span>
+    </div>
+
+    {/* ── 브랜드 경쟁력 비교 ── */}
+    <Card style={{marginBottom:16}} glow={ME}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:4}}>📊 브랜드 경쟁력 비교</div>
+      <div style={{fontSize:10,color:TX.m,marginBottom:10}}>Medicube vs 선택 브랜드 — ER · 점유율 · 가성비 3축 (최대 3개 선택)</div>
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+        {allBrands.filter(function(b){return !b.isMe}).map(function(b){
+          var isOn=selBrands.indexOf(b.name)>=0;
+          return <button key={b.name} onClick={function(){toggleBrand(b.name)}} style={{padding:"4px 10px",borderRadius:6,border:"1px solid "+(isOn?ME:CB),background:isOn?ME+"18":"transparent",color:isOn?ME:TX.m,fontSize:10,fontWeight:isOn?700:400,cursor:"pointer",fontFamily:"inherit"}}>{b.name}</button>;
+        })}
+      </div>
+      {(function(){
+        var compColors=["#F59E0B","#06B6D4","#A78BFA"];
+        var shown=[allBrands[0]].concat(allBrands.filter(function(b){return selBrands.indexOf(b.name)>=0}));
+        shown.forEach(function(b,i){b.color=i===0?ME:compColors[i-1]});
+        /* 시장 평균 기반 점수: 시장평균=50, 2배=100 */
+        var avgER=allBrands.reduce(function(s,b){return s+b.er},0)/allBrands.length;
+        var avgSOV=allBrands.reduce(function(s,b){return s+b.sov},0)/allBrands.length;
+        var avgFolK=allBrands.reduce(function(s,b){return s+b.followersK},0)/allBrands.length;
+        function relScore(val,avg){return Math.round(val/avg*50)}
+        function costScore(b){return Math.round((b.er/avgER)*(avgFolK/b.followersK)*50)}
+        var radarData=[{axis:"ER"},{axis:"점유율"},{axis:"가성비"}];
+        shown.forEach(function(b){
+          radarData[0][b.name]=relScore(b.er,avgER);
+          radarData[1][b.name]=relScore(b.sov,avgSOV);
+          radarData[2][b.name]=costScore(b);
+        });
+        var tableRows=shown.map(function(b){
+          var erScore=relScore(b.er,avgER);
+          var sovScore=relScore(b.sov,avgSOV);
+          var cScore=costScore(b);
+          var total=Math.round(erScore*0.4+sovScore*0.3+cScore*0.3);
+          return {b:b,erScore:erScore,sovScore:sovScore,cScore:cScore,total:total};
+        });
+        return <div>
+          <div style={{display:"flex",justifyContent:"center"}}>
+            <div style={{width:"100%",maxWidth:480}}>
+              <ResponsiveContainer width="100%" height={320}>
+                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+                  <PolarGrid stroke={CB} strokeDasharray="3 3"/>
+                  <PolarAngleAxis dataKey="axis" tick={{fill:TX.m,fontSize:11}}/>
+                  <PolarRadiusAxis tick={false} axisLine={false} domain={[0,120]}/>
+                  {shown.map(function(b){
+                    return <Radar key={b.name} name={b.name} dataKey={b.name} stroke={b.color} fill={b.color} fillOpacity={b.isMe?0.15:0.06} strokeWidth={b.isMe?3:2} strokeDasharray={b.isMe?"":"4 3"}/>;
+                  })}
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div style={{marginTop:12,fontSize:12}}>
+            <div style={{display:"flex",padding:"10px 0",borderBottom:"2px solid "+CB,fontWeight:700,color:TX.m}}>
+              <div style={{width:20}}></div>
+              <div style={{flex:"1 1 100px"}}>브랜드</div>
+              <div style={{flex:"1 1 90px",textAlign:"center"}}>ER</div>
+              <div style={{flex:"1 1 90px",textAlign:"center"}}>점유율</div>
+              <div style={{flex:"1 1 90px",textAlign:"center"}}>가성비</div>
+              <div style={{flex:"0 0 60px",textAlign:"center",fontWeight:800}}>종합</div>
+            </div>
+            <div style={{display:"flex",padding:"4px 0",color:TX.m+"88",fontSize:9}}>
+              <div style={{width:20}}></div>
+              <div style={{flex:"1 1 100px",fontStyle:"italic"}}>시장평균 = 50</div>
+              <div style={{flex:"1 1 90px",textAlign:"center"}}>{avgER.toFixed(2)}% = 50</div>
+              <div style={{flex:"1 1 90px",textAlign:"center"}}>{avgSOV.toFixed(1)}% = 50</div>
+              <div style={{flex:"1 1 90px",textAlign:"center"}}>ER효율 × 팔로워효율</div>
+              <div style={{flex:"0 0 60px",textAlign:"center"}}>가중합</div>
+            </div>
+            {tableRows.map(function(r,i){
+              var b=r.b;
+              return <div key={i} style={{display:"flex",padding:"10px 0",borderBottom:"1px solid "+CB+"22",alignItems:"center"}}>
+                <div style={{width:20}}><div style={{width:10,height:10,borderRadius:"50%",background:b.color}}></div></div>
+                <div style={{flex:"1 1 100px",fontWeight:b.isMe?700:500,color:b.isMe?ME:TX.p,fontSize:13}}>{b.name}</div>
+                <div style={{flex:"1 1 90px",textAlign:"center"}}><span style={{fontSize:16,fontWeight:700,color:TX.s}}>{r.erScore}</span><span style={{color:TX.m+"88",fontSize:10,marginLeft:4}}>({b.er}%)</span></div>
+                <div style={{flex:"1 1 90px",textAlign:"center"}}><span style={{fontSize:16,fontWeight:700,color:TX.s}}>{r.sovScore}</span><span style={{color:TX.m+"88",fontSize:10,marginLeft:4}}>({b.sov}%)</span></div>
+                <div style={{flex:"1 1 90px",textAlign:"center"}}><span style={{fontSize:16,fontWeight:700,color:TX.s}}>{r.cScore}</span><span style={{color:TX.m+"88",fontSize:10,marginLeft:4}}>({b.followersK}K)</span></div>
+                <div style={{flex:"0 0 60px",textAlign:"center",fontSize:18,fontWeight:800,color:b.isMe?ME:r.total>=70?SC.pos:r.total>=50?ACC.action:TX.m,fontFamily:"'Outfit'"}}>{r.total}</div>
+              </div>;
+            })}
+          </div>
+        </div>;
+      })()}
+      <div style={{background:CB+"44",borderRadius:8,padding:"10px 14px",marginTop:12,marginBottom:6}}>
+        <div style={{fontSize:10,fontWeight:700,color:TX.p,marginBottom:6}}>📐 점수 산출 방식</div>
+        <div style={{fontSize:9,color:TX.m,lineHeight:1.7}}>
+          <div><b style={{color:TX.s}}>기준:</b> 시장 평균 = 50점 (값/시장평균 × 50). 50 이상이면 시장보다 우수.</div>
+          <div><b style={{color:TX.s}}>ER 점수:</b> 내 ER / 시장 평균 ER × 50 → 콘텐츠가 팔로워 대비 얼마나 효율적으로 조회되는지</div>
+          <div><b style={{color:TX.s}}>점유율 점수:</b> 내 SOV / 시장 평균 SOV × 50 → 시장에서 우리 콘텐츠가 차지하는 비중</div>
+          <div><b style={{color:TX.s}}>가성비 점수:</b> (ER 효율) × (팔로워 효율) × 50 → 적은 팔로워로 높은 ER을 낼수록 비용 대비 효과적</div>
+          <div><b style={{color:TX.s}}>종합:</b> ER×0.4 + 점유율×0.3 + 가성비×0.3 — ER에 가장 높은 가중치 (콘텐츠 효율이 핵심 KPI)</div>
+        </div>
+      </div>
+    </Card>
+
+    {/* ── 콘텐츠 성과 ── */}
+    <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0 12px"}}>
+      <div style={{flex:1,height:1,background:CB}}></div>
+      <span style={{fontSize:11,fontWeight:700,color:TX.m,letterSpacing:"0.05em"}}>📝 콘텐츠 시장 비교</span>
+      <div style={{flex:1,height:1,background:CB}}></div>
+    </div>
+
+    {/* ── Share of Content + 플랫폼 필터 ── */}
+    {(function(){
+      var brands=socData[l2Filter];
+      var total=brands.reduce(function(s,b){return s+b.count},0);
+      var meCount=brands[0].count;
+      var pct=(meCount/total*100).toFixed(0);
+      return <Card style={{marginBottom:16}} glow={MKT}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:600,color:MKT,letterSpacing:1}}>📊 SHARE OF CONTENT</div>
+          <div style={{display:"flex",gap:4}}>
+            {["전체","TikTok","Instagram"].map(function(f){
+              var isA=l2Filter===f;
+              var fC=f==="TikTok"?ACC.tiktok:f==="Instagram"?ACC.instagram:ME;
+              return <div key={f} onClick={function(){setL2Filter(f)}} style={{cursor:"pointer",padding:"3px 10px",borderRadius:5,fontSize:9,fontWeight:600,background:isA?fC+"22":"transparent",color:isA?fC:TX.m,border:"1px solid "+(isA?fC+"55":CB),transition:"all .2s"}}>{f==="전체"?"전체":f==="TikTok"?"🎵 TikTok":"📸 Instagram"}</div>;
+            })}
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:14}}>
+          <div style={{fontSize:36,fontWeight:800,color:ME,fontFamily:"'Outfit'"}}>{pct}%</div>
+          <div style={{fontSize:12,color:TX.m}}>{meCount.toLocaleString()} / {total.toLocaleString()}건 (최근 30일)</div>
+        </div>
+        <div style={{display:"flex",height:28,borderRadius:8,overflow:"hidden",marginBottom:10}}>
+          {brands.map(function(b,i){
+            return <div key={i} style={{width:(b.count/total*100)+"%",background:b.color,transition:"width .3s"}} title={b.name+" "+b.count}></div>;
+          })}
+        </div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+          {brands.map(function(b,i){
+            return <div key={i} style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:b.color}}></div>
+              <span style={{fontSize:11,color:i===0?ME:TX.s,fontWeight:i===0?700:400}}>{b.name} {b.count.toLocaleString()}</span>
+            </div>;
+          })}
+        </div>
+      </Card>;
+    })()}
+
+    {/* ── KPI 추이: ER / 건당 조회수 ── */}
+    <Card style={{marginBottom:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+        <div><div style={{fontSize:14,fontWeight:700,color:TX.p}}>{l2Metric==="ER"?"ER 추이":l2Metric==="조회수"?"조회수 추이":"팔로워 추이"} <span style={{fontSize:11,fontWeight:400,color:TX.m,marginLeft:6}}>Medicube vs 경쟁사 평균</span></div><div style={{fontSize:9,color:TX.m,marginTop:2}}>경쟁사 대비 우리 지표가 개선되고 있는지, 격차가 벌어지고 있는지 추세를 확인합니다.</div></div>
+        <div style={{display:"flex",gap:8}}>
+          <div style={{display:"flex",gap:4}}>
+            {["전체","TikTok","Instagram"].map(function(f){
+              var isA=l2Filter===f;
+              var fC=f==="TikTok"?ACC.tiktok:f==="Instagram"?ACC.instagram:ME;
+              return <div key={f} onClick={function(){setL2Filter(f)}} style={{cursor:"pointer",padding:"3px 10px",borderRadius:5,fontSize:9,fontWeight:600,background:isA?fC+"22":"transparent",color:isA?fC:TX.m,border:"1px solid "+(isA?fC+"55":CB),transition:"all .2s"}}>{f==="전체"?"전체":f==="TikTok"?"🎵 TikTok":"📸 Instagram"}</div>;
+            })}
+          </div>
+          <div style={{width:1,background:CB}}></div>
+          <div style={{display:"flex",gap:4}}>
+            {["ER","조회수","팔로워"].map(function(m){
+              var isA=l2Metric===m;
+              return <div key={m} onClick={function(){setL2Metric(m)}} style={{cursor:"pointer",padding:"3px 10px",borderRadius:5,fontSize:10,fontWeight:600,background:isA?ME+"22":"transparent",color:isA?ME:TX.m,border:"1px solid "+(isA?ME+"55":CB),transition:"all .2s"}}>{m==="ER"?"ER %":m==="조회수"?"조회수":"팔로워"}</div>;
+            })}
+          </div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:12,marginBottom:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:20,height:3,background:ME,borderRadius:2}}></div><span style={{fontSize:10,color:ME,fontWeight:600}}>Medicube</span></div>
+        <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:20,height:2,background:TX.m,borderRadius:2,borderTop:"1px dashed "+TX.m}}></div><span style={{fontSize:10,color:TX.m}}>경쟁사 평균</span></div>
+      </div>
+      {(function(){
+        var td=mktTrend[l2Filter];
+        return <ResponsiveContainer width="100%" height={240}>
+        <ComposedChart data={td} margin={{left:10,right:10,top:10,bottom:5}} onClick={function(e){if(e&&e.activeLabel){setSelL2Week(selL2Week===e.activeLabel?null:e.activeLabel)}}}>
+          <CartesianGrid strokeDasharray="3 3" stroke={CB}/>
+          <XAxis dataKey="week" tick={{fill:TX.m,fontSize:10}}/>
+          <YAxis tick={{fill:TX.m,fontSize:10}} domain={l2Metric==="ER"?[0,7]:l2Metric==="조회수"?[0,10]:[0,350]} label={{value:l2Metric==="ER"?"ER %":l2Metric==="조회수"?"조회수 (K)":"팔로워 (K)",angle:-90,position:"insideLeft",fill:TX.m,fontSize:9}}/>
+          <Tooltip contentStyle={ttS} formatter={function(v,name){
+            var label=name==="me"?"Medicube":name==="compAvg"?"경쟁사 평균":name;
+            return [v+(l2Metric==="ER"?"%":"K"),label];
+          }}/>
+          <Line dataKey={l2Metric==="ER"?"compAvg":l2Metric==="조회수"?"compReachAvg":"compFollowersAvg"} name="compAvg" stroke={TX.m} strokeWidth={1.5} strokeDasharray="6 3" dot={false} type="monotone"/>
+          <Line dataKey={l2Metric==="ER"?"meER":l2Metric==="조회수"?"meReach":"meFollowers"} name="me" stroke={ME} strokeWidth={2.5} dot={{fill:ME,r:4,strokeWidth:2,stroke:"#fff"}} type="monotone" activeDot={{r:6,fill:ME,stroke:"#fff",strokeWidth:3}}/>
+        </ComposedChart>
+      </ResponsiveContainer>;
+      })()}
+      {selL2Week&&contentByL2Week[selL2Week]&&<div style={{marginTop:8,padding:12,borderRadius:10,background:CB+"22",border:"1px solid "+ME+"22"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <span style={{fontSize:11,fontWeight:700,color:ME}}>📋 {selL2Week} 콘텐츠</span>
+          <span style={{fontSize:9,color:TX.m,cursor:"pointer",padding:"2px 6px",borderRadius:4,background:CB}} onClick={function(){setSelL2Week(null)}}>✕ 닫기</span>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {contentByL2Week[selL2Week].map(function(c,i){
+            return <div key={i} style={{flex:"1 1 180px",padding:10,borderRadius:8,background:CBG,border:"1px solid "+CB}}>
+              <div style={{fontSize:10,fontWeight:700,color:TX.p,marginBottom:4}}>{c.title}</div>
+              <div style={{display:"flex",gap:8,fontSize:9,color:TX.m}}>
+                <span>{c.creator}</span>
+                <span style={{padding:"1px 4px",borderRadius:3,background:(c.platform==="TikTok"?ACC.tiktok:ACC.instagram)+"15",color:c.platform==="TikTok"?ACC.tiktok:ACC.instagram,fontSize:8}}>{c.platform}</span>
+              </div>
+              <div style={{display:"flex",gap:10,marginTop:6,fontSize:9}}>
+                <span style={{color:SC.pos,fontWeight:700}}>ER {c.er}%</span>
+                <span style={{color:TX.m}}>👁 {c.views}</span>
+                <span style={{color:TX.m}}>{c.format}</span>
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>}
+      {l2Metric==="ER"
+        ?<ActionTip icon="📈" text="Medicube ER이 W3-W4에서 5%+ 돌파 — 경쟁사 평균을 지속 상회. 스파이크 기간과 일치." color={ME}/>
+        :l2Metric==="조회수"
+        ?<ActionTip icon="📈" text="Medicube 조회수 W4 최고 7.8K — 경쟁사 평균 대비 상회. 전 기간 우위 유지." color={ME}/>
+        :<ActionTip icon="📈" text="Medicube 팔로워 규모 142-170K — 경쟁사 평균(210-245K) 대비 작지만 ER은 더 높아 효율적 크리에이터 활용." color={ME}/>
+      }
+    </Card>
+
+    {/* ── 2. 성공 콘텐츠 비교: 내 Top vs 경쟁 Top ── */}
+    <Card style={{marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:2}}>🏆 내 Top vs 경쟁 Top 콘텐츠 비교</div>
+      <div style={{fontSize:9,color:TX.m,marginBottom:4}}>최고 성과 콘텐츠끼리 비교하면 우리의 강점과 경쟁사가 잘하는 부분이 명확해집니다.</div>
+      <div style={{fontSize:10,color:TX.m,marginBottom:12}}>각 브랜드 최고 ER 콘텐츠 1건 비교</div>
+      <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:8,marginBottom:12,WebkitOverflowScrolling:"touch"}}>
+        {/* 내 Top */}
+        {(function(){var c=successComparison.myTop; var isOpen=selTopCard==="me"; return <div onClick={function(){setSelTopCard(isOpen?null:"me")}} style={{flex:"0 0 240px",padding:14,borderRadius:12,background:ME+"08",border:"2px solid "+ME+"33",cursor:"pointer",transition:"all 0.15s"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:12,fontWeight:700,color:ME}}>Medicube</span>
+            <span style={{fontSize:8,padding:"2px 5px",borderRadius:3,background:ME+"20",color:ME,fontWeight:700}}>MY TOP</span>
+          </div>
+          <div style={{textAlign:"center",marginBottom:8}}>
+            <div style={{fontSize:28,fontWeight:800,color:SC.pos,fontFamily:"'Outfit'"}}>{c.er}%</div>
+            <div style={{fontSize:9,color:TX.m}}>👁 {c.views} · 팔로워</div>
+          </div>
+          <div style={{fontSize:10,color:TX.s}}>📌 {c.creator} · {c.format} · {c.duration}</div>
+          {isOpen&&<div style={{marginTop:8,padding:"6px 8px",borderRadius:6,background:ME+"15",fontSize:9,wordBreak:"break-all"}}>
+            <a href={c.url} target="_blank" rel="noopener" style={{color:ME,textDecoration:"underline"}}>{c.url}</a>
+          </div>}
+          {!isOpen&&<div style={{fontSize:8,color:TX.m,marginTop:6,textAlign:"center"}}>클릭하여 콘텐츠 URL 보기</div>}
+        </div>;})()}
+        {/* 경쟁 Top */}
+        {successComparison.compTop.map(function(c,i){
+          var isOpen=selTopCard===c.brand;
+          return <div key={i} onClick={function(){setSelTopCard(isOpen?null:c.brand)}} style={{flex:"0 0 220px",padding:14,borderRadius:12,background:CB+"33",border:"1px solid "+CB,cursor:"pointer",transition:"all 0.15s"}}>
+            <div style={{fontSize:11,fontWeight:700,color:COMP,marginBottom:8}}>{c.brand}</div>
+            <div style={{textAlign:"center",marginBottom:8}}>
+              <div style={{fontSize:22,fontWeight:800,color:c.er>=7?SC.pos:"#F59E0B",fontFamily:"'Outfit'"}}>{c.er}%</div>
+              <div style={{fontSize:9,color:TX.m}}>👁 {c.views} · 팔로워</div>
+            </div>
+            <div style={{fontSize:10,color:TX.s}}>📌 {c.creator} · {c.format} · {c.duration}</div>
+            {isOpen&&<div style={{marginTop:8,padding:"6px 8px",borderRadius:6,background:CB+"66",fontSize:9,wordBreak:"break-all"}}>
+              <a href={c.url} target="_blank" rel="noopener" style={{color:"#60A5FA",textDecoration:"underline"}}>{c.url}</a>
+            </div>}
+            {!isOpen&&<div style={{fontSize:8,color:TX.m,marginTop:6,textAlign:"center"}}>클릭하여 URL 보기</div>}
+          </div>;
+        })}
+      </div>
+    </Card>
+
+    {/* ── Competitor Comparison ── */}
+    <div style={{fontSize:13,fontWeight:600,color:TX.s,marginBottom:12,marginTop:20}}>Competitor Comparison</div>
+
+    <Card style={{marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:2}}>📊 브랜드 포지셔닝</div>
+      <div style={{fontSize:9,color:TX.m,marginBottom:4}}>ER과 조회수 두 축으로 브랜드 위치를 한눈에 파악. 우상단(고ER+고조회수)이 이상적 포지션입니다. <b style={{color:TX.s}}>원이 클수록 콘텐츠 수가 많은 브랜드</b>입니다.</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span style={{fontSize:10,color:TX.m}}>← 낮은 ER</span>
+        <span style={{fontSize:10,color:TX.m}}>ER (%)</span>
+        <span style={{fontSize:10,color:TX.m}}>높은 ER →</span>
+      </div>
+      {(function(){
+        var sorted=erComp.slice().sort(function(a,b){return a.er-b.er});
+        var minER=Math.min.apply(null,sorted.map(function(d){return d.er}))-0.3;
+        var maxER=Math.max.apply(null,sorted.map(function(d){return d.er}))+0.5;
+        var minReach=Math.min.apply(null,sorted.map(function(d){return parseFloat(d.views)}));
+        var maxReach=Math.max.apply(null,sorted.map(function(d){return parseFloat(d.views)}));
+        var avgER=sorted.reduce(function(s,d){return s+d.er},0)/sorted.length;
+        var brandColors=["#EC4899","#8B5CF6","#F59E0B","#06B6D4","#A78BFA","#34D399","#FB923C","#E879F9","#22D3EE","#FBBF24","#F87171","#818CF8","#4ADE80","#F472B6","#38BDF8","#C084FC","#FB7185","#FCD34D","#2DD4BF"];
+        return <div style={{position:"relative",height:440,background:CB+"22",borderRadius:12,marginBottom:8,overflow:"hidden"}}>
+          {/* 시장 평균 라인 */}
+          <div style={{position:"absolute",left:((avgER-minER)/(maxER-minER)*100)+"%",top:0,bottom:30,width:1,borderLeft:"2px dashed "+MKT+"66",zIndex:1}}></div>
+          <div style={{position:"absolute",left:((avgER-minER)/(maxER-minER)*100)+"%",top:8,transform:"translateX(-50%)",fontSize:9,color:MKT,fontWeight:600,background:CBG,padding:"1px 6px",borderRadius:3,zIndex:2}}>시장 평균 {avgER.toFixed(1)}%</div>
+          {/* Y축 라벨 */}
+          <div style={{position:"absolute",left:4,top:"50%",transform:"rotate(-90deg) translateX(-50%)",transformOrigin:"0 0",fontSize:8,color:TX.m+"66"}}>총 조회수 ↑</div>
+          {/* ER 눈금 */}
+          {[1.5,2,2.5,3,3.5,4,4.5,5].map(function(v){
+            if(v<minER||v>maxER) return null;
+            var left=((v-minER)/(maxER-minER)*100);
+            return <div key={v} style={{position:"absolute",left:left+"%",bottom:8,fontSize:8,color:TX.m+"44",transform:"translateX(-50%)",zIndex:1}}>{v}%</div>;
+          })}
+          {/* 브랜드 버블 — X=ER, Y=조회수 */}
+          {sorted.map(function(d,i){
+            var left=((d.er-minER)/(maxER-minER)*100);
+            var reachNum=parseFloat(d.views);
+            var top=(1-(reachNum-minReach)/(maxReach-minReach))*75+5;
+            var size=d.isMe?90:Math.max(28+reachNum*3,32);
+            var c=d.isMe?ME:brandColors[i%brandColors.length];
+            return <div key={i} style={{position:"absolute",left:"calc("+left+"% - "+size/2+"px)",top:top+"%",zIndex:d.isMe?3:1}}>
+              <div style={{width:size,height:size,borderRadius:"50%",background:d.isMe?ME+"20":"transparent",border:(d.isMe?4:2)+"px solid "+c,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .3s"}}>
+                <div style={{fontSize:d.isMe?18:size>50?12:10,fontWeight:800,color:c,fontFamily:"'Outfit'"}}>{d.er}%</div>
+              </div>
+              <div style={{textAlign:"center",marginTop:2}}>
+                <div style={{fontSize:d.isMe?10:8,fontWeight:d.isMe?700:500,color:d.isMe?ME:TX.p}}>{d.brand}</div>
+              </div>
+            </div>;
+          })}
+        </div>;
+      })()}
+      <div style={{textAlign:"center",fontSize:9,color:TX.m,marginBottom:8}}>X = ER% · Y = 총 조회수 · 원 크기 = 콘텐츠 수 · 점선 = 시장 평균</div>
+      <ActionTip icon="📊" text={"Medicube ER 4.72%로 1위 — 총 조회수 18.2M으로 최고. 20개 브랜드 중 ER·조회수 모두 상위권."} color={ME}/>
+    </Card>
+
+
+        {/* ── Market Gap Analysis ── */}
+    <div style={{fontSize:13,fontWeight:600,color:TX.s,marginBottom:6,marginTop:20}}>Market Gap Analysis</div>
+    <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+      <span style={{fontSize:9,color:TX.m}}>판정 기준:</span>
+      <span style={{fontSize:9,padding:"2px 8px",borderRadius:3,background:SC.pos+"15",color:SC.pos,fontWeight:600}}>✅ 우위 — 활용중 · 내 ER ≥ 시장</span>
+      <span style={{fontSize:9,padding:"2px 8px",borderRadius:3,background:"#F59E0B18",color:"#F59E0B",fontWeight:600}}>⚡ 검토 — 활용중 · 내 ER &lt; 시장</span>
+      <span style={{fontSize:9,padding:"2px 8px",borderRadius:3,background:ACC.action+"18",color:ACC.action,fontWeight:600}}>🔺 추천 — 미활용 · 시장 ER ≥ 평균({health.mktER}%)</span>
+    </div>
+
+    {/* 포맷별 — 그룹 바 차트 */}
+    <Card style={{marginBottom:16}} glow={MKT}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:2}}>🎞️ 포맷별 시장 vs 내 성과</div>
+      <div style={{fontSize:9,color:TX.m,marginBottom:8}}>시장에서 잘 되는 포맷 중 우리가 미활용하거나 약한 영역을 발견 → 새로운 포맷 기회 도출</div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8,alignItems:"center"}}>
+        <span style={{fontSize:9,color:TX.m,marginRight:4}}>필터:</span>
+        <span onClick={function(){setSelFormats(selFormats.length===mktFormats.length?[]:mktFormats.map(function(f){return f.format}))}} style={{padding:"3px 8px",borderRadius:10,fontSize:9,cursor:"pointer",fontWeight:600,background:selFormats.length===mktFormats.length?ME+"22":CB,color:selFormats.length===mktFormats.length?ME:TX.m,border:"1px solid "+(selFormats.length===mktFormats.length?ME+"44":CB)}}>전체</span>
+        {mktFormats.map(function(f,i){var sel=selFormats.indexOf(f.format)>=0;return <span key={i} onClick={function(){setSelFormats(sel?selFormats.filter(function(x){return x!==f.format}):selFormats.concat(f.format))}} style={{padding:"3px 8px",borderRadius:10,fontSize:9,cursor:"pointer",fontWeight:sel?600:400,background:sel?ME+"15":"transparent",color:sel?TX.p:TX.m,border:"1px solid "+(sel?ME+"33":CB)}}>{f.format}</span>})}
+      </div>
+      <div style={{fontSize:10,color:TX.m,marginBottom:8}}><span style={{color:MKT}}>■</span> 시장 ER · <span style={{color:ME}}>■</span> 내 ER · 미활용 포맷은 내 ER 없음</div>
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={mktFormats.filter(function(f){return selFormats.indexOf(f.format)>=0}).sort(function(a,b){return b.mktER-a.mktER})} margin={{left:10,right:10,top:10,bottom:5}}>
+          <CartesianGrid strokeDasharray="3 3" stroke={CB}/>
+          <XAxis dataKey="format" tick={{fill:TX.m,fontSize:9}} interval={0} angle={-20} textAnchor="end" height={50}/>
+          <YAxis tick={{fill:TX.m,fontSize:10}} domain={[0,7]} label={{value:"ER %",angle:-90,position:"insideLeft",fill:TX.m,fontSize:9}}/>
+          <Tooltip contentStyle={ttS} formatter={function(v,name){return [v+"%",name]}}/>
+          <ReferenceLine y={health.mktER} stroke={"#FF6B6B"} strokeWidth={2} strokeDasharray="8 4" label={{value:"⬤ 시장 평균 "+health.mktER+"%",position:"insideTopRight",fill:"#FF6B6B",fontSize:11,fontWeight:700}}/>
+          <Bar dataKey="mktER" name="시장 ER" fill={MKT+"88"} radius={[4,4,0,0]} barSize={20}/>
+          <Bar dataKey="myER" name="내 ER" fill={ME} radius={[4,4,0,0]} barSize={20}/>
+        </ComposedChart>
+      </ResponsiveContainer>
+      <div style={{fontSize:9,color:TX.m,marginTop:4,marginBottom:6,padding:"4px 8px",background:"#FF6B6B10",borderRadius:4,borderLeft:"3px solid #FF6B6B"}}>📊 <b style={{color:"#FF6B6B"}}>시장 평균({health.mktER}%)</b> = 분석 대상 20개 뷰티 브랜드의 전체 콘텐츠 평균 ER. 이 기준선 위 = 시장 대비 고효율.</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+        {mktFormats.filter(function(f){return selFormats.indexOf(f.format)>=0}).sort(function(a,b){return b.mktER-a.mktER}).map(function(f,i){
+          var verdict=f.myUse&&f.myER>=f.mktER?"우위":f.myUse?"검토":"미활용";
+          var vCol=verdict==="우위"?SC.pos:verdict==="검토"?"#F59E0B":ACC.action;
+          return <div key={i} style={{padding:"4px 8px",borderRadius:6,background:vCol+"10",border:"1px solid "+vCol+"22",fontSize:9}}>
+            <span style={{fontWeight:700,color:TX.p}}>{f.format}</span>
+            <span style={{color:vCol,fontWeight:700,marginLeft:4}}>{verdict}</span>
+            <span style={{color:TX.m,marginLeft:4}}>시장 {f.mktER}%{f.myUse?" · 내 "+f.myER+"%":""}</span>
+          </div>;
+        })}
+      </div>
+      <ActionTip icon="💡" text={"미활용 포맷 중 챌린지(시장 ER 6.2%), 듀엣/리액션(5.4%)이 효율 높음 — 신규 시도 최우선."} color={ACC.action}/>
+    </Card>
+
+    {/* 해시태그별 — 그룹 바 차트 */}
+    <Card style={{marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:2}}># 해시태그별 시장 vs 내 성과</div>
+      <div style={{fontSize:9,color:TX.m,marginBottom:8}}>어떤 해시태그가 높은 ER을 만드는지 비교 → 콘텐츠 디스커버리 최적화</div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8,alignItems:"center"}}>
+        <span style={{fontSize:9,color:TX.m,marginRight:4}}>필터:</span>
+        <span onClick={function(){setSelHashtags(selHashtags.length===hashtags.length?[]:hashtags.map(function(h){return h.tag}))}} style={{padding:"3px 8px",borderRadius:10,fontSize:9,cursor:"pointer",fontWeight:600,background:selHashtags.length===hashtags.length?ME+"22":CB,color:selHashtags.length===hashtags.length?ME:TX.m,border:"1px solid "+(selHashtags.length===hashtags.length?ME+"44":CB)}}>전체</span>
+        {hashtags.map(function(h,i){var sel=selHashtags.indexOf(h.tag)>=0;return <span key={i} onClick={function(){setSelHashtags(sel?selHashtags.filter(function(x){return x!==h.tag}):selHashtags.concat(h.tag))}} style={{padding:"3px 8px",borderRadius:10,fontSize:9,cursor:"pointer",fontWeight:sel?600:400,background:sel?ME+"15":"transparent",color:sel?TX.p:TX.m,border:"1px solid "+(sel?ME+"33":CB)}}>{h.tag}</span>})}
+      </div>
+      <div style={{fontSize:10,color:TX.m,marginBottom:8}}><span style={{color:MKT}}>■</span> 시장 ER · <span style={{color:ME}}>■</span> 내 ER</div>
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={hashtags.filter(function(h){return selHashtags.indexOf(h.tag)>=0}).sort(function(a,b){return b.mktER-a.mktER})} margin={{left:10,right:10,top:10,bottom:5}}>
+          <CartesianGrid strokeDasharray="3 3" stroke={CB}/>
+          <XAxis dataKey="tag" tick={{fill:TX.m,fontSize:9}} interval={0} angle={-20} textAnchor="end" height={50}/>
+          <YAxis tick={{fill:TX.m,fontSize:10}} domain={[0,7]} label={{value:"ER %",angle:-90,position:"insideLeft",fill:TX.m,fontSize:9}}/>
+          <Tooltip contentStyle={ttS} formatter={function(v,name){return [v?v+"%":"미활용",name]}}/>
+          <ReferenceLine y={health.mktER} stroke={"#FF6B6B"} strokeWidth={2} strokeDasharray="8 4" label={{value:"⬤ 시장 평균 "+health.mktER+"%",position:"insideTopRight",fill:"#FF6B6B",fontSize:11,fontWeight:700}}/>
+          <Bar dataKey="mktER" name="시장 ER" fill={MKT+"88"} radius={[4,4,0,0]} barSize={20}/>
+          <Bar dataKey="myER" name="내 ER" fill={ME} radius={[4,4,0,0]} barSize={20}/>
+        </ComposedChart>
+      </ResponsiveContainer>
+      <div style={{fontSize:9,color:TX.m,marginTop:4,marginBottom:6,padding:"4px 8px",background:"#FF6B6B10",borderRadius:4,borderLeft:"3px solid #FF6B6B"}}>📊 <b style={{color:"#FF6B6B"}}>시장 평균({health.mktER}%)</b> = 분석 대상 20개 뷰티 브랜드의 전체 콘텐츠 평균 ER. 이 기준선 위 = 시장 대비 고효율.</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+        {hashtags.filter(function(h){return selHashtags.indexOf(h.tag)>=0}).sort(function(a,b){return b.mktER-a.mktER}).map(function(h,i){
+          var verdict=h.myUse&&h.myER>=h.mktER?"우위":h.myUse?"검토":"미활용";
+          var vCol=verdict==="우위"?SC.pos:verdict==="검토"?"#F59E0B":ACC.action;
+          return <div key={i} style={{padding:"4px 8px",borderRadius:6,background:vCol+"10",border:"1px solid "+vCol+"22",fontSize:9}}>
+            <span style={{fontWeight:700,color:TX.p}}>{h.tag}</span>
+            <span style={{color:vCol,fontWeight:700,marginLeft:4}}>{verdict}</span>
+            <span style={{color:TX.m,marginLeft:4}}>시장 {h.mktER}%{h.myUse?" · 내 "+h.myER+"%":""}</span>
+          </div>;
+        })}
+      </div>
+      <ActionTip icon="💡" text="미활용 고효율: #파데프리(5.8%), #추천템(5.3%) — 즉시 활용 가치." color={ACC.action}/>
+    </Card>
+
+    {/* 시간대별 — 그룹 바 차트 */}
+    <Card style={{marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:2}}>🕐 업로드 시간대별 시장 vs 내 성과</div>
+      <div style={{fontSize:9,color:TX.m,marginBottom:8}}>시장 전체의 시간대별 ER 패턴과 비교해 우리만의 골든타임을 찾습니다.</div>
+      <div style={{fontSize:10,color:TX.m,marginBottom:8}}><span style={{color:MKT}}>■</span> 시장 ER · <span style={{color:ME}}>■</span> 내 ER</div>
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={mktTimeGap} margin={{left:10,right:10,top:10,bottom:5}}>
+          <CartesianGrid strokeDasharray="3 3" stroke={CB}/>
+          <XAxis dataKey="hour" tick={{fill:TX.m,fontSize:10}} interval={0}/>
+          <YAxis tick={{fill:TX.m,fontSize:10}} domain={[0,7]} label={{value:"ER %",angle:-90,position:"insideLeft",fill:TX.m,fontSize:9}}/>
+          <Tooltip contentStyle={ttS} formatter={function(v,name){return [v+"%",name]}}/>
+          <ReferenceLine y={health.mktER} stroke={"#FF6B6B"} strokeWidth={2} strokeDasharray="8 4" label={{value:"⬤ 시장 평균 "+health.mktER+"%",position:"insideTopRight",fill:"#FF6B6B",fontSize:11,fontWeight:700}}/>
+          <Bar dataKey="mktER" name="시장 ER" fill={MKT+"88"} radius={[4,4,0,0]} barSize={24}/>
+          <Bar dataKey="myER" name="내 ER" fill={ME} radius={[4,4,0,0]} barSize={24}/>
+        </ComposedChart>
+      </ResponsiveContainer>
+      <div style={{fontSize:9,color:TX.m,marginTop:4,marginBottom:6,padding:"4px 8px",background:"#FF6B6B10",borderRadius:4,borderLeft:"3px solid #FF6B6B"}}>📊 <b style={{color:"#FF6B6B"}}>시장 평균({health.mktER}%)</b> = 분석 대상 20개 뷰티 브랜드의 전체 콘텐츠 평균 ER. 이 기준선 위 = 시장 대비 고효율.</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+        {mktTimeGap.map(function(t,i){
+          var win=t.myER>=t.mktER;
+          return <div key={i} style={{padding:"4px 8px",borderRadius:6,background:(win?SC.pos:"#F59E0B")+"10",border:"1px solid "+(win?SC.pos:"#F59E0B")+"22",fontSize:9}}>
+            <span style={{fontWeight:700,color:TX.p}}>{t.hour}</span>
+            <span style={{color:win?SC.pos:"#F59E0B",fontWeight:700,marginLeft:4}}>{win?"우위":"검토"}</span>
+            <span style={{color:TX.m,marginLeft:4}}>시장 {t.mktER}% · 내 {t.myER}%</span>
+          </div>;
+        })}
+      </div>
+      <ActionTip icon="🕐" text="18-21시가 시장·내 브랜드 모두 최고 효율. 콘텐츠 수도 가장 많아 경쟁 치열 — 품질로 차별화 필요." color={MKT}/>
+    </Card>
+
+
+
+    {/* ── 크리에이터 분석 ── */}
+    <div style={{display:"flex",alignItems:"center",gap:12,margin:"24px 0 12px"}}>
+      <div style={{flex:1,height:1,background:CB}}></div>
+      <span style={{fontSize:11,fontWeight:700,color:TX.m,letterSpacing:"0.05em"}}>👤 크리에이터 분석</span>
+      <div style={{flex:1,height:1,background:CB}}></div>
+    </div>
+    <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap"}}>
+      <span style={{fontSize:9,padding:"2px 6px",borderRadius:3,background:CB+"44",color:TX.m}}>나노 &lt;100K · 마이크로 100-300K · 매크로 300-500K · 메가 500K+</span>
+    </div>
+
+    {/* STEP 1: 사분면 비중 먼저 */}
+    <Card style={{marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:2}}>📊 사분면 비중</div>
+      <div style={{fontSize:9,color:TX.m,marginBottom:8}}>브랜드별 협업 크리에이터가 어떤 사분면에 분포하는지 비율로 비교합니다. <span style={{color:ME}}>브랜드명을 클릭하면 아래 맵에서 해당 브랜드 협업 크리에이터가 하이라이트됩니다.</span></div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8,alignItems:"center"}}>
+        <span style={{fontSize:9,color:TX.m,marginRight:2}}>비교 브랜드:</span>
+        {portfolioDiversity.filter(function(d){return !d.isMe}).map(function(d){
+          var isOn=selDivBrands.indexOf(d.brand)>=0;
+          return <span key={d.brand} onClick={function(){setSelDivBrands(isOn?selDivBrands.filter(function(x){return x!==d.brand}):selDivBrands.concat(d.brand))}} style={{padding:"3px 8px",borderRadius:10,fontSize:8,cursor:"pointer",fontWeight:isOn?600:400,background:isOn?ME+"15":"transparent",color:isOn?TX.p:TX.m,border:"1px solid "+(isOn?ME+"33":CB)}}>{d.brand}</span>;
+        })}
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+        {[{label:"가성비",color:TIER_COLORS.costEffective},{label:"프리미엄",color:TIER_COLORS.premium},{label:"육성",color:TIER_COLORS.growth},{label:"조회수",color:TIER_COLORS.viewsFocus}].map(function(t){
+          return <span key={t.label} style={{fontSize:8,display:"flex",alignItems:"center",gap:3}}>
+            <span style={{width:7,height:7,borderRadius:2,background:t.color,display:"inline-block"}}></span>
+            <span style={{color:TX.s}}>{t.label}</span>
+          </span>;
+        })}
+      </div>
+      {portfolioDiversity.filter(function(d){return d.isMe||selDivBrands.indexOf(d.brand)>=0}).map(function(d){
+        var total=d.costEffective+d.premium+d.growth+d.viewsFocus;
+        var gradeColor=d.grade==="가성비 중심"?SC.pos:d.grade==="균형"?ACC.action:d.grade==="프리미엄 중심"?"#F59E0B":SC.neg;
+        var cePct=Math.round(d.costEffective/total*100);
+        var prPct=Math.round(d.premium/total*100);
+        var grPct=Math.round(d.growth/total*100);
+        var vfPct=Math.round(d.viewsFocus/total*100);
+        return <div key={d.brand} style={{marginBottom:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+            <span onClick={function(){setSelMapBrand(selMapBrand===d.brand?null:d.brand)}} style={{fontSize:10,fontWeight:d.isMe?700:selMapBrand===d.brand?700:500,color:d.isMe?ME:selMapBrand===d.brand?ME:TX.p,width:70,cursor:"pointer",textDecoration:selMapBrand===d.brand?"underline":"none"}}>{d.brand}</span>
+            <div style={{flex:1,display:"flex",height:18,borderRadius:3,overflow:"hidden"}}>
+              {cePct>0&&<div style={{width:cePct+"%",background:TIER_COLORS.costEffective,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff",fontWeight:700}}>{cePct}%</div>}
+              {prPct>0&&<div style={{width:prPct+"%",background:TIER_COLORS.premium,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff",fontWeight:700}}>{prPct}%</div>}
+              {grPct>0&&<div style={{width:grPct+"%",background:TIER_COLORS.growth,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff",fontWeight:700}}>{grPct}%</div>}
+              {vfPct>0&&<div style={{width:vfPct+"%",background:TIER_COLORS.viewsFocus,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff",fontWeight:700}}>{vfPct}%</div>}
+            </div>
+            <span style={{fontSize:9,padding:"1px 5px",borderRadius:3,background:gradeColor+"15",color:gradeColor,fontWeight:600}}>{d.grade}</span>
+          </div>
+        </div>;
+      })}
+      <ActionTip icon="💎" text="가성비 최고 영역: @sera_routine(35K·10.2%), @haeni_skin(48K·9.8%) — 나노·마이크로 고ER 크리에이터 집중 시딩 추천." color={SC.pos}/>
+    </Card>
+
+    {/* STEP 2: 크리에이터 맵 */}
+    <Card style={{marginBottom:16}}>
+      <div style={{fontSize:14,fontWeight:700,color:TX.p,marginBottom:2}}>🫧 크리에이터 전체 풀</div>
+      <div style={{fontSize:9,color:TX.m,marginBottom:4}}>팔로워 규모와 ER로 크리에이터를 4분면에 배치. 가성비(소규모+고ER) 영역이 비용 대비 효율이 가장 높습니다.</div>
+      <div style={{fontSize:10,color:TX.m,marginBottom:8}}>X = 팔로워(K) · Y = ER% · 큰 원(ER% 표시) = 주요 크리에이터 (클릭 시 상세) · 작은 점 = 시장 전체 분포{selMapBrand&&<span style={{marginLeft:8,padding:"2px 8px",borderRadius:4,background:ME+"22",color:ME,fontWeight:700,fontSize:9}}>🔍 {selMapBrand}와 협업 이력이 있는 크리에이터 강조 <span style={{cursor:"pointer",marginLeft:4}} onClick={function(){setSelMapBrand(null)}}>✕</span></span>}</div>
+      <div style={{flex:"1 1 auto"}}>
+          {(function(){
+            var allCreators=[];
+            var seen={};
+            collabs.forEach(function(g){
+              g.creators.forEach(function(c){
+                var fK=parseFloat(c.followers.replace("K",""));
+                if(!seen[c.name]){seen[c.name]=true;allCreators.push({name:c.name,followersK:fK,er:c.er,contents:c.count,type:"comp",brand:g.brand});}
+              });
+            });
+            mktCreators.forEach(function(c){
+              if(!seen[c.name]){seen[c.name]=true;allCreators.push({name:c.name,followersK:c.followersK,er:c.avgER,contents:c.contents,type:ourCollabCreators.indexOf(c.name)>=0?"ours":"free",brand:ourCollabCreators.indexOf(c.name)>=0?"Medicube":(c.brand||"")});}
+            });
+            recommendedCreators.forEach(function(c){
+              if(!seen[c.name]){seen[c.name]=true;allCreators.push({name:c.name,followersK:c.followersK,er:c.avgER,contents:c.contents,type:ourCollabCreators.indexOf(c.name)>=0?"ours":"free",brand:ourCollabCreators.indexOf(c.name)>=0?"Medicube":""});}
+            });
+            /* 시장 크리에이터 ~150명 추가 생성 (시드 기반) */
+            function seededRand(seed){return function(){seed=(seed*16807+0)%2147483647;return(seed-1)/2147483646}}
+            var rng=seededRand(42);
+            for(var gi=0;gi<150;gi++){
+              var fK=Math.round(15+rng()*550);
+              var baseER=fK<200?(4+rng()*8):(3+rng()*5.5);
+              var er=Math.round(baseER*10)/10;
+              var cnt=Math.round(3+rng()*40);
+              allCreators.push({name:"creator_"+gi,followersK:fK,er:er,contents:cnt,type:"free",brand:""});
+            }
+            var xMid=200,yMid=6;
+            var xMax=600,yMax=12,yMin=3;
+            return <div style={{position:"relative",height:480,borderRadius:12,overflow:"hidden"}}>
+              {/* 4구역 배경 — 왼쪽=소규모, 오른쪽=대규모 */}
+              <div style={{position:"absolute",left:0,top:0,width:((xMid/xMax)*100)+"%",height:((yMax-yMid)/(yMax-yMin)*100)+"%",background:SC.pos+"18",borderRight:"2px dashed "+TX.m+"33",borderBottom:"2px dashed "+TX.m+"33"}}></div>
+              <div style={{position:"absolute",right:0,top:0,width:((1-xMid/xMax)*100)+"%",height:((yMax-yMid)/(yMax-yMin)*100)+"%",background:ME+"08",borderBottom:"2px dashed "+TX.m+"33"}}></div>
+              <div style={{position:"absolute",left:0,top:((yMax-yMid)/(yMax-yMin)*100)+"%",width:((xMid/xMax)*100)+"%",bottom:0,background:CB+"08",borderRight:"2px dashed "+TX.m+"33"}}></div>
+              <div style={{position:"absolute",right:0,top:((yMax-yMid)/(yMax-yMin)*100)+"%",width:((1-xMid/xMax)*100)+"%",bottom:0,background:CB+"08"}}></div>
+              {/* 구역 라벨 — 반전 */}
+              <div style={{position:"absolute",top:8,left:8,zIndex:1}}><div style={{fontSize:11,fontWeight:700,color:SC.pos}}>💎 가성비 최고</div><div style={{fontSize:8,color:SC.pos+"88"}}>소규모 + 고ER</div></div>
+              <div style={{position:"absolute",top:8,right:8,zIndex:1,textAlign:"right"}}><div style={{fontSize:11,fontWeight:700,color:ME}}>👑 프리미엄</div><div style={{fontSize:8,color:ME+"88"}}>대형 + 고ER</div></div>
+              <div style={{position:"absolute",bottom:8,left:8,zIndex:1}}><div style={{fontSize:11,fontWeight:700,color:TX.m+"88"}}>🌱 육성 대상</div><div style={{fontSize:8,color:TX.m+"66"}}>소규모 + 저ER</div></div>
+              <div style={{position:"absolute",bottom:8,right:8,zIndex:1,textAlign:"right"}}><div style={{fontSize:11,fontWeight:700,color:"#F59E0B"}}>📢 조회수 중심</div><div style={{fontSize:8,color:"#F59E0B88"}}>대형 + 저ER</div></div>
+              {/* 축 라벨 */}
+              <div style={{position:"absolute",left:((xMid/xMax)*100)+"%",bottom:2,transform:"translateX(-50%)",fontSize:8,color:TX.m+"88",zIndex:1}}>{xMid}K</div>
+              <div style={{position:"absolute",top:((yMax-yMid)/(yMax-yMin)*100)+"%",left:2,transform:"translateY(-50%)",fontSize:8,color:TX.m+"88",zIndex:1}}>{yMid}%</div>
+              {/* 크리에이터 점 */}
+              {allCreators.map(function(c,i){
+                var x=Math.min(c.followersK/xMax,0.95)*100;
+                var y=Math.max(Math.min((yMax-c.er)/(yMax-yMin),0.92),0.05)*100;
+                var isBrandMatch=selMapBrand&&(c.brand===selMapBrand||(selMapBrand==="Medicube"&&c.type==="ours"));
+                var col=isBrandMatch?ME:c.type==="ours"?ME:TX.m;
+                var dimmed=selMapBrand&&!isBrandMatch;
+                var isGenerated=c.name.indexOf("creator_")===0;
+                var size=isGenerated?8+Math.min(c.contents,50)*0.15:28+Math.min(c.contents,50)*0.3;
+                var isSel=selInfluencer===c.name;
+                return <div key={i} style={{position:"absolute",left:"calc("+x+"% - "+size/2+"px)",top:"calc("+y+"% - "+size/2+"px)",zIndex:isBrandMatch?4:isSel?5:isGenerated?1:2,cursor:isGenerated?"default":"pointer",opacity:dimmed?0.4:1,transition:"opacity .3s"}} onClick={isGenerated?undefined:function(){setSelInfluencer(isSel?null:c.name)}}>
+                  <div style={{width:size,height:size,borderRadius:"50%",background:isBrandMatch?ME+"55":isSel?col+"55":isGenerated?col+"18":col+"30",border:(isBrandMatch?3:isSel?3:isGenerated?1:2)+"px solid "+(isBrandMatch?ME:isGenerated?col+"44":col),display:"flex",alignItems:"center",justifyContent:"center",boxShadow:isBrandMatch?"0 0 10px "+ME+"44":isSel?"0 0 12px "+col+"66":"none",transition:"all .2s"}}>
+                    {!isGenerated&&<span style={{fontSize:size>32?9:7,fontWeight:700,color:isBrandMatch?"#fff":isSel?"#fff":col}}>{c.er}%</span>}
+                  </div>
+                  {isSel&&!isGenerated&&<div style={{textAlign:"center",marginTop:1,whiteSpace:"nowrap"}}>
+                    <div style={{fontSize:7,fontWeight:700,color:col,background:CBG+"ee",padding:"1px 4px",borderRadius:3}}>{c.name}</div>
+                  </div>}
+                </div>;
+              })}
+            </div>;
+          })()}
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:TX.m+"66",marginTop:4,padding:"0 4px"}}><span>← 소규모</span><span>팔로워 →</span></div>
+      </div>
+      {/* 선택된 크리에이터 디테일 */}
+      {selInfluencer&&creatorDetail[selInfluencer]&&(function(){
+        var d=creatorDetail[selInfluencer];
+        var hasCollab=d.brandCollab&&d.brandCollab.length>0;
+        var totalCollabCount=hasCollab?d.brandCollab.reduce(function(s,b){return s+b.count},0):0;
+        var avgCollabER=hasCollab?(d.brandCollab.reduce(function(s,b){return s+b.er*b.count},0)/totalCollabCount).toFixed(1):null;
+        var erDiff=hasCollab?(d.organicER-avgCollabER).toFixed(1):null;
+        var totalCount=totalCollabCount;
+        var isOurs=ourCollabCreators.indexOf(selInfluencer)>=0;
+        var statusLabel=isOurs?"우리 협업":hasCollab?"경쟁사 협업":"미협업";
+        var statusColor=isOurs?ME:hasCollab?COMP:SC.pos;
+        return <div style={{marginTop:12,padding:16,borderRadius:12,background:CB+"11",border:"1px solid "+statusColor+"33"}}>
+          {/* 프로필 헤더 */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,"+statusColor+","+statusColor+"44)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:"2px solid "+statusColor+"55"}}>👤</div>
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:15,fontWeight:700,color:TX.p}}>{selInfluencer}</span>
+                  <span style={{fontSize:8,padding:"2px 6px",borderRadius:3,background:statusColor+"18",color:statusColor,fontWeight:700}}>{statusLabel}</span>
+                </div>
+                <div style={{display:"flex",gap:6,marginTop:4}}>
+                  <span style={{fontSize:9,padding:"2px 6px",borderRadius:3,background:ME+"15",color:ME}}>{d.topFormat}</span>
+                  <span style={{fontSize:9,padding:"2px 6px",borderRadius:3,background:MKT+"15",color:MKT}}>{d.category}</span>
+                </div>
+              </div>
+            </div>
+            <div style={{fontSize:10,color:TX.m,cursor:"pointer",padding:"4px 8px",borderRadius:6,background:CB+"33"}} onClick={function(){setSelInfluencer(null)}}>✕ 닫기</div>
+          </div>
+
+          {/* 핵심 지표 */}
+          <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:80,padding:10,borderRadius:8,background:CBG,textAlign:"center"}}>
+              <div style={{fontSize:9,color:TX.m}}>팔로워</div>
+              <div style={{fontSize:20,fontWeight:800,color:TX.p,fontFamily:"'Outfit'"}}>{(function(){var all=[];collabs.forEach(function(g){g.creators.forEach(function(c){if(c.name===selInfluencer)all.push(c.followers)})});mktCreators.forEach(function(c){if(c.name===selInfluencer)all.push(c.followersK+"K")});recommendedCreators.forEach(function(c){if(c.name===selInfluencer)all.push(c.followersK+"K")});return all[0]||"-"})()}</div>
+            </div>
+            <div style={{flex:1,minWidth:80,padding:10,borderRadius:8,background:CBG,textAlign:"center"}}>
+              <div style={{fontSize:9,color:TX.m}}>평균 조회수</div>
+              <div style={{fontSize:16,fontWeight:700,color:TX.p,fontFamily:"'Outfit'"}}>{d.organicReach}</div>
+            </div>
+            <div style={{flex:1,minWidth:80,padding:10,borderRadius:8,background:CBG,textAlign:"center"}}>
+              <div style={{fontSize:9,color:TX.m}}>총 콘텐츠</div>
+              <div style={{fontSize:16,fontWeight:700,color:TX.p,fontFamily:"'Outfit'"}}>{totalCount}건</div>
+            </div>
+            <div style={{flex:1,minWidth:80,padding:10,borderRadius:8,background:CBG,textAlign:"center"}}>
+              <div style={{fontSize:9,color:TX.m}}>주력 포맷</div>
+              <div style={{fontSize:14,fontWeight:700,color:TX.p}}>{d.topFormat}</div>
+            </div>
+          </div>
+
+          {/* 브랜드별 협업 성과 */}
+          {hasCollab||isOurs?<div>
+            <div style={{fontSize:11,fontWeight:700,color:TX.s,marginBottom:8}}>📢 브랜드별 협업 성과</div>
+            <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+              {/* 우리 협업 카드 */}
+              {isOurs&&d.ourCollab&&<div style={{flex:"1 1 180px",padding:12,borderRadius:10,background:ME+"08",border:"2px solid "+ME+"33"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <span style={{fontSize:12,fontWeight:700,color:ME}}>Medicube (우리)</span>
+                  <span style={{fontSize:9,color:ME,fontWeight:700}}>{d.ourCollab.count}건</span>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div><div style={{fontSize:8,color:TX.m}}>ER</div><div style={{fontSize:18,fontWeight:800,color:ME,fontFamily:"'Outfit'"}}>{d.ourCollab.er}%</div></div>
+                  <div><div style={{fontSize:8,color:TX.m}}>조회수</div><div style={{fontSize:13,fontWeight:700,color:TX.p}}>{d.ourCollab.reach}</div></div>
+                  <div><div style={{fontSize:8,color:TX.m}}>포맷</div><div style={{fontSize:11,fontWeight:600,color:TX.s}}>{d.ourCollab.format}</div></div>
+                </div>
+                <div style={{marginTop:6,fontSize:8,color:ME}}>오가닉 대비 {d.ourCollab.er>=d.organicER?"+":""}{(d.ourCollab.er-d.organicER).toFixed(1)}%p</div>
+              </div>}
+              {/* 경쟁사 협업 카드 */}
+              {d.brandCollab.map(function(b,bi){
+                return <div key={bi} style={{flex:"1 1 180px",padding:12,borderRadius:10,background:COMP+"06",border:"1px solid "+COMP+"22"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <span style={{fontSize:12,fontWeight:700,color:COMP}}>{b.brand}</span>
+                    <span style={{fontSize:9,color:TX.m}}>{b.count}건</span>
+                  </div>
+                  <div style={{display:"flex",gap:12}}>
+                    <div><div style={{fontSize:8,color:TX.m}}>ER</div><div style={{fontSize:18,fontWeight:800,color:COMP,fontFamily:"'Outfit'"}}>{b.er}%</div></div>
+                    <div><div style={{fontSize:8,color:TX.m}}>조회수</div><div style={{fontSize:13,fontWeight:700,color:TX.p}}>{b.reach}</div></div>
+                    <div><div style={{fontSize:8,color:TX.m}}>포맷</div><div style={{fontSize:11,fontWeight:600,color:TX.s}}>{b.format}</div></div>
+                  </div>
+                  <div style={{marginTop:6,fontSize:8,color:"#F59E0B"}}>오가닉 대비 -{(d.organicER-b.er).toFixed(1)}%p</div>
+                </div>;
+              })}
+              {/* 오가닉 비교 카드 */}
+              <div style={{flex:"1 1 180px",padding:12,borderRadius:10,background:SC.pos+"06",border:"1px solid "+SC.pos+"22"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <span style={{fontSize:12,fontWeight:700,color:SC.pos}}>🌿 오가닉</span>
+                  <span style={{fontSize:9,color:TX.m}}></span>
+                </div>
+                <div style={{display:"flex",gap:12}}>
+                  <div><div style={{fontSize:8,color:TX.m}}>ER</div><div style={{fontSize:18,fontWeight:800,color:SC.pos,fontFamily:"'Outfit'"}}>{d.organicER}%</div></div>
+                  <div><div style={{fontSize:8,color:TX.m}}>조회수</div><div style={{fontSize:13,fontWeight:700,color:TX.p}}>{d.organicReach}</div></div>
+                  <div><div style={{fontSize:8,color:TX.m}}>포맷</div><div style={{fontSize:11,fontWeight:600,color:TX.s}}>{d.topFormat}</div></div>
+                </div>
+              </div>
+            </div>
+            <div style={{padding:10,borderRadius:8,background:CB+"22",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:16}}>📉</span>
+              <span style={{fontSize:10,color:TX.s}}>협업 평균 ER {avgCollabER}% vs 오가닉 {d.organicER}% → <span style={{fontWeight:700,color:"#F59E0B"}}>-{erDiff}%p</span> — {erDiff>=2?"광고 저항 높음. 자연스러운 시딩 추천.":erDiff>=1?"보통 수준. PPL보다 리뷰형 추천.":"광고 저항 낮음. 직접 협업 적합."}</span>
+            </div>
+          </div>
+          :<div>
+            {isOurs&&d.ourCollab&&<div style={{padding:12,borderRadius:10,background:ME+"08",border:"2px solid "+ME+"33",marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <span style={{fontSize:12,fontWeight:700,color:ME}}>Medicube (우리) 협업 성과</span>
+                <span style={{fontSize:9,color:ME,fontWeight:700}}>{d.ourCollab.count}건</span>
+              </div>
+              <div style={{display:"flex",gap:16}}>
+                <div><div style={{fontSize:8,color:TX.m}}>ER</div><div style={{fontSize:20,fontWeight:800,color:ME,fontFamily:"'Outfit'"}}>{d.ourCollab.er}%</div></div>
+                <div><div style={{fontSize:8,color:TX.m}}>조회수</div><div style={{fontSize:14,fontWeight:700,color:TX.p}}>{d.ourCollab.reach}</div></div>
+                <div><div style={{fontSize:8,color:TX.m}}>포맷</div><div style={{fontSize:14,fontWeight:700,color:TX.p}}>{d.ourCollab.format}</div></div>
+              </div>
+              <div style={{marginTop:6,fontSize:9,color:ME}}>오가닉({d.organicER}%) 대비 {d.ourCollab.er>=d.organicER?"+":""}{(d.ourCollab.er-d.organicER).toFixed(1)}%p</div>
+            </div>}
+            <div style={{padding:12,borderRadius:10,background:SC.pos+"06",border:"1px solid "+SC.pos+"22"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <span style={{fontSize:11,fontWeight:700,color:SC.pos}}>🌿 오가닉 콘텐츠</span>
+                <span style={{fontSize:10,fontWeight:700,color:SC.pos}}></span>
+              </div>
+              <div style={{display:"flex",gap:16}}>
+                <div><div style={{fontSize:8,color:TX.m}}>ER</div><div style={{fontSize:20,fontWeight:800,color:SC.pos,fontFamily:"'Outfit'"}}>{d.organicER}%</div></div>
+                <div><div style={{fontSize:8,color:TX.m}}>조회수</div><div style={{fontSize:14,fontWeight:700,color:TX.p}}>{d.organicReach}</div></div>
+              </div>
+            </div>
+            {!isOurs&&<div style={{marginTop:8,padding:8,borderRadius:8,background:SC.pos+"10",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:16}}>✅</span>
+              <span style={{fontSize:10,color:SC.pos}}>협업 이력 없음 — 신규 협업 최�� 타겟</span>
+            </div>}
+          </div>}
+        </div>;
+      })()}
+    </Card>
+
+
+
+
+
+  </div>;
+}
+
+
+/* ═══ TAB L3: Recommended Actions ═══ */
+function TabL3(){
+
+  var actions=[
+    {title:"GRWM + Short Review 포맷 집중",why:"GRWM ER 6.1%(1위) + Short Review ER 5.8%(2위) — 검증된 고효율 포맷",expect:"ER 6%+",effort:"Low"},
+    {title:"고효율 해시태그 적용 (#파데프리 · #추천템)",why:"시장 ER 5.8%·5.3% — 현재 미활용 중인 고효율 태그",expect:"신규 유입 +20~30%",effort:"Low"},
+    {title:"가성비 사분면 크리에이터 확대",why:"Medicube 가성비 비중 63% — 소규모 팔로워 고ER 전략이 핵심 강점",expect:"ER 유지 + 비용 효율",effort:"Mid"},
+    {title:"콘텐츠 볼륨 확대 (SOC "+health.sov+"% → 25%+)",why:"이니스프리 SOC 35.2% 대비 볼륨 열위 — 조회수 규모 성장 필요",expect:"조회수 +40%",effort:"Mid"},
+    {title:"챌린지 포맷 신규 테스트",why:"시장 챌린지 ER 6.2%·조회수 9.1K — 미활용 고효율 포맷",expect:"신규 오디언스 유입",effort:"Mid"},
+  ];
+
+  return <div>
+    <div style={{marginBottom:20}}>
+      <h2 style={{margin:0,fontSize:18,fontWeight:700,color:TX.p,fontFamily:"'Outfit',sans-serif"}}>Recommended Actions</h2>
+      <span style={{fontSize:12,color:TX.m}}>데이터 기반 핵심 액션</span>
+    </div>
+
+    {/* 핵심 과제 */}
+    <div style={{padding:14,borderRadius:12,background:ME+"08",border:"1px solid "+ME+"22",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
+      <div style={{fontSize:28}}>🎯</div>
+      <div>
+        <div style={{fontSize:13,fontWeight:700,color:TX.p}}>핵심 과제: ER 1위 유지 + 조회수 규모 확대</div>
+        <div style={{fontSize:11,color:TX.s,marginTop:2}}>ER {health.avgER}%(업계 1위) — 가성비 중심 전략 유지하면서 콘텐츠 볼륨 확대가 핵심</div>
+      </div>
+    </div>
+
+    {/* 액션 리스트 */}
+    <Card style={{marginBottom:16}}>
+      {actions.map(function(a,i){
+        return <div key={i} style={{marginBottom:i<actions.length-1?10:0,padding:14,borderRadius:10,background:CBG,border:"1px solid "+CB,borderLeft:"4px solid "+ME}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{fontSize:13,fontWeight:700,color:TX.p,marginBottom:4}}>{a.title}</div>
+              <div style={{fontSize:10,color:TX.m}}>{a.why}</div>
+            </div>
+            <div style={{padding:"4px 10px",borderRadius:6,background:ME+"10",border:"1px solid "+ME+"22",textAlign:"center",flexShrink:0}}>
+              <div style={{fontSize:8,color:TX.m}}>기대 효과</div>
+              <div style={{fontSize:10,fontWeight:700,color:ME}}>{a.expect}</div>
+            </div>
+          </div>
+        </div>;
+      })}
+    </Card>
+
+  </div>;
+}
+
+
+/* ═══ MAIN ═══ */
+function App(){
+  const [tab,setTab]=useState("L3");
+  const [sel,setSel]=useState(null);
+  const [collab,setCollab]=useState(false);
+
+  var tabs=[
+    {id:"L3",label:"Recommended Actions"},
+    {id:"L1",label:"Brand Health at a Glance"},
+    {id:"L2",label:"Our Position in the Market"},
+  ];
+
+  return <div style={{minHeight:"100vh",background:BG,color:TX.p,fontFamily:"'Outfit','Pretendard',-apple-system,sans-serif"}}>
+    {/* HEADER */}
+    <div style={{padding:"20px 32px",borderBottom:"1px solid "+CB,display:"flex",alignItems:"center",justifyContent:"space-between",background:"linear-gradient(180deg,"+CBG+" 0%,"+BG+" 100%)",flexWrap:"wrap",gap:12}}>
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+          <span style={{fontSize:20,fontWeight:800,letterSpacing:"-0.02em"}}>V-RAINMAKER</span>
+          <span style={{padding:"2px 8px",borderRadius:4,fontSize:10,background:ME+"20",color:ME,fontWeight:600}}>CONTENT</span>
+        </div>
+        <div style={{fontSize:12,color:TX.m}}><span style={{color:TX.s,fontWeight:600}}>Medicube</span> · Red Serum · K-Beauty Serum · Last 30 days</div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button style={{padding:"6px 16px",borderRadius:8,border:"none",cursor:"default",fontSize:13,fontWeight:600,fontFamily:"inherit",background:CBG,color:TX.s}}>{"📊 Overview"}</button>
+        <button style={{padding:"6px 16px",borderRadius:8,border:"none",cursor:"default",fontSize:13,fontWeight:600,fontFamily:"inherit",background:CBG,color:TX.s}}>{"💬 VoC"}</button>
+        <button style={{padding:"6px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit",background:ME,color:"#fff"}}>{"🎬 Content"}</button>
+      </div>
+    </div>
+
+    {/* CONTEXT */}
+    <div style={{padding:"24px 32px 0",maxWidth:1400,margin:"0 auto"}}>
+      <div style={{marginBottom:16}}>
+        <h2 style={{margin:0,fontSize:18,fontWeight:700,color:TX.p,fontFamily:"'Outfit',sans-serif"}}>Core KPIs</h2>
+      </div>
+      <div style={{display:"flex",gap:14,marginBottom:20,flexWrap:"wrap"}}>
+        {/* ER */}
+        <Card style={{flex:"1 1 200px",textAlign:"center"}} glow={SC.pos}>
+          <div style={{fontSize:10,color:TX.m,fontWeight:600,marginBottom:8}}>콘텐츠 효율</div>
+          <div style={{fontSize:42,fontWeight:800,color:SC.pos,lineHeight:1,fontFamily:"'Outfit'",letterSpacing:"-0.02em"}}>{health.avgER}%</div>
+          <div style={{fontSize:11,fontWeight:600,color:SC.pos,marginTop:6}}>ER</div>
+          <div style={{fontSize:10,color:SC.pos,marginTop:4}}>시장 대비 +{health.erDelta}%p · {health.erRankOf}개 중 {health.erRank}위</div>
+          <div style={{fontSize:9,color:TX.m,marginTop:8}}>조회수 / 팔로워 × 100</div>
+        </Card>
+        {/* 점유율 */}
+        <Card style={{flex:"1 1 200px",textAlign:"center"}} glow={"#F59E0B"}>
+          <div style={{fontSize:10,color:TX.m,fontWeight:600,marginBottom:8}}>시장 내 존재감</div>
+          <div style={{fontSize:42,fontWeight:800,color:"#F59E0B",lineHeight:1,fontFamily:"'Outfit'",letterSpacing:"-0.02em"}}>{health.sov}%</div>
+          <div style={{fontSize:11,fontWeight:600,color:"#F59E0B",marginTop:6}}>점유율 (SOV)</div>
+          <div style={{fontSize:10,color:"#F59E0B",marginTop:4}}>1위 이니스프리 35.2% · 우리 2위</div>
+          <div style={{fontSize:9,color:TX.m,marginTop:8}}>전체 뷰티 콘텐츠 중 비중</div>
+        </Card>
+        {/* 가성비 */}
+        <Card style={{flex:"1 1 200px",textAlign:"center"}} glow={ME}>
+          <div style={{fontSize:10,color:TX.m,fontWeight:600,marginBottom:8}}>비용 효율</div>
+          <div style={{fontSize:42,fontWeight:800,color:ME,lineHeight:1,fontFamily:"'Outfit'",letterSpacing:"-0.02em"}}>63%</div>
+          <div style={{fontSize:11,fontWeight:600,color:ME,marginTop:6}}>가성비 사분면 비중</div>
+          <div style={{fontSize:10,color:ME,marginTop:4}}>업계 최고 · 2위 달바 43%</div>
+          <div style={{fontSize:9,color:TX.m,marginTop:8}}>소규모 팔로워 + 고ER 크리에이터 비율</div>
+        </Card>
+      </div>
+    </div>
+
+    {/* TABS */}
+    <div style={{position:"sticky",top:0,zIndex:50,background:BG,borderBottom:"1px solid "+CB,padding:"0 32px"}}>
+      <div style={{maxWidth:1400,margin:"0 auto",display:"flex"}}>
+        {tabs.map(function(t){var a=tab===t.id;var tc={L1:ME,L2:COMP,L3:MKT}[t.id];return <button key={t.id} onClick={function(){setTab(t.id);setSel(null)}} style={{padding:"14px 24px",fontSize:13,fontWeight:600,fontFamily:"inherit",color:a?tc:TX.m,background:"none",border:"none",borderBottom:"2px solid "+(a?tc:"transparent"),cursor:"pointer"}}>{t.label}</button>;})}
+      </div>
+    </div>
+
+    <div style={{padding:"24px 32px",maxWidth:1400,margin:"0 auto"}}>
+      {tab==="L1"&&<TabL1 selectedContent={sel} setSelectedContent={setSel}/>}
+      {tab==="L2"&&<TabL2 showCollab={collab} setShowCollab={setCollab}/>}
+      {tab==="L3"&&<TabL3/>}
+    </div>
+
+    <div style={{textAlign:"center",padding:"24px 32px 12px",borderTop:"1px solid "+CB,fontSize:11,color:TX.m}}>
+      V-Rainmaker Content Dashboard · Data as of Feb 12, 2026 · Medicube Red Serum · K-Beauty Serum Market
+    </div>
+  </div>;
+}
+
+ReactDOM.render(React.createElement(App), document.getElementById("root"));
+</script>
+</body>
+</html>
