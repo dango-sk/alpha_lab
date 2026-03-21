@@ -1,0 +1,34 @@
+source .venv/bin/activate && python -c "
+import sqlite3
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+
+conn = sqlite3.connect('data/alpha_lab.db')
+rows = conn.execute('SELECT shares_common FROM shares_outstanding WHERE shares_common > 0').fetchall()
+conn.close()
+
+values = [r[0] for r in rows]
+
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# 전체 분포 (log scale)
+axes[0].hist([np.log10(v) for v in values], bins=50, edgecolor='black', alpha=0.7)
+axes[0].set_xlabel('log10(shares_common)')
+axes[0].set_ylabel('count')
+axes[0].set_title('Distribution (log scale)')
+axes[0].axvline(x=np.log10(10_000_000_000), color='red', linestyle='--', label='10B threshold')
+axes[0].legend()
+
+# 정상 범위만
+normal = [v for v in values if v <= 10_000_000_000]
+axes[1].hist([v/1_000_000 for v in normal], bins=50, edgecolor='black', alpha=0.7)
+axes[1].set_xlabel('shares (millions)')
+axes[1].set_ylabel('count')
+axes[1].set_title('Normal range only (<10B)')
+
+plt.tight_layout()
+plt.savefig('/tmp/shares_histogram.png', dpi=150)
+print('saved')
+"

@@ -147,10 +147,9 @@ function getAllMonths(results: Record<string, StrategyResult>): string[] {
 
 const REGIME_COLORS: Record<string, string> = {
   Bull: '#22c55e',
-  Sideways: '#6b7280',
   Bear: '#ef4444',
 };
-const REGIME_ORDER = ['Bull', 'Sideways', 'Bear'];
+const REGIME_ORDER = ['Bull', 'Bear'];
 
 const manualBears = [
   { start: '2018-01-01', end: '2019-01-31', label: '미중 무역전쟁' },
@@ -313,12 +312,11 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
     <div className="space-y-4">
       <SectionHeader
         title="시장 국면 분석 (Regime Analysis)"
-        subtitle={`KOSPI 200 50일 MA ±3% 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Sideways: ${regimeData.regime_counts?.Sideways ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
+        subtitle={`KOSPI 200 50일 MA 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
       />
       <div className="flex gap-6 text-xs text-muted bg-surface/50 rounded-lg px-4 py-2.5 border border-border">
-        <span><span className="text-green-400 font-medium">Bull</span> — KOSPI 200이 50일 평균보다 3% 이상 위 (강세장)</span>
-        <span><span className="text-gray-400 font-medium">Sideways</span> — 50일 평균 ±3% 이내 (횡보장)</span>
-        <span><span className="text-red-400 font-medium">Bear</span> — KOSPI 200이 50일 평균보다 3% 이상 아래 (약세장)</span>
+        <span><span className="text-green-400 font-medium">Bull (강세장)</span> — KOSPI 200 ≥ 50일 이동평균</span>
+        <span><span className="text-red-400 font-medium">Bear (약세장)</span> — KOSPI 200 &lt; 50일 이동평균</span>
       </div>
       <LazyChart height={120}>
         <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
@@ -333,12 +331,11 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
                 className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
                   activeRegime === r
                     ? r === 'Bull' ? 'bg-green-500/20 text-green-400 border border-green-500/40'
-                      : r === 'Bear' ? 'bg-red-500/20 text-red-400 border border-red-500/40'
-                      : 'bg-gray-500/20 text-gray-300 border border-gray-500/40'
+                      : 'bg-red-500/20 text-red-400 border border-red-500/40'
                     : 'text-muted hover:text-foreground border border-transparent'
                 }`}
               >
-                {r === 'Bull' ? '강세장 (Bull)' : r === 'Bear' ? '약세장 (Bear)' : '횡보장 (Sideways)'}
+                {r === 'Bull' ? '강세장 (Bull)' : '약세장 (Bear)'}
                 <span className="ml-1.5 text-xs opacity-60">{regimeData.regime_counts?.[r] ?? 0}개월</span>
               </button>
             ))}

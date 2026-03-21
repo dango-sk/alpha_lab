@@ -1466,13 +1466,7 @@ def run_regime_combo_backtest(
         else:
             current = prices[0]
             ma50 = float(np.mean(prices[1:51]))
-            gap = (current - ma50) / ma50
-            if gap > 0.03:
-                result_regime = "Bull"
-            elif gap < -0.03:
-                result_regime = "Bear"
-            else:
-                result_regime = "Sideways"
+            result_regime = "Bull" if current >= ma50 else "Bear"
         regime_cache[calc_date] = result_regime
         return result_regime
 
@@ -1548,13 +1542,12 @@ def compute_regime_analysis(
     universe: str = None,
     rebal_type: str = None,
 ) -> dict:
-    """KOSPI 200 50일 이동평균 기준으로 시장 국면(Bull/Sideways/Bear)을 분류하고,
+    """KOSPI 200 50일 이동평균 기준으로 시장 국면(Bull/Bear)을 분류하고,
     각 전략의 국면별 성과 통계를 반환한다.
 
-    국면 기준 (리밸런싱 시점, 50일 MA 대비 괴리율):
-        Bull     : 괴리율 > +3%
-        Sideways : -3% ~ +3%
-        Bear     : 괴리율 < -3%
+    국면 기준 (리밸런싱 시점):
+        Bull : KOSPI 200 >= 50일 MA
+        Bear : KOSPI 200 < 50일 MA
 
     Returns:
         {
@@ -1596,26 +1589,20 @@ def compute_regime_analysis(
         ).fetchall()
         prices = [r[0] for r in rows if r[0]]
         if len(prices) < 51:
-            regime = "Bull"  # 데이터 부족 시 Bull로 처리
+            regime = "Bull"
         else:
             current = prices[0]
             ma50 = float(np.mean(prices[1:51]))
-            gap = (current - ma50) / ma50  # 괴리율
-            if gap > 0.03:
-                regime = "Bull"
-            elif gap < -0.03:
-                regime = "Bear"
-            else:
-                regime = "Sideways"
+            regime = "Bull" if current >= ma50 else "Bear"
         regimes_by_date[str(end_d)] = regime
     _conn.close()
 
-    regime_counts = {"Bull": 0, "Sideways": 0, "Bear": 0}
+    regime_counts = {"Bull": 0, "Bear": 0}
     for r in regimes_by_date.values():
         regime_counts[r] = regime_counts.get(r, 0) + 1
 
     # 전략별 국면 성과 계산
-    REGIMES = ["Bull", "Sideways", "Bear"]
+    REGIMES = ["Bull", "Bear"]
     summary = {}
 
     for key, val in results.items():
@@ -1633,7 +1620,7 @@ def compute_regime_analysis(
         # 날짜 → 인덱스 맵 (bm 기준)
         bm_date_idx = {str(d): i for i, d in enumerate(ret_dates)}
 
-        per_regime: dict[str, dict] = {r: {"rets": [], "bm_rets": []} for r in ["Bull", "Sideways", "Bear"]}
+        per_regime: dict[str, dict] = {r: {"rets": [], "bm_rets": []} for r in ["Bull", "Bear"]}
 
         for j, sd in enumerate(strat_ret_dates):
             regime = regimes_by_date.get(str(sd))

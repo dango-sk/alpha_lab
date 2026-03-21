@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getResults, getConfig, getStrategies, getStrategy, runBacktest, fetchApi, getRegimeCombo } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
-import KpiCard from '@/components/KpiCard';
 import DataTable from '@/components/DataTable';
 import PlotlyChart from '@/components/PlotlyChart';
 import LoadingState from '@/components/LoadingState';
@@ -788,7 +787,7 @@ export default function LabPage() {
       <div className="space-y-4 border border-border rounded-xl p-5">
         <div>
           <h2 className="text-base font-semibold text-foreground">레짐 조합 백테스트</h2>
-          <p className="text-xs text-muted mt-0.5">KOSPI 200 50일 이동평균 기준 상승/하락장 구분 — 각 장세마다 다른 전략 적용</p>
+          <p className="text-xs text-muted mt-0.5">KOSPI 200 50일 이동평균 기준 — Bull(≥ MA) vs Bear(&lt; MA) 이진 분류, 실제 종목 선택 기반 완전 재백테스트</p>
         </div>
 
         {/* 전략 선택 */}
@@ -847,7 +846,7 @@ export default function LabPage() {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs text-muted font-medium">상승장 전략</label>
+                  <label className="text-xs text-muted font-medium">강세장 전략 (Bull: KOSPI 200 ≥ 50일 MA)</label>
                   <select
                     value={regimeBullKey}
                     onChange={(e) => setRegimeBullKey(e.target.value)}
@@ -860,7 +859,7 @@ export default function LabPage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted font-medium">하락장 전략</label>
+                  <label className="text-xs text-muted font-medium">약세장 전략 (Bear: KOSPI 200 &lt; 50일 MA)</label>
                   <select
                     value={regimeBearKey}
                     onChange={(e) => setRegimeBearKey(e.target.value)}
