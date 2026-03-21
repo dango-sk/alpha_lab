@@ -112,8 +112,16 @@ export async function getRegimeCombo(
   return fetchApi(`/api/regime-combo?${qs}`);
 }
 
-export async function getStrategies() {
-  return fetchApi('/api/strategies');
+export async function getStrategies(universe?: string, rebal_type?: string) {
+  const params: Record<string, string> = {};
+  if (universe) params.universe = universe;
+  if (rebal_type) params.rebal_type = rebal_type;
+  const qs = new URLSearchParams(params).toString();
+  return fetchApi(`/api/strategies${qs ? '?' + qs : ''}`);
+}
+
+export async function getStrategy(name: string) {
+  return fetchApi(`/api/strategies/${encodeURIComponent(name)}`);
 }
 
 export async function getLatestPriceDate() {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getResults, getConfig, getStrategies, runBacktest, fetchApi, getRegimeCombo } from '@/lib/api';
+import { getResults, getConfig, getStrategies, getStrategy, runBacktest, fetchApi, getRegimeCombo } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/KpiCard';
@@ -65,6 +65,28 @@ function parseWeights(code: string): Record<string, number> {
     weights[entry[1]] = parseFloat(entry[2]);
   }
   return weights;
+}
+
+// ─── Parse strategy params from code ───
+function parseStrategyParams(code: string): {
+  weightCapPct?: number;
+  topN?: number;
+  txCostBp?: number;
+  universe?: 'KOSPI' | 'KOSPI+KOSDAQ';
+  rebalType?: 'monthly' | 'biweekly';
+} {
+  const result: ReturnType<typeof parseStrategyParams> = {};
+  const cap = code.match(/weight_cap_pct\s*[=:]\s*(\d+)/);
+  if (cap) result.weightCapPct = parseInt(cap[1]);
+  const top = code.match(/top_n(?:_stocks)?\s*[=:]\s*(\d+)/);
+  if (top) result.topN = parseInt(top[1]);
+  const tx = code.match(/transaction_cost_bp\s*[=:]\s*(\d+)/);
+  if (tx) result.txCostBp = parseInt(tx[1]);
+  if (/KOSPI\+KOSDAQ|kospi.*kosdaq/i.test(code)) result.universe = 'KOSPI+KOSDAQ';
+  else if (/KOSPI/i.test(code)) result.universe = 'KOSPI';
+  if (/biweekly|격주/i.test(code)) result.rebalType = 'biweekly';
+  else if (/monthly|월간/i.test(code)) result.rebalType = 'monthly';
+  return result;
 }
 
 function updateWeightInCode(code: string, factor: string, newValue: number): string {
@@ -169,26 +191,42 @@ export default function LabPage() {
       .finally(() => setInitialLoading(false));
   }, []);
 
-  // Reload base results when universe/rebalType changes
+  // Reload base results + strategies when universe/rebalType changes
   useEffect(() => {
     if (initialLoading) return;
-    getResults({ universe, rebal_type: rebalType })
-      .then(setBaseResults)
+    Promise.all([
+      getResults({ universe, rebal_type: rebalType }),
+      getStrategies(universe, rebalType),
+    ])
+      .then(([results, strats]) => {
+        setBaseResults(results);
+        setSavedStrategies(strats || []);
+      })
       .catch(console.error);
   }, [universe, rebalType, initialLoading]);
 
   // ─── Load strategy ───
-  const loadStrategy = useCallback((name: string) => {
+  const loadStrategy = useCallback(async (name: string) => {
     setSelectedStrategy(name);
     if (!name) {
       setCode(defaultCode);
       return;
     }
-    const found = savedStrategies.find((s) => s.name === name);
-    if (found?.code) {
-      setCode(found.code);
+    try {
+      const data = await getStrategy(name);
+      if (data?.code) {
+        setCode(data.code);
+        const parsed = parseStrategyParams(data.code);
+        if (parsed.weightCapPct !== undefined) setWeightCapPct(parsed.weightCapPct);
+        if (parsed.topN !== undefined) setTopN(parsed.topN);
+        if (parsed.txCostBp !== undefined) setTxCostBp(parsed.txCostBp);
+        if (parsed.universe) setUniverse(parsed.universe);
+        if (parsed.rebalType) setRebalType(parsed.rebalType);
+      }
+    } catch {
+      // 코드 없는 전략 (레짐 조합 등)은 무시
     }
-  }, [savedStrategies, defaultCode]);
+  }, [defaultCode]);
 
   // ─── Delete strategy ───
   const deleteStrategy = useCallback(async () => {
@@ -752,10 +790,13 @@ export default function LabPage() {
         {/* 전략 선택 */}
         {(() => {
           const stratKeys = baseResults
-            ? Object.keys(baseResults).filter((k) => k !== 'KOSPI' && k !== 'KOSDAQ')
+            ? Object.keys(baseResults).filter((k) => k !== 'KOSPI' && k !== 'KOSDAQ' && k !== 'CUSTOM')
             : [];
+          // config 라벨 → 저장된 전략 이름 → key 순으로 표시
+          const cfgLabels: Record<string, string> = config?.strategy_labels || {};
+          const savedNameMap = Object.fromEntries(savedStrategies.map((s) => [s.name, s.name]));
           const labels: Record<string, string> = baseResults
-            ? Object.fromEntries(stratKeys.map((k) => [k, (baseResults[k] as StrategyResult & { strategy?: string }).strategy || k]))
+            ? Object.fromEntries(stratKeys.map((k) => [k, savedNameMap[k] || cfgLabels[k] || k]))
             : {};
 
           const handleRun = async () => {

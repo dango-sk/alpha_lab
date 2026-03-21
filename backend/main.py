@@ -64,6 +64,7 @@ from lib.data import (
     get_latest_price_date,
     get_first_entry_dates,
     list_strategies,
+    load_strategy,
     save_strategy,
     delete_strategy,
     run_strategy_backtest,
@@ -538,7 +539,17 @@ def api_save_strategy(req: SaveStrategyRequest):
 
 
 # ══════════════════════════════════════════════
-# 11. DELETE /api/strategies/{name}
+# 11a. GET /api/strategies/{name}  — 단일 전략 상세 (code 포함)
+# ══════════════════════════════════════════════
+@app.get("/api/strategies/{name}")
+def api_get_strategy(name: str):
+    data = load_strategy(name)
+    if not data:
+        raise HTTPException(status_code=404, detail="전략을 찾을 수 없습니다.")
+    return _convert_for_json(data)
+
+
+# 11b. DELETE /api/strategies/{name}
 # ══════════════════════════════════════════════
 @app.delete("/api/strategies/{name}")
 def api_delete_strategy(name: str):
