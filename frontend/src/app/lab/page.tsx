@@ -1038,6 +1038,50 @@ export default function LabPage() {
                   makeTrace(combo, '레짐 조합', '#43A047'),
                 ].filter((x): x is NonNullable<typeof x> => x !== null);
 
+                // 레짐 전환 선 + 구간별 겹침율 계산
+                const regimeByDate = (combo.regime_by_date || {}) as Record<string, string>;
+                const overlapByDate = (combo.overlap_by_date || {}) as Record<string, number>;
+                const sortedDates = Object.keys(regimeByDate).sort();
+                const transitionDates: string[] = [];
+                for (let i = 1; i < sortedDates.length; i++) {
+                  if (regimeByDate[sortedDates[i]] !== regimeByDate[sortedDates[i - 1]]) {
+                    transitionDates.push(sortedDates[i]);
+                  }
+                }
+
+                // 각 구간의 중간 날짜 & 평균 겹침율
+                const segmentBoundaries = [sortedDates[0], ...transitionDates, sortedDates[sortedDates.length - 1]].filter(Boolean);
+                const segmentAnnotations = [];
+                for (let i = 0; i < segmentBoundaries.length - 1; i++) {
+                  const segStart = segmentBoundaries[i];
+                  const segEnd = segmentBoundaries[i + 1];
+                  const segDates = sortedDates.filter((d) => d >= segStart && d < segEnd);
+                  const segOverlaps = segDates.map((d) => overlapByDate[d]).filter((v) => v !== undefined);
+                  const avgOverlap = segOverlaps.length ? Math.round(segOverlaps.reduce((a, b) => a + b, 0) / segOverlaps.length) : null;
+                  const midDate = segDates[Math.floor(segDates.length / 2)] || segStart;
+                  const regime = regimeByDate[segStart] || regimeByDate[segDates[0]];
+                  if (avgOverlap !== null) {
+                    segmentAnnotations.push({ x: midDate, regime, avgOverlap });
+                  }
+                }
+
+                const chartShapes = transitionDates.map((d) => ({
+                  type: 'line' as const,
+                  x0: d, x1: d, y0: 0, y1: 1,
+                  xref: 'x' as const, yref: 'paper' as const,
+                  line: { color: 'rgba(150,150,150,0.5)', width: 1, dash: 'dash' as const },
+                }));
+
+                const chartAnnotations = segmentAnnotations.map(({ x, regime, avgOverlap }) => ({
+                  x, y: 0.97,
+                  xref: 'x' as const, yref: 'paper' as const,
+                  text: `${avgOverlap}%`,
+                  showarrow: false,
+                  font: { size: 10, color: regime === 'Bull' ? '#4ade80' : '#f87171' },
+                  bgcolor: 'rgba(0,0,0,0.4)',
+                  borderpad: 2,
+                }));
+
                 return (
                   <div className="space-y-4">
                     <p className="text-xs text-muted">실제 종목 선택 기반 완전 재백테스트 — 레짐 전환 시 거래비용 자동 반영</p>
@@ -1060,6 +1104,8 @@ export default function LabPage() {
                         yaxis: { title: { text: '누적수익률 (%)' }, ticksuffix: '%' },
                         xaxis: { title: { text: '' } },
                         legend: { orientation: 'h', y: -0.15 },
+                        shapes: chartShapes,
+                        annotations: chartAnnotations,
                       }}
                       height={360}
                     />
