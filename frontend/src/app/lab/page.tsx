@@ -824,7 +824,7 @@ export default function LabPage() {
       </div>
 
       {/* ─── 레짐 조합 백테스트 ─── */}
-      <div className="space-y-4 border border-border rounded-xl p-5">
+      <div id="regime-combo" className="space-y-4 border border-border rounded-xl p-5">
         <div>
           <h2 className="text-base font-semibold text-foreground">레짐 조합 백테스트</h2>
           <p className="text-xs text-muted mt-0.5">KOSPI 200 50일 이동평균 기준 — Bull(≥ MA) vs Bear(&lt; MA) 이진 분류, 실제 종목 선택 기반 완전 재백테스트</p>

@@ -387,6 +387,14 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
           <PlotlyChart data={regimeBarTraces} layout={regimeBarLayout} height={300} />
         </LazyChart>
       )}
+      <div className="flex justify-end">
+        <a
+          href="/lab#regime-combo"
+          className="text-sm text-primary hover:underline flex items-center gap-1"
+        >
+          전략 실험실에서 레짐 조합 실험 →
+        </a>
+      </div>
     </div>
   );
 }
