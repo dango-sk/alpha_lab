@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getResults, getConfig, getStrategies, getStrategy, runBacktest, fetchApi, getRegimeCombo, getRegimeComboPreview } from '@/lib/api';
+import { getResults, getConfig, getStrategies, getStrategy, runBacktest, fetchApi, getRegimeCombo } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
 import DataTable from '@/components/DataTable';
@@ -152,8 +152,6 @@ export default function LabPage() {
   const [regimeResult, setRegimeResult] = useState<Record<string, unknown> | null>(null);
   const [regimeLoading, setRegimeLoading] = useState(false);
   const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
-  const [regimePreview, setRegimePreview] = useState<{ overlap_pct: number; transition_count: number; avg_bull_duration: number; avg_bear_duration: number } | null>(null);
-  const [regimePreviewLoading, setRegimePreviewLoading] = useState(false);
   const [regimeMaWindow, setRegimeMaWindow] = useState(50);
   const [regimeMaWindowInput, setRegimeMaWindowInput] = useState('50');
 
@@ -243,19 +241,6 @@ export default function LabPage() {
       // 코드 없는 전략 (레짐 조합 등)은 무시
     }
   }, [defaultCode]);
-
-  // ─── Regime Combo Preview ───
-  useEffect(() => {
-    if (!regimeBullKey || !regimeBearKey) { setRegimePreview(null); return; }
-    let cancelled = false;
-    setRegimePreviewLoading(true);
-    setRegimePreview(null);
-    getRegimeComboPreview(regimeBullKey, regimeBearKey, universe, rebalType, regimeMaWindow)
-      .then((res) => { if (!cancelled) setRegimePreview(res); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setRegimePreviewLoading(false); });
-    return () => { cancelled = true; };
-  }, [regimeBullKey, regimeBearKey, universe, rebalType, regimeMaWindow]);
 
   // ─── Delete strategy ───
   const deleteStrategy = useCallback(async () => {
@@ -977,48 +962,6 @@ export default function LabPage() {
                 </div>
               </div>
 
-              {/* 조합 미리보기 */}
-              {(regimePreviewLoading || regimePreview) && (
-                <div className="rounded-lg border border-border bg-surface/50 px-4 py-3 text-sm space-y-2">
-                  {regimePreviewLoading ? (
-                    <p className="text-muted text-xs animate-pulse">조합 지표 계산 중...</p>
-                  ) : regimePreview && (
-                    <>
-                      <p className="text-xs text-muted font-medium mb-1">조합 미리보기 — 백테스트 전 참고 지표</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="text-center">
-                          <p className="text-xs text-muted">종목 겹침율</p>
-                          {regimePreview.overlap_pct != null ? (
-                            <>
-                              <p className={`text-lg font-semibold ${regimePreview.overlap_pct < 30 ? 'text-red-400' : regimePreview.overlap_pct < 60 ? 'text-yellow-400' : 'text-green-400'}`}>
-                                {regimePreview.overlap_pct}%
-                              </p>
-                              <p className="text-[10px] text-muted">{regimePreview.overlap_pct < 30 ? '낮음 → 전환 비용 주의' : regimePreview.overlap_pct < 60 ? '보통' : '높음 → 전환 비용 적음'}</p>
-                            </>
-                          ) : (
-                            <p className="text-lg font-semibold text-muted">-</p>
-                          )}
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-muted">레짐 전환 횟수</p>
-                          <p className={`text-lg font-semibold ${regimePreview.transition_count > 15 ? 'text-red-400' : regimePreview.transition_count > 8 ? 'text-yellow-400' : 'text-green-400'}`}>
-                            {regimePreview.transition_count}회
-                          </p>
-                          <p className="text-[10px] text-muted">{regimePreview.transition_count > 15 ? '잦음 → 비용 누적' : regimePreview.transition_count > 8 ? '보통' : '적음 → 유리'}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-muted">평균 레짐 지속</p>
-                          <p className="text-lg font-semibold text-foreground">
-                            Bull {regimePreview.avg_bull_duration}개월
-                          </p>
-                          <p className="text-[10px] text-muted">Bear {regimePreview.avg_bear_duration}개월</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
               <button
                 onClick={handleRun}
                 disabled={!regimeBullKey || !regimeBearKey || regimeLoading}
@@ -1142,6 +1085,39 @@ export default function LabPage() {
                       data={tableData}
                       maxHeight="200px"
                     />
+
+                    {/* 레짐 조합 지표 */}
+                    {(() => {
+                      const tc = combo.transition_count as number | undefined;
+                      const ab = combo.avg_bull_duration as number | undefined;
+                      const abr = combo.avg_bear_duration as number | undefined;
+                      const op = combo.overlap_pct as number | null | undefined;
+                      if (tc == null) return null;
+                      return (
+                        <div className="rounded-lg border border-border bg-surface/50 px-4 py-3 text-sm">
+                          <p className="text-xs text-muted font-medium mb-2">레짐 조합 지표</p>
+                          <div className={`grid gap-3 ${op != null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                            {op != null && (
+                              <div className="text-center">
+                                <p className="text-xs text-muted">종목 겹침율</p>
+                                <p className={`text-lg font-semibold ${op < 30 ? 'text-red-400' : op < 60 ? 'text-yellow-400' : 'text-green-400'}`}>{op}%</p>
+                                <p className="text-[10px] text-muted">{op < 30 ? '낮음 → 전환 비용 주의' : op < 60 ? '보통' : '높음 → 전환 비용 적음'}</p>
+                              </div>
+                            )}
+                            <div className="text-center">
+                              <p className="text-xs text-muted">레짐 전환 횟수</p>
+                              <p className={`text-lg font-semibold ${(tc ?? 0) > 15 ? 'text-red-400' : (tc ?? 0) > 8 ? 'text-yellow-400' : 'text-green-400'}`}>{tc}회</p>
+                              <p className="text-[10px] text-muted">{(tc ?? 0) > 15 ? '잦음 → 비용 누적' : (tc ?? 0) > 8 ? '보통' : '적음 → 유리'}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-muted">평균 레짐 지속</p>
+                              <p className="text-lg font-semibold text-foreground">Bull {ab}개월</p>
+                              <p className="text-[10px] text-muted">Bear {abr}개월</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <PlotlyChart
                       data={comboChartData}

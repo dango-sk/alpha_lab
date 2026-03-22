@@ -1552,6 +1552,35 @@ def run_regime_combo_backtest(
             result["bear_key"] = bear_key
             result["regime_by_date"] = regime_cache
             result["overlap_by_date"] = overlap_by_date
+
+            # 레짐 전환 횟수 & 평균 지속 기간 계산
+            sorted_regimes = [regime_cache[d] for d in sorted(regime_cache.keys())]
+            _transition_count = sum(
+                1 for i in range(1, len(sorted_regimes))
+                if sorted_regimes[i] != sorted_regimes[i - 1]
+            )
+            _bull_durations, _bear_durations = [], []
+            if sorted_regimes:
+                _cur_r, _cur_l = sorted_regimes[0], 1
+                for _r in sorted_regimes[1:]:
+                    if _r == _cur_r:
+                        _cur_l += 1
+                    else:
+                        (_bull_durations if _cur_r == "Bull" else _bear_durations).append(_cur_l)
+                        _cur_r, _cur_l = _r, 1
+                (_bull_durations if _cur_r == "Bull" else _bear_durations).append(_cur_l)
+            result["transition_count"] = _transition_count
+            result["avg_bull_duration"] = round(float(np.mean(_bull_durations)), 1) if _bull_durations else 0.0
+            result["avg_bear_duration"] = round(float(np.mean(_bear_durations)), 1) if _bear_durations else 0.0
+
+            # 겹침율 평균
+            if overlap_by_date:
+                result["overlap_pct"] = round(float(np.mean(list(overlap_by_date.values()))), 1)
+            elif bull_key == bear_key:
+                result["overlap_pct"] = 100.0
+            else:
+                result["overlap_pct"] = None
+
             results["REGIME_COMBO"] = result
 
         # 벤치마크 + 두 원전략 결과 포함
@@ -1562,11 +1591,19 @@ def run_regime_combo_backtest(
             results.update(bm)
         conn_bm.close()
 
-        # 두 원전략 결과도 함께 반환 (비교용)
-        all_cached = load_all_results(universe=_universe, rebal_type=_rebal)
-        for key in [bull_key, bear_key]:
-            if key in all_cached:
-                results[key] = all_cached[key]
+        # 두 원전략 결과도 함께 반환 (비교용) — 레짐 조합과 동일 조건으로 새로 백테스트
+        for key, module in [(bull_key, bull_module), (bear_key, bear_module)]:
+            if key in results:
+                continue  # 이미 있으면 스킵
+            def _make_selector(_mod=module):
+                def _sel(conn, calc_date, _top_n):
+                    universe_set = get_universe_stocks(conn, calc_date, _rebal, _min_market_cap)
+                    candidates = score_stocks_from_strategy(conn, calc_date, _mod)
+                    return [(c, s) for c, s in candidates if c in universe_set][:_top_n]
+                return _sel
+            _single = run_backtest(key, stock_selector=_make_selector(), rebal_type=_rebal)
+            if _single:
+                results[key] = _single
 
         clear_factor_cache()
         return _numpy_to_python(results)
