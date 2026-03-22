@@ -221,6 +221,25 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
 }) {
   const [activeRegime, setActiveRegime] = useState<string>('Bull');
 
+  const regimeStats = useMemo(() => {
+    const sorted = Object.keys(regimeData.regimes).sort().map((d) => regimeData.regimes[d]);
+    if (sorted.length === 0) return null;
+    let transitions = 0;
+    const bullDurations: number[] = [], bearDurations: number[] = [];
+    let cur = sorted[0], len = 1;
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === cur) { len++; }
+      else {
+        transitions++;
+        (cur === 'Bull' ? bullDurations : bearDurations).push(len);
+        cur = sorted[i]; len = 1;
+      }
+    }
+    (cur === 'Bull' ? bullDurations : bearDurations).push(len);
+    const avg = (arr: number[]) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '-';
+    return { transitions, avgBull: avg(bullDurations), avgBear: avg(bearDurations) };
+  }, [regimeData.regimes]);
+
   const regimeTimelineTraces = useMemo<Plotly.Data[]>(() => {
     const regimeDates = Object.keys(regimeData.regimes).sort();
     return REGIME_ORDER.map((regime) => ({
@@ -321,6 +340,22 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
       <LazyChart height={120}>
         <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
       </LazyChart>
+      {regimeStats && (
+        <div className="grid grid-cols-3 gap-3 text-center text-sm">
+          <div className="bg-surface/50 border border-border rounded-lg py-2.5">
+            <p className="text-xs text-muted mb-0.5">레짐 전환 횟수</p>
+            <p className={`text-lg font-semibold ${regimeStats.transitions > 20 ? 'text-red-400' : regimeStats.transitions > 10 ? 'text-yellow-400' : 'text-green-400'}`}>{regimeStats.transitions}회</p>
+          </div>
+          <div className="bg-surface/50 border border-border rounded-lg py-2.5">
+            <p className="text-xs text-muted mb-0.5">평균 Bull 지속</p>
+            <p className="text-lg font-semibold text-green-400">{regimeStats.avgBull}개월</p>
+          </div>
+          <div className="bg-surface/50 border border-border rounded-lg py-2.5">
+            <p className="text-xs text-muted mb-0.5">평균 Bear 지속</p>
+            <p className="text-lg font-semibold text-red-400">{regimeStats.avgBear}개월</p>
+          </div>
+        </div>
+      )}
       {regimePerfRows.length > 0 && (
         <div className="space-y-2">
           <div className="flex gap-1">
