@@ -335,10 +335,11 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
             INNER JOIN (
                 SELECT stock_code, MAX(fiscal_year) as max_year
                 FROM fnspace_finance
-                WHERE fiscal_quarter = 'TTM' AND fiscal_year <= ?
+                WHERE fiscal_quarter IN ('TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q', 'TTM') AND fiscal_year <= ?
                 GROUP BY stock_code
             ) latest ON ff.stock_code = latest.stock_code
-                AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'TTM'
+                AND ff.fiscal_year = latest.max_year
+                AND ff.fiscal_quarter IN ('TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q', 'TTM')
         """, conn, params=(max_usable_year,))
 
         # Annual fallback (TTM 없는 종목)
@@ -372,7 +373,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         # prev_revenue: TTM 전년도 우선
         prev_ttm = read_sql("""
             SELECT stock_code, revenue as prev_revenue
-            FROM fnspace_finance WHERE fiscal_quarter='TTM' AND fiscal_year=?
+            FROM fnspace_finance WHERE fiscal_quarter IN ('TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q') AND fiscal_year=?
         """, conn, params=(max_usable_year - 1,))
         prev_annual = read_sql("""
             SELECT stock_code, revenue as prev_revenue
