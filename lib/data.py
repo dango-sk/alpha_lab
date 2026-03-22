@@ -1278,7 +1278,9 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
     from step7_backtest import get_universe_stocks
 
     def stock_selector(conn, calc_date, _top_n):
-        universe_set = get_universe_stocks(conn, calc_date)
+        _rb = BACKTEST_CONFIG.get("rebal_type", "monthly")
+        _mmc = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
+        universe_set = get_universe_stocks(conn, calc_date, _rb, _mmc)
         candidates = score_stocks_from_strategy(conn, calc_date, strategy_module)
         filtered = [(c, s) for c, s in candidates if c in universe_set][:_top_n]
         return filtered
@@ -1483,10 +1485,12 @@ def run_regime_combo_backtest(
         return result_regime
 
     # 5. 레짐 기반 stock_selector
+    _min_market_cap = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
+
     def regime_stock_selector(conn, calc_date, _top_n):
         regime = _get_regime(calc_date)
         module = bull_module if regime == "Bull" else bear_module
-        universe_set = get_universe_stocks(conn, calc_date)
+        universe_set = get_universe_stocks(conn, calc_date, _rebal, _min_market_cap)
         candidates = score_stocks_from_strategy(conn, calc_date, module)
         return [(c, s) for c, s in candidates if c in universe_set][:_top_n]
 
