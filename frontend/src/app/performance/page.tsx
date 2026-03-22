@@ -213,12 +213,15 @@ const regimePerfColumns = [
   },
 ];
 
-function RegimeSection({ regimeData, strategyKeys, labels, maWindow }: {
+function RegimeSection({ regimeData, strategyKeys, labels, maWindow, maWindowInput, setMaWindowInput, setMaWindow }: {
   regimeData: { regimes: Record<string, string>; summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>; regime_counts: Record<string, number> };
   strategyKeys: string[];
   labels: Record<string, string>;
   colors: Record<string, string>;
   maWindow: number;
+  maWindowInput: string;
+  setMaWindowInput: (v: string) => void;
+  setMaWindow: (v: number) => void;
 }) {
   const [activeRegime, setActiveRegime] = useState<string>('Bull');
 
@@ -330,10 +333,35 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow }: {
 
   return (
     <div className="space-y-4">
-      <SectionHeader
-        title="시장 국면 분석 (Regime Analysis)"
-        subtitle={`KOSPI 200 ${maWindow}일 MA 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
-      />
+      <div className="flex items-start justify-between">
+        <SectionHeader
+          title="시장 국면 분석 (Regime Analysis)"
+          subtitle={`KOSPI 200 ${maWindow}일 MA 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
+        />
+        <div className="flex items-center gap-1.5 mt-1">
+          <label className="text-xs text-muted whitespace-nowrap">MA 기간</label>
+          <input
+            type="number"
+            min={5}
+            max={500}
+            value={maWindowInput}
+            onChange={(e) => setMaWindowInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const v = parseInt(maWindowInput);
+                if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+              }
+            }}
+            onBlur={() => {
+              const v = parseInt(maWindowInput);
+              if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+              else setMaWindowInput(String(maWindow));
+            }}
+            className="w-16 px-2 py-1 rounded border border-border bg-surface text-center text-sm"
+          />
+          <span className="text-xs text-muted">일</span>
+        </div>
+      </div>
       <div className="flex gap-6 text-xs text-muted bg-surface/50 rounded-lg px-4 py-2.5 border border-border">
         <span><span className="text-green-400 font-medium">Bull (강세장)</span> — KOSPI 200 ≥ {maWindow}일 이동평균</span>
         <span><span className="text-red-400 font-medium">Bear (약세장)</span> — KOSPI 200 &lt; {maWindow}일 이동평균</span>
@@ -977,32 +1005,16 @@ export default function PerformancePage() {
 
       {/* Regime Analysis */}
       {regimeData && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-end gap-2 text-sm">
-            <label className="text-muted">MA 기간</label>
-            <input
-              type="number"
-              min={5}
-              max={500}
-              value={maWindowInput}
-              onChange={(e) => setMaWindowInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const v = parseInt(maWindowInput);
-                  if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
-                }
-              }}
-              onBlur={() => {
-                const v = parseInt(maWindowInput);
-                if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
-                else setMaWindowInput(String(maWindow));
-              }}
-              className="w-20 px-2 py-1 rounded border border-border bg-surface text-center text-sm"
-            />
-            <span className="text-muted">일</span>
-          </div>
-          <RegimeSection regimeData={regimeData} strategyKeys={strategyKeys} labels={labels} colors={colors} maWindow={maWindow} />
-        </div>
+        <RegimeSection
+          regimeData={regimeData}
+          strategyKeys={strategyKeys}
+          labels={labels}
+          colors={colors}
+          maWindow={maWindow}
+          maWindowInput={maWindowInput}
+          setMaWindowInput={setMaWindowInput}
+          setMaWindow={setMaWindow}
+        />
       )}
     </div>
   );

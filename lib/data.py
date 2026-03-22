@@ -1521,33 +1521,37 @@ def run_regime_combo_backtest(
             rebal_type=_rebal,
         )
 
-        # 날짜별 종목 겹침율 계산 (holdings 캐시 사용)
+        # 날짜별 겹침율: 같은 전략이면 100%, 다른 전략이면 holdings 캐시 사용
         import json as _json
         from pathlib import Path as _Path
-        uni_key = _universe.replace("+", "_")
-        _hcache_file = _Path("cache") / f"holdings_{uni_key}_{_rebal}.json"
         overlap_by_date: dict[str, float] = {}
-        if _hcache_file.exists():
-            try:
-                _hcache = _json.loads(_hcache_file.read_text())
-                _hdata = _hcache.get("data", {})
-                _bull_h = _hdata.get(bull_key, {})
-                _bear_h = _hdata.get(bear_key, {})
-                for _d in set(_bull_h.keys()) | set(_bear_h.keys()):
-                    _bc = {h["종목코드"] for h in (_bull_h.get(_d) or [])}
-                    _brc = {h["종목코드"] for h in (_bear_h.get(_d) or [])}
-                    if _bc and _brc:
-                        overlap_by_date[_d] = round(len(_bc & _brc) / top_n * 100, 1)
-            except Exception:
-                pass
+        if bull_key == bear_key:
+            # 동일 전략 → 겹침율 항상 100%
+            overlap_by_date = {d: 100.0 for d in regime_cache}
+        else:
+            uni_key = _universe.replace("+", "_")
+            _hcache_file = _Path("cache") / f"holdings_{uni_key}_{_rebal}.json"
+            if _hcache_file.exists():
+                try:
+                    _hcache = _json.loads(_hcache_file.read_text())
+                    _hdata = _hcache.get("data", {})
+                    _bull_h = _hdata.get(bull_key, {})
+                    _bear_h = _hdata.get(bear_key, {})
+                    for _d in set(_bull_h.keys()) & set(_bear_h.keys()):
+                        _bc = {h["종목코드"] for h in (_bull_h.get(_d) or [])}
+                        _brc = {h["종목코드"] for h in (_bear_h.get(_d) or [])}
+                        if _bc and _brc:
+                            overlap_by_date[_d] = round(len(_bc & _brc) / top_n * 100, 1)
+                except Exception:
+                    pass
 
         results = {}
         if result:
             result["strategy"] = "레짐 조합"
             result["bull_key"] = bull_key
             result["bear_key"] = bear_key
-            result["regime_by_date"] = regime_cache  # Bull/Bear 전환 타이밍
-            result["overlap_by_date"] = overlap_by_date  # 날짜별 종목 겹침율
+            result["regime_by_date"] = regime_cache
+            result["overlap_by_date"] = overlap_by_date
             results["REGIME_COMBO"] = result
 
         # 벤치마크 + 두 원전략 결과 포함
@@ -1798,7 +1802,7 @@ def compute_regime_combo_preview(
     avg_bear = round(float(np.mean(bear_durations)), 1) if bear_durations else 0.0
 
     return {
-        "overlap_pct": round(avg_overlap, 1),
+        "overlap_pct": avg_overlap,  # already rounded or None
         "transition_count": transition_count,
         "avg_bull_duration": avg_bull,
         "avg_bear_duration": avg_bear,

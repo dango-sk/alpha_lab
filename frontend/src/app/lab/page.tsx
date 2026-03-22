@@ -844,6 +844,45 @@ export default function LabPage() {
             stratKeys.map((k) => [k, savedNameMap[k] || cfgLabels[k] || k])
           );
 
+          function RegimeProgressBar() {
+            const [progress, setProgress] = useState(0);
+            useEffect(() => {
+              const total = 270; // 4.5분 기준 (초)
+              const interval = setInterval(() => {
+                setProgress((p) => {
+                  if (p >= 95) { clearInterval(interval); return p; }
+                  // 초반 빠르게, 후반 느리게
+                  const step = p < 50 ? 0.6 : p < 80 ? 0.3 : 0.1;
+                  return Math.min(p + step, 95);
+                });
+              }, total * 10); // ~270초에 걸쳐 95%까지
+              return () => clearInterval(interval);
+            }, []);
+
+            const stages = [
+              { label: '데이터 로드', pct: 20 },
+              { label: '레짐 분류', pct: 40 },
+              { label: '종목 선택', pct: 70 },
+              { label: '수익률 계산', pct: 90 },
+            ];
+            const currentStage = stages.findLast((s) => progress >= s.pct)?.label ?? '초기화 중';
+
+            return (
+              <div className="space-y-1.5 py-1">
+                <div className="flex justify-between text-xs text-muted">
+                  <span>{currentStage}...</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            );
+          }
+
           const handleRun = async () => {
             if (!regimeBullKey || !regimeBearKey) return;
             setRegimeLoading(true);
@@ -999,6 +1038,10 @@ export default function LabPage() {
                 ) : '레짐 조합 실행'}
               </button>
 
+              {regimeLoading && (
+                <RegimeProgressBar />
+              )}
+
               {regimeResult && (() => {
                 const allRes = regimeResult as Record<string, unknown>;
                 const combo = allRes['REGIME_COMBO'] as Record<string, unknown> | undefined;
@@ -1061,7 +1104,7 @@ export default function LabPage() {
                   const midDate = segDates[Math.floor(segDates.length / 2)] || segStart;
                   const regime = regimeByDate[segStart] || regimeByDate[segDates[0]];
                   if (avgOverlap !== null) {
-                    segmentAnnotations.push({ x: midDate, regime, avgOverlap });
+                    segmentAnnotations.push({ x: midDate, regime, avgOverlap, segLen: segDates.length });
                   }
                 }
 
@@ -1072,15 +1115,17 @@ export default function LabPage() {
                   line: { color: 'rgba(150,150,150,0.5)', width: 1, dash: 'dash' as const },
                 }));
 
-                const chartAnnotations = segmentAnnotations.map(({ x, regime, avgOverlap }) => ({
-                  x, y: 0.97,
-                  xref: 'x' as const, yref: 'paper' as const,
-                  text: `${avgOverlap}%`,
-                  showarrow: false,
-                  font: { size: 10, color: regime === 'Bull' ? '#4ade80' : '#f87171' },
-                  bgcolor: 'rgba(0,0,0,0.4)',
-                  borderpad: 2,
-                }));
+                const chartAnnotations = segmentAnnotations
+                  .filter(({ segLen }) => (segLen ?? 0) >= 3) // 3개월 이상 구간만 표시
+                  .map(({ x, regime, avgOverlap }) => ({
+                    x, y: 0.97,
+                    xref: 'x' as const, yref: 'paper' as const,
+                    text: `${avgOverlap}%`,
+                    showarrow: false,
+                    font: { size: 10, color: regime === 'Bull' ? '#4ade80' : '#f87171' },
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    borderpad: 2,
+                  }));
 
                 return (
                   <div className="space-y-4">
