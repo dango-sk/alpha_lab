@@ -211,7 +211,7 @@ export default function LabPage() {
       return;
     }
     try {
-      const data = await getStrategy(name);
+      const data = await getStrategy(name, universe, rebalType);
       if (data?.code) {
         setCode(data.code);
         const parsed = parseStrategyParams(data.code);

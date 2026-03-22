@@ -543,11 +543,23 @@ def api_save_strategy(req: SaveStrategyRequest):
 # 11a. GET /api/strategies/{name}  — 단일 전략 상세 (code 포함)
 # ══════════════════════════════════════════════
 @app.get("/api/strategies/{name}")
-def api_get_strategy(name: str):
-    data = load_strategy(name)
-    if not data:
-        raise HTTPException(status_code=404, detail="전략을 찾을 수 없습니다.")
-    return _convert_for_json(data)
+def api_get_strategy(name: str, universe: Optional[str] = None, rebal_type: Optional[str] = None):
+    # Try with provided params first, then fallback to all combos
+    combos = []
+    if universe and rebal_type:
+        combos = [(universe, rebal_type)]
+    else:
+        combos = [
+            (universe or "KOSPI", rebal_type or "monthly"),
+            (universe or "KOSPI", "biweekly"),
+            ("KOSPI+KOSDAQ", rebal_type or "monthly"),
+            ("KOSPI+KOSDAQ", "biweekly"),
+        ]
+    for u, r in combos:
+        data = load_strategy(name, rebal_type=r, universe=u)
+        if data and data.get("code"):
+            return _convert_for_json(data)
+    raise HTTPException(status_code=404, detail="전략을 찾을 수 없습니다.")
 
 
 # 11b. DELETE /api/strategies/{name}
