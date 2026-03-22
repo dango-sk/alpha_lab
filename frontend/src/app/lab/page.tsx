@@ -901,9 +901,20 @@ export default function LabPage() {
               <button
                 onClick={handleRun}
                 disabled={!regimeBullKey || !regimeBearKey || regimeLoading}
-                className="px-4 py-2 rounded-lg bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:cursor-not-allowed ${
+                  regimeLoading
+                    ? 'bg-primary/10 text-primary border border-primary/30 animate-pulse'
+                    : 'bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-40'
+                }`}
               >
-                {regimeLoading ? '백테스트 실행 중... (3~5분 소요)' : '레짐 조합 실행'}
+                {regimeLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span>백테스트 실행 중... (3~5분 소요)</span>
+                  </span>
+                ) : '레짐 조합 실행'}
               </button>
 
               {regimeResult && (() => {
