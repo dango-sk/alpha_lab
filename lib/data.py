@@ -1406,6 +1406,7 @@ def run_regime_combo_backtest(
     bear_key: str,
     universe: str = None,
     rebal_type: str = None,
+    ma_window: int = 50,
 ) -> dict | None:
     """
     레짐 조합 백테스트: 장세마다 다른 전략을 실제로 적용해 완전 재실행.
@@ -1457,15 +1458,15 @@ def run_regime_combo_backtest(
             return regime_cache[calc_date]
         rows = _conn_regime.execute(
             "SELECT close FROM daily_price WHERE stock_code = '069500' "
-            "AND trade_date <= ? ORDER BY trade_date DESC LIMIT 51",
+            f"AND trade_date <= ? ORDER BY trade_date DESC LIMIT {ma_window + 1}",
             (calc_date,)
         ).fetchall()
         prices = [r[0] for r in rows if r[0]]
-        if len(prices) < 51:
+        if len(prices) < ma_window + 1:
             result_regime = "Bull"
         else:
             current = prices[0]
-            ma50 = float(np.mean(prices[1:51]))
+            ma50 = float(np.mean(prices[1:ma_window + 1]))
             result_regime = "Bull" if current >= ma50 else "Bear"
         regime_cache[calc_date] = result_regime
         return result_regime
