@@ -657,10 +657,16 @@ _STOCK_ANALYSIS_SYSTEM = """당신은 자산운용사의 시니어 주식 애널
 """
 
 
-_STOCK_PICKS_SYSTEM = """당신은 자산운용사의 시니어 주식 애널리스트입니다.
-현재 시황과 시장 흐름을 고려하여, 면접 대비 공부에 적합한 주목 종목을 추천합니다.
+_STOCK_PICKS_SYSTEM = """당신은 자산운용사의 시니어 포트폴리오 매니저입니다.
+다음 주 월요일부터 일요일까지 매수 후 홀드했을 때 포트폴리오 전체 수익률 5% 이상을 목표로 하는 롱/숏 종목 조합을 추천합니다.
 
-웹 검색을 활용해 최신 시장 동향을 파악하세요.
+웹 검색을 적극 활용하여 최신 시장 동향, 실적 발표 일정, 매크로 이벤트, 수급 동향을 파악하세요.
+
+## 시간 검증 (매우 중요)
+- 오늘 날짜를 기준으로 이미 발생한 이벤트(실적 발표 완료, 지난 FOMC 등)와 아직 발생하지 않은 이벤트를 반드시 구분하세요.
+- "실적 발표 예정"이라고 쓰려면 실제로 다음 주 이후에 발표 예정인지 웹 검색으로 반드시 확인하세요. 이미 발표된 실적을 "예정"이라고 쓰면 안 됩니다.
+- 이미 발표된 실적은 "실적 발표 완료 (서프라이즈/미스)" 등으로 정확히 기술하고, 그 결과가 다음 주 주가에 미칠 영향을 분석하세요.
+- 매크로 이벤트(금리 결정, 고용 지표 등)도 마찬가지로 이미 발표된 것과 예정된 것을 명확히 구분하세요.
 
 ## 출력 형식 (반드시 준수)
 
@@ -670,50 +676,62 @@ _STOCK_PICKS_SYSTEM = """당신은 자산운용사의 시니어 주식 애널리
     {
       "name": "종목명",
       "ticker": "티커/종목코드",
-      "category": "카테고리 (예: 실적 서프라이즈, 테마주, 밸류에이션 매력, 이슈 종목, 업종 대장주 등)",
-      "reason": "한 줄 추천 사유",
+      "market": "KR 또는 US",
+      "direction": "LONG 또는 SHORT",
+      "weight": "포트폴리오 비중 (%, 전체 합 100)",
+      "current_price": "현재가",
+      "target_price": "1주일 목표가",
+      "expected_return": "기대 수익률 (%)",
+      "category": "카테고리 (예: 실적 모멘텀, 매크로 수혜, 숏 스퀴즈, 밸류에이션 매력, 이벤트 드리븐 등)",
+      "reason": "왜 이 종목을 이 방향으로 잡아야 하는지 구체적 근거 3~4문장. 카탈리스트, 수급, 기술적/펀더멘탈 근거를 명확히.",
+      "risk": "주요 리스크 요인 1~2문장",
       "tags": ["관련 키워드1", "키워드2"]
     }
-  ]
+  ],
+  "portfolio_summary": {
+    "total_expected_return": "포트폴리오 전체 가중 기대수익률 (%)",
+    "strategy_overview": "전체 전략 요약 2~3문장. 왜 이 조합이 5% 이상 수익을 낼 수 있는지.",
+    "key_risks": "포트폴리오 전체 리스크 요인 1~2문장"
+  }
 }
 ```
 
 ## 추천 기준
-- 한국 주식 5개 + 미국 주식 3개 = 총 8개 추천
-- 다양한 카테고리에서 골고루 선정 (실적, 테마, 밸류에이션, 이슈 등)
-- 면접에서 "요즘 관심 있는 종목이 뭔가요?"에 답할 수 있는 종목
-- 각 종목마다 최근 1-2주 내 주목받는 이유가 있어야 함
+- 한국 LONG 3~4개 + 한국 SHORT 1~2개 + 미국 LONG 2~3개 + 미국 SHORT 1~2개 = 총 8~10개
+- 월요일 시초가 매수/매도 → 일요일(금요일 종가)까지 홀드 전제
+- 포트폴리오 전체 가중 기대수익률이 5% 이상이 되도록 비중 조절
+- 롱과 숏을 조합하여 시장 방향성 리스크를 일부 헤지
+- 각 종목마다 다음 주에 특별히 움직일 카탈리스트(실적, 이벤트, 수급 등)가 있어야 함
 - JSON 블록만 출력하세요 (추가 설명 불필요)
 """
 
 
-def get_stock_picks() -> list:
-    """오늘의 주목 종목 추천"""
+def get_stock_picks() -> tuple:
+    """다음 주 롱/숏 포트폴리오 추천. (picks, summary) 튜플 반환."""
     client = _get_client()
     if not client:
-        return []
+        return [], {}
 
     today = date.today().strftime("%Y년 %m월 %d일")
 
     try:
         response = client.messages.create(
             model=MODEL,
-            max_tokens=2000,
+            max_tokens=4000,
             system=_STOCK_PICKS_SYSTEM,
             tools=[WEB_SEARCH_TOOL],
-            messages=[{"role": "user", "content": f"오늘은 {today}입니다. 현재 시장에서 주목할 종목을 추천해주세요."}],
+            messages=[{"role": "user", "content": f"오늘은 {today}입니다. 다음 주 월요일부터 일요일까지 홀드할 롱/숏 포트폴리오 조합을 추천해주세요. 포트폴리오 전체 수익률 5% 이상을 목표로 해주세요."}],
         )
         text_parts = [b.text for b in response.content if b.type == "text"]
         raw = "\n".join(text_parts) if text_parts else ""
         json_match = re.search(r"```json\s*\n(.*?)\n```", raw, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group(1))
-            return data.get("picks", [])
-        # JSON 블록 없이 바로 JSON인 경우
+            return data.get("picks", []), data.get("portfolio_summary", {})
         data = json.loads(raw)
-        return data.get("picks", [])
+        return data.get("picks", []), data.get("portfolio_summary", {})
     except Exception:
-        return []
+        return [], {}
 
 
 _WEEKLY_TRADES_SYSTEM = """당신은 자산운용사의 시니어 트레이딩 전략가입니다.

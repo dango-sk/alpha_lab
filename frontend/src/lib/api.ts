@@ -82,8 +82,9 @@ export async function getRobustness(params: Record<string, string>) {
   return fetchApi(`/api/robustness?${qs}`);
 }
 
-export async function getRegimeAnalysis(params: Record<string, string>) {
-  const qs = new URLSearchParams(params).toString();
+export async function getRegimeAnalysis(params: Record<string, string>, maWindow?: number) {
+  const p = maWindow ? { ...params, ma_window: String(maWindow) } : params;
+  const qs = new URLSearchParams(p).toString();
   return fetchApi(`/api/regime?${qs}`);
 }
 
@@ -103,11 +104,13 @@ export async function getRegimeComboPreview(
   bull_key: string,
   bear_key: string,
   universe?: string,
-  rebal_type?: string
+  rebal_type?: string,
+  ma_window?: number
 ) {
   const params: Record<string, string> = { bull_key, bear_key };
   if (universe) params.universe = universe;
   if (rebal_type) params.rebal_type = rebal_type;
+  if (ma_window) params.ma_window = String(ma_window);
   const qs = new URLSearchParams(params).toString();
   return fetchApi(`/api/regime-combo-preview?${qs}`);
 }
@@ -116,11 +119,13 @@ export async function getRegimeCombo(
   bull_key: string,
   bear_key: string,
   universe?: string,
-  rebal_type?: string
+  rebal_type?: string,
+  ma_window?: number
 ) {
   const params: Record<string, string> = { bull_key, bear_key };
   if (universe) params.universe = universe;
   if (rebal_type) params.rebal_type = rebal_type;
+  if (ma_window) params.ma_window = String(ma_window);
   const qs = new URLSearchParams(params).toString();
 
   // Start async job (real backtest, not splice)

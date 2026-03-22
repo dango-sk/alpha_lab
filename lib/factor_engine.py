@@ -164,7 +164,7 @@ def prefetch_all_data(conn):
                eps, bps, per, psr, ev_ebitda,
                revenue, operating_income, net_income,
                oi_margin, div_yield, pcf
-        FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM')
+        FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
     """, conn)
 
     _prefetch_cache["forward"] = read_sql("""
@@ -192,20 +192,34 @@ def clear_prefetch_cache():
     _prefetch_cache.clear()
 
 
-def _get_fin_for_year(max_year: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """프리페치 캐시에서 재무 데이터 추출. TTM 우선, 없으면 Annual fallback."""
+def _available_ttm_quarter(calc_date: str) -> tuple[int, str]:
+    """calc_date 기준으로 공시 완료된 가장 최근 TTM 분기 반환.
+    공시 시차: 1Q→5/15, 2Q→8/15, 3Q→11/15, 4Q→익년 3/31"""
+    dt = datetime.strptime(calc_date, "%Y-%m-%d")
+    y = dt.year
+    if dt >= datetime(y, 11, 15):
+        return (y, "TTM_3Q")
+    if dt >= datetime(y, 8, 15):
+        return (y, "TTM_2Q")
+    if dt >= datetime(y, 5, 15):
+        return (y, "TTM_1Q")
+    if dt >= datetime(y, 3, 31):
+        return (y - 1, "TTM_4Q")
+    return (y - 1, "TTM_3Q")
+
+
+def _get_fin_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """calc_date 기준 TTM_xQ 선택. Annual fallback."""
     fin_all = _prefetch_cache["finance"]
+    ttm_year, ttm_qtr = _available_ttm_quarter(calc_date)
 
-    # TTM 우선 조회
-    ttm = fin_all[(fin_all["fiscal_quarter"] == "TTM") & (fin_all["fiscal_year"] <= max_year)].copy()
-    if not ttm.empty:
-        idx = ttm.groupby("stock_code")["fiscal_year"].idxmax()
-        ttm_df = ttm.loc[idx]
-    else:
-        ttm_df = pd.DataFrame()
+    ttm = fin_all[(fin_all["fiscal_quarter"] == ttm_qtr) & (fin_all["fiscal_year"] == ttm_year)].copy()
+    ttm_df = ttm if not ttm.empty else pd.DataFrame()
 
-    # Annual fallback (TTM 없는 종목)
-    annual = fin_all[(fin_all["fiscal_quarter"] == "Annual") & (fin_all["fiscal_year"] <= max_year) & fin_all["roe"].notna()].copy()
+    dt = datetime.strptime(calc_date, "%Y-%m-%d")
+    max_usable_year = dt.year - 1 if dt.month >= 4 else dt.year - 2
+    annual_all = fin_all[fin_all["fiscal_quarter"] == "Annual"]
+    annual = annual_all[(annual_all["fiscal_year"] <= max_usable_year) & annual_all["roe"].notna()].copy()
     if not annual.empty:
         idx = annual.groupby("stock_code")["fiscal_year"].idxmax()
         annual_df = annual.loc[idx]
@@ -220,18 +234,20 @@ def _get_fin_for_year(max_year: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     else:
         fin_df = annual_df
 
-    fin_df = fin_df.drop(columns=["fiscal_quarter"], errors="ignore")
+    fin_df = fin_df.drop(columns=["fiscal_quarter", "fiscal_year"], errors="ignore")
 
-    # prev_revenue: TTM 전년도 우선, 없으면 Annual
-    prev_ttm = fin_all[(fin_all["fiscal_quarter"] == "TTM") & (fin_all["fiscal_year"] == max_year - 1)][["stock_code", "revenue"]].copy()
-    prev_annual = fin_all[(fin_all["fiscal_quarter"] == "Annual") & (fin_all["fiscal_year"] == max_year - 1)][["stock_code", "revenue"]].copy()
+    # prev_revenue: 동일 TTM 분기 전년도
+    prev_ttm = fin_all[
+        (fin_all["fiscal_quarter"] == ttm_qtr) & (fin_all["fiscal_year"] == ttm_year - 1)
+    ][["stock_code", "revenue"]].copy()
     if not prev_ttm.empty:
+        prev_annual = annual_all[annual_all["fiscal_year"] == max_usable_year - 1][["stock_code", "revenue"]].copy()
         fallback = prev_annual[~prev_annual["stock_code"].isin(prev_ttm["stock_code"])]
         prev_rev = pd.concat([prev_ttm, fallback], ignore_index=True)
     else:
-        prev_rev = prev_annual
-    prev_rev = prev_rev.rename(columns={"revenue": "prev_revenue"})
+        prev_rev = annual_all[annual_all["fiscal_year"] == max_usable_year - 1][["stock_code", "revenue"]].copy()
 
+    prev_rev = prev_rev.rename(columns={"revenue": "prev_revenue"})
     return fin_df, prev_rev
 
 
@@ -298,7 +314,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
 
     # ── 프리페치 캐시가 있으면 메모리에서 처리 ──
     if _prefetch_cache:
-        fin_df, prev_rev_df = _get_fin_for_year(max_usable_year)
+        fin_df, prev_rev_df = _get_fin_for_date(calc_date)
         if fin_df.empty:
             return None
         fwd_df, fwd_3m_df = _get_fwd_for_date(calc_date)

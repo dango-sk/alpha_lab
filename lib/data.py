@@ -1408,6 +1408,7 @@ def run_regime_combo_backtest(
     bear_key: str,
     universe: str = None,
     rebal_type: str = None,
+    ma_window: int = 50,
 ) -> dict | None:
     """
     레짐 조합 백테스트: 장세마다 다른 전략을 실제로 적용해 완전 재실행.
@@ -1466,21 +1467,23 @@ def run_regime_combo_backtest(
     _conn_regime = _get_conn()
     regime_cache: dict[str, str] = {}
 
+    _ma_window = ma_window or 50
+
     def _get_regime(calc_date: str) -> str:
         if calc_date in regime_cache:
             return regime_cache[calc_date]
         rows = _conn_regime.execute(
             "SELECT close FROM daily_price WHERE stock_code = '069500' "
-            "AND trade_date <= ? ORDER BY trade_date DESC LIMIT 51",
+            f"AND trade_date <= ? ORDER BY trade_date DESC LIMIT {_ma_window + 1}",
             (calc_date,)
         ).fetchall()
         prices = [r[0] for r in rows if r[0]]
-        if len(prices) < 51:
+        if len(prices) < _ma_window + 1:
             result_regime = "Bull"
         else:
             current = prices[0]
-            ma50 = float(np.mean(prices[1:51]))
-            result_regime = "Bull" if current >= ma50 else "Bear"
+            ma_val = float(np.mean(prices[1:_ma_window + 1]))
+            result_regime = "Bull" if current >= ma_val else "Bear"
         regime_cache[calc_date] = result_regime
         return result_regime
 
@@ -1557,13 +1560,14 @@ def compute_regime_analysis(
     end: str = None,
     universe: str = None,
     rebal_type: str = None,
+    ma_window: int = 50,
 ) -> dict:
-    """KOSPI 200 50일 이동평균 기준으로 시장 국면(Bull/Bear)을 분류하고,
+    """KOSPI 200 이동평균 기준으로 시장 국면(Bull/Bear)을 분류하고,
     각 전략의 국면별 성과 통계를 반환한다.
 
     국면 기준 (리밸런싱 시점):
-        Bull : KOSPI 200 >= 50일 MA
-        Bear : KOSPI 200 < 50일 MA
+        Bull : KOSPI 200 >= MA
+        Bear : KOSPI 200 < MA
 
     Returns:
         {
@@ -1594,22 +1598,23 @@ def compute_regime_analysis(
 
     bm_arr = np.array(bm_returns, dtype=float)
 
-    # KOSPI 200 50일 MA 신호: 각 리밸런싱 시작일 기준
+    # KOSPI 200 MA 신호: 각 리밸런싱 시작일 기준
+    _maw = ma_window or 50
     _conn = _get_conn()
     regimes_by_date = {}
     for i, (start_d, end_d) in enumerate(zip(start_dates, ret_dates)):
         rows = _conn.execute(
             "SELECT close FROM daily_price WHERE stock_code = '069500' "
-            "AND trade_date <= ? ORDER BY trade_date DESC LIMIT 51",
+            f"AND trade_date <= ? ORDER BY trade_date DESC LIMIT {_maw + 1}",
             (start_d,)
         ).fetchall()
         prices = [r[0] for r in rows if r[0]]
-        if len(prices) < 51:
+        if len(prices) < _maw + 1:
             regime = "Bull"
         else:
             current = prices[0]
-            ma50 = float(np.mean(prices[1:51]))
-            regime = "Bull" if current >= ma50 else "Bear"
+            ma_val = float(np.mean(prices[1:_maw + 1]))
+            regime = "Bull" if current >= ma_val else "Bear"
         regimes_by_date[str(end_d)] = regime
     _conn.close()
 
@@ -1700,6 +1705,7 @@ def compute_regime_combo_preview(
     bear_key: str,
     universe: str = None,
     rebal_type: str = None,
+    ma_window: int = 50,
 ) -> dict:
     """레짐 조합 백테스트 실행 전 미리 볼 수 있는 지표 계산.
 
@@ -1744,7 +1750,7 @@ def compute_regime_combo_preview(
 
     # ── 레짐 전환 횟수 & 평균 지속 기간 ─────────────────────────
     # compute_regime_analysis의 regimes_by_date 재활용
-    regime_data = compute_regime_analysis(universe=_universe, rebal_type=_rebal)
+    regime_data = compute_regime_analysis(universe=_universe, rebal_type=_rebal, ma_window=ma_window)
     regimes_by_date = regime_data.get("regimes", {})
 
     sorted_regimes = [regimes_by_date[d] for d in sorted(regimes_by_date.keys())]

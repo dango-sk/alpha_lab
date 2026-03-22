@@ -750,24 +750,39 @@ elif mode == "종목 공부":
         picks_col, hist_col = st.columns(2)
 
         with picks_col:
-            st.markdown("**오늘의 주목 종목**")
+            st.markdown("**다음 주 롱/숏 포트폴리오**")
             if "stock_picks" not in st.session_state:
                 st.session_state.stock_picks = None
+            if "stock_picks_summary" not in st.session_state:
+                st.session_state.stock_picks_summary = None
 
-            if st.button("AI 추천 받기", key="get_picks", use_container_width=True):
-                with st.spinner("시장 동향 분석 중..."):
-                    st.session_state.stock_picks = get_stock_picks()
+            if st.button("포트폴리오 추천 받기", key="get_picks", use_container_width=True):
+                with st.spinner("시장 동향 분석 중... (웹 검색 포함, 30초~1분 소요)"):
+                    picks, summary = get_stock_picks()
+                    st.session_state.stock_picks = picks
+                    st.session_state.stock_picks_summary = summary
                 st.rerun()
 
             if st.session_state.stock_picks:
+                # portfolio_summary가 session_state에 있으면 표시
+                if st.session_state.stock_picks_summary:
+                    summary = st.session_state.stock_picks_summary
+                    st.info(f"📊 기대수익률: **{summary.get('total_expected_return', 'N/A')}** | {summary.get('strategy_overview', '')}")
+
                 for i, pick in enumerate(st.session_state.stock_picks):
-                    cat = pick.get("category", "")
+                    direction = pick.get("direction", "")
+                    dir_emoji = "🟢" if direction == "LONG" else "🔴"
+                    market = pick.get("market", "")
+                    weight = pick.get("weight", "")
+                    expected = pick.get("expected_return", "")
                     tags = " ".join(f"`{t}`" for t in pick.get("tags", []))
                     with st.container():
                         pc1, pc2 = st.columns([4, 1])
                         with pc1:
-                            st.markdown(f"**{pick['name']}** · {cat}")
-                            st.caption(f"{pick.get('reason', '')}  {tags}")
+                            st.markdown(f"{dir_emoji} **{pick['name']}** ({market}) · {direction} · 비중 {weight}% · 기대 {expected}%")
+                            st.caption(f"{pick.get('reason', '')}")
+                            if pick.get("risk"):
+                                st.caption(f"⚠️ {pick['risk']}  {tags}")
                         with pc2:
                             if st.button("분석", key=f"pick_{i}", use_container_width=True):
                                 with st.spinner(f"'{pick['name']}' 분석 중..."):

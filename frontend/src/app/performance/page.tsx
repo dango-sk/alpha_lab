@@ -213,11 +213,12 @@ const regimePerfColumns = [
   },
 ];
 
-function RegimeSection({ regimeData, strategyKeys, labels }: {
+function RegimeSection({ regimeData, strategyKeys, labels, maWindow }: {
   regimeData: { regimes: Record<string, string>; summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>; regime_counts: Record<string, number> };
   strategyKeys: string[];
   labels: Record<string, string>;
   colors: Record<string, string>;
+  maWindow: number;
 }) {
   const [activeRegime, setActiveRegime] = useState<string>('Bull');
 
@@ -331,11 +332,11 @@ function RegimeSection({ regimeData, strategyKeys, labels }: {
     <div className="space-y-4">
       <SectionHeader
         title="시장 국면 분석 (Regime Analysis)"
-        subtitle={`KOSPI 200 50일 MA 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
+        subtitle={`KOSPI 200 ${maWindow}일 MA 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
       />
       <div className="flex gap-6 text-xs text-muted bg-surface/50 rounded-lg px-4 py-2.5 border border-border">
-        <span><span className="text-green-400 font-medium">Bull (강세장)</span> — KOSPI 200 ≥ 50일 이동평균</span>
-        <span><span className="text-red-400 font-medium">Bear (약세장)</span> — KOSPI 200 &lt; 50일 이동평균</span>
+        <span><span className="text-green-400 font-medium">Bull (강세장)</span> — KOSPI 200 ≥ {maWindow}일 이동평균</span>
+        <span><span className="text-red-400 font-medium">Bear (약세장)</span> — KOSPI 200 &lt; {maWindow}일 이동평균</span>
       </div>
       <LazyChart height={120}>
         <PlotlyChart data={regimeTimelineTraces} layout={regimeTimelineLayout} height={120} />
@@ -412,6 +413,8 @@ export default function PerformancePage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
+  const [maWindow, setMaWindow] = useState(50);
+  const [maWindowInput, setMaWindowInput] = useState('50');
   const [regimeData, setRegimeData] = useState<{
     regimes: Record<string, string>;
     summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>;
@@ -456,10 +459,10 @@ export default function PerformancePage() {
 
   useEffect(() => {
     setRegimeData(null);
-    getRegimeAnalysis({ start: startDate, end: endDate, universe, rebal_type: rebalType })
+    getRegimeAnalysis({ start: startDate, end: endDate, universe, rebal_type: rebalType }, maWindow)
       .then(setRegimeData)
       .catch(() => setRegimeData(null));
-  }, [universe, rebalType, startDate, endDate]);
+  }, [universe, rebalType, startDate, endDate, maWindow]);
 
   // All keys available for selection
   const allStrategyKeys = useMemo(() => Object.keys(results), [results]);
@@ -973,7 +976,34 @@ export default function PerformancePage() {
       )}
 
       {/* Regime Analysis */}
-      {regimeData && <RegimeSection regimeData={regimeData} strategyKeys={strategyKeys} labels={labels} colors={colors} />}
+      {regimeData && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-end gap-2 text-sm">
+            <label className="text-muted">MA 기간</label>
+            <input
+              type="number"
+              min={5}
+              max={500}
+              value={maWindowInput}
+              onChange={(e) => setMaWindowInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const v = parseInt(maWindowInput);
+                  if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+                }
+              }}
+              onBlur={() => {
+                const v = parseInt(maWindowInput);
+                if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+                else setMaWindowInput(String(maWindow));
+              }}
+              className="w-20 px-2 py-1 rounded border border-border bg-surface text-center text-sm"
+            />
+            <span className="text-muted">일</span>
+          </div>
+          <RegimeSection regimeData={regimeData} strategyKeys={strategyKeys} labels={labels} colors={colors} maWindow={maWindow} />
+        </div>
+      )}
     </div>
   );
 }

@@ -955,11 +955,12 @@ def api_regime(
     end: Optional[str] = None,
     universe: Optional[str] = None,
     rebal_type: Optional[str] = None,
+    ma_window: Optional[int] = 50,
 ):
-    cache_key = f"regime:{start}:{end}:{universe}:{rebal_type}"
+    cache_key = f"regime:{start}:{end}:{universe}:{rebal_type}:{ma_window}"
     result = _cached(
         cache_key,
-        lambda: compute_regime_analysis(start, end, universe=universe, rebal_type=rebal_type),
+        lambda: compute_regime_analysis(start, end, universe=universe, rebal_type=rebal_type, ma_window=ma_window),
         ttl=600,
     )
     return _convert_for_json(result)
@@ -986,10 +987,10 @@ def api_first_entry_dates(
 # ══════════════════════════════════════════════
 # 18. POST /api/regime-combo  (async job)
 # ══════════════════════════════════════════════
-def _run_regime_combo_job(job_id: str, bull_key: str, bear_key: str, universe: str, rebal_type: str):
+def _run_regime_combo_job(job_id: str, bull_key: str, bear_key: str, universe: str, rebal_type: str, ma_window: int = 50):
     import traceback as _tb
     try:
-        result = run_regime_combo_backtest(bull_key, bear_key, universe=universe, rebal_type=rebal_type)
+        result = run_regime_combo_backtest(bull_key, bear_key, universe=universe, rebal_type=rebal_type, ma_window=ma_window)
         if result is None:
             _backtest_jobs[job_id] = {"status": "error", "detail": "결과 없음"}
         elif "error" in result:
@@ -1007,12 +1008,13 @@ def api_regime_combo_start(
     bear_key: str,
     universe: Optional[str] = "KOSPI",
     rebal_type: Optional[str] = "monthly",
+    ma_window: Optional[int] = 50,
 ):
     job_id = str(_uuid.uuid4())[:8]
     _backtest_jobs[job_id] = {"status": "running"}
     t = threading.Thread(
         target=_run_regime_combo_job,
-        args=(job_id, bull_key, bear_key, universe, rebal_type),
+        args=(job_id, bull_key, bear_key, universe, rebal_type, ma_window),
         daemon=True,
     )
     t.start()
@@ -1025,8 +1027,9 @@ def api_regime_combo_preview(
     bear_key: str,
     universe: Optional[str] = None,
     rebal_type: Optional[str] = None,
+    ma_window: Optional[int] = 50,
 ):
-    result = compute_regime_combo_preview(bull_key, bear_key, universe=universe, rebal_type=rebal_type)
+    result = compute_regime_combo_preview(bull_key, bear_key, universe=universe, rebal_type=rebal_type, ma_window=ma_window)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
