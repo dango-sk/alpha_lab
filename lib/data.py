@@ -1424,11 +1424,23 @@ def run_regime_combo_backtest(
     from step7_backtest import get_universe_stocks
     from lib.db import get_conn as _get_conn
 
-    # 1. 두 전략 코드 로드
-    bull_data = load_strategy(bull_key, rebal_type=rebal_type, universe=universe)
-    bear_data = load_strategy(bear_key, rebal_type=rebal_type, universe=universe)
-    if not bull_data.get("code") or not bear_data.get("code"):
-        return {"error": "전략 코드를 찾을 수 없습니다."}
+    # 1. 두 전략 코드 로드 (DB 저장 전략 우선, 없으면 사전 정의 코드 사용)
+    def _get_code(key):
+        # DB에서 조회 (여러 universe/rebal_type 조합 시도)
+        for u in [universe or "KOSPI", "KOSPI", "KOSPI+KOSDAQ"]:
+            for r in [rebal_type or "monthly", "monthly", "biweekly"]:
+                d = load_strategy(key, rebal_type=r, universe=u)
+                if d and d.get("code"):
+                    return d["code"]
+        # predefined 전략 fallback (A0 = 기존전략)
+        return _BASE_STRATEGY_CODES.get(key, "")
+
+    bull_code = _get_code(bull_key)
+    bear_code = _get_code(bear_key)
+    if not bull_code or not bear_code:
+        return {"error": f"전략 코드를 찾을 수 없습니다. (bull={bull_key}, bear={bear_key})"}
+    bull_data = {"code": bull_code}
+    bear_data = {"code": bear_code}
 
     # 2. 코드 → 모듈 변환 및 검증
     for code_str, label in [(bull_data["code"], "Bull"), (bear_data["code"], "Bear")]:

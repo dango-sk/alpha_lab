@@ -792,10 +792,15 @@ export default function LabPage() {
 
         {/* 전략 선택 */}
         {(() => {
-          // 레짐 조합은 코드가 저장된 전략(실험실 저장 전략)만 사용 가능
-          const stratKeys = savedStrategies.map((s) => s.name);
-          // config 라벨 → 저장된 전략 이름 → key 순으로 표시
-          const labels: Record<string, string> = Object.fromEntries(stratKeys.map((k) => [k, k]));
+          // 사전 정의 전략 + 저장된 전략 모두 표시 (KOSPI 벤치마크 제외)
+          const stratKeys = baseResults
+            ? Object.keys(baseResults).filter((k) => k !== 'KOSPI' && k !== 'KOSDAQ' && k !== 'CUSTOM')
+            : [];
+          const cfgLabels: Record<string, string> = config?.strategy_labels || {};
+          const savedNameMap = Object.fromEntries(savedStrategies.map((s) => [s.name, s.name]));
+          const labels: Record<string, string> = Object.fromEntries(
+            stratKeys.map((k) => [k, savedNameMap[k] || cfgLabels[k] || k])
+          );
 
           const handleRun = async () => {
             if (!regimeBullKey || !regimeBearKey) return;
