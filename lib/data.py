@@ -1724,9 +1724,9 @@ def compute_regime_combo_preview(
             for r in [_rebal, "monthly", "biweekly"]:
                 d = load_strategy(key, rebal_type=r, universe=u)
                 if d and d.get("code"):
-                    return _load_strategy_module(d["code"])
+                    return code_to_module(d["code"])
         code = _BASE_STRATEGY_CODES.get(key, "")
-        return _load_strategy_module(code) if code else None
+        return code_to_module(code) if code else None
 
     bull_module = _get_module(bull_key)
     bear_module = _get_module(bear_key)
@@ -1744,10 +1744,10 @@ def compute_regime_combo_preview(
     for date in dates:
         try:
             universe_set = get_universe_stocks(score_conn, date, _rebal, _min_mc)
-            bull_stocks = {c for c, _ in score_stocks_from_strategy(score_conn, date, bull_module) if c in universe_set}
-            bear_stocks = {c for c, _ in score_stocks_from_strategy(score_conn, date, bear_module) if c in universe_set}
-            bull_top = set(list(bull_stocks)[:_top_n])
-            bear_top = set(list(bear_stocks)[:_top_n])
+            bull_scored = [c for c, _ in score_stocks_from_strategy(score_conn, date, bull_module) if c in universe_set]
+            bear_scored = [c for c, _ in score_stocks_from_strategy(score_conn, date, bear_module) if c in universe_set]
+            bull_top = set(bull_scored[:_top_n])
+            bear_top = set(bear_scored[:_top_n])
             if bull_top and bear_top:
                 overlaps.append(len(bull_top & bear_top) / _top_n)
         except Exception:
