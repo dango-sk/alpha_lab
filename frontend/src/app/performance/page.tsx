@@ -213,7 +213,7 @@ const regimePerfColumns = [
   },
 ];
 
-function RegimeSection({ regimeData, regimeLoading, strategyKeys, labels, maWindow, setMaWindow }: {
+function RegimeSection({ regimeData, regimeLoading, strategyKeys, labels, maWindow, setMaWindow, setRegimeLoading }: {
   regimeData: { regimes: Record<string, string>; summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>; regime_counts: Record<string, number> } | null;
   regimeLoading: boolean;
   strategyKeys: string[];
@@ -221,6 +221,7 @@ function RegimeSection({ regimeData, regimeLoading, strategyKeys, labels, maWind
   colors: Record<string, string>;
   maWindow: number;
   setMaWindow: (v: number) => void;
+  setRegimeLoading: (v: boolean) => void;
 }) {
   const [activeRegime, setActiveRegime] = useState<string>('Bull');
   const [localInput, setLocalInput] = useState(String(maWindow));
@@ -360,7 +361,7 @@ function RegimeSection({ regimeData, regimeLoading, strategyKeys, labels, maWind
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 const v = parseInt(localInput);
-                if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+                if (!isNaN(v) && v >= 5 && v <= 500) { setRegimeLoading(true); setMaWindow(v); }
                 else setLocalInput(String(maWindow));
               }
             }}
@@ -370,7 +371,7 @@ function RegimeSection({ regimeData, regimeLoading, strategyKeys, labels, maWind
           <button
             onClick={() => {
               const v = parseInt(localInput);
-              if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+              if (!isNaN(v) && v >= 5 && v <= 500) { setRegimeLoading(true); setMaWindow(v); }
               else setLocalInput(String(maWindow));
             }}
             className="px-2 py-1 text-xs rounded bg-primary/20 text-primary hover:bg-primary/30"
@@ -1031,6 +1032,7 @@ export default function PerformancePage() {
           colors={colors}
           maWindow={maWindow}
           setMaWindow={setMaWindow}
+          setRegimeLoading={setRegimeLoading}
         />
       )}
     </div>
