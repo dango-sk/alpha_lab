@@ -213,8 +213,9 @@ const regimePerfColumns = [
   },
 ];
 
-function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow }: {
-  regimeData: { regimes: Record<string, string>; summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>; regime_counts: Record<string, number> };
+function RegimeSection({ regimeData, regimeLoading, strategyKeys, labels, maWindow, setMaWindow }: {
+  regimeData: { regimes: Record<string, string>; summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>; regime_counts: Record<string, number> } | null;
+  regimeLoading: boolean;
   strategyKeys: string[];
   labels: Record<string, string>;
   colors: Record<string, string>;
@@ -225,7 +226,8 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow
   const [localInput, setLocalInput] = useState(String(maWindow));
 
   const regimeStats = useMemo(() => {
-    const sorted = Object.keys(regimeData.regimes).sort().map((d) => regimeData.regimes[d]);
+    if (!regimeData) return null;
+    const sorted = Object.keys(regimeData?.regimes ?? {}).sort().map((d) => regimeData?.regimes[d]);
     if (sorted.length === 0) return null;
     let transitions = 0;
     const bullDurations: number[] = [], bearDurations: number[] = [];
@@ -241,19 +243,19 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow
     (cur === 'Bull' ? bullDurations : bearDurations).push(len);
     const avg = (arr: number[]) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '-';
     return { transitions, avgBull: avg(bullDurations), avgBear: avg(bearDurations) };
-  }, [regimeData.regimes]);
+  }, [regimeData?.regimes]);
 
   const regimeTimelineTraces = useMemo<Plotly.Data[]>(() => {
-    const regimeDates = Object.keys(regimeData.regimes).sort();
+    const regimeDates = Object.keys(regimeData?.regimes ?? {}).sort();
     return REGIME_ORDER.map((regime) => ({
       type: 'bar' as const,
       name: regime,
-      x: regimeDates.filter((d) => regimeData.regimes[d] === regime),
-      y: regimeDates.filter((d) => regimeData.regimes[d] === regime).map(() => 1),
+      x: regimeDates.filter((d) => regimeData?.regimes[d] === regime),
+      y: regimeDates.filter((d) => regimeData?.regimes[d] === regime).map(() => 1),
       marker: { color: REGIME_COLORS[regime] },
       hovertemplate: `%{x}<br>${regime}<extra></extra>`,
     }));
-  }, [regimeData.regimes]);
+  }, [regimeData?.regimes]);
 
   const regimeTimelineLayout = useMemo<Partial<Plotly.Layout>>(() => ({
     title: { text: '시장 국면 (Regime) 분류', font: { size: 13, color: '#e4e4e7' } },
@@ -290,7 +292,7 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow
   const regimePerfRows = useMemo(() => {
     const rows: Record<string, unknown>[] = [];
     for (const key of strategyKeys) {
-      const stratSummary = regimeData.summary?.[key];
+      const stratSummary = regimeData?.summary?.[key];
       if (!stratSummary) continue;
       const m = stratSummary[activeRegime];
       if (!m) continue;
@@ -311,16 +313,16 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow
     rows.sort((a, b) => ((b.sharpe as number) ?? -Infinity) - ((a.sharpe as number) ?? -Infinity));
     // Mark rank
     return rows.map((r, i) => ({ ...r, _rank: i + 1 }));
-  }, [regimeData.summary, strategyKeys, labels, activeRegime]);
+  }, [regimeData?.summary, strategyKeys, labels, activeRegime]);
 
   const regimeBarTraces = useMemo<Plotly.Data[]>(() => REGIME_ORDER.map((regime) => ({
     type: 'bar' as const,
     name: regime,
     x: strategyKeys.map((k) => labels[k] || k),
-    y: strategyKeys.map((k) => regimeData.summary?.[k]?.[regime]?.avg_monthly_return ?? null),
+    y: strategyKeys.map((k) => regimeData?.summary?.[k]?.[regime]?.avg_monthly_return ?? null),
     marker: { color: REGIME_COLORS[regime] },
     hovertemplate: `%{x}<br>${regime}: %{y:.2%}<extra></extra>`,
-  })), [regimeData.summary, strategyKeys, labels]);
+  })), [regimeData?.summary, strategyKeys, labels]);
 
   const regimeBarLayout = useMemo<Partial<Plotly.Layout>>(() => ({
     title: { text: '국면별 평균 월수익률', font: { size: 13, color: '#e4e4e7' } },
@@ -331,11 +333,21 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow
   }), []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
+      {regimeLoading && (
+        <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-xl">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <span className="inline-block w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="inline-block w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="inline-block w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span>레짐 분석 중...</span>
+          </div>
+        </div>
+      )}
       <div className="flex items-start justify-between">
         <SectionHeader
           title="시장 국면 분석 (Regime Analysis)"
-          subtitle={`KOSPI 200 ${maWindow}일 MA 기준 | Bull: ${regimeData.regime_counts?.Bull ?? 0}개월 | Bear: ${regimeData.regime_counts?.Bear ?? 0}개월`}
+          subtitle={`KOSPI 200 ${maWindow}일 MA 기준 | Bull: ${regimeData?.regime_counts?.Bull ?? 0}개월 | Bear: ${regimeData?.regime_counts?.Bear ?? 0}개월`}
         />
         <div className="flex items-center gap-1.5 mt-1">
           <label className="text-xs text-muted whitespace-nowrap">MA 기간</label>
@@ -405,7 +417,7 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow
                 }`}
               >
                 {r === 'Bull' ? '강세장 (Bull)' : '약세장 (Bear)'}
-                <span className="ml-1.5 text-xs opacity-60">{regimeData.regime_counts?.[r] ?? 0}개월</span>
+                <span className="ml-1.5 text-xs opacity-60">{regimeData?.regime_counts?.[r] ?? 0}개월</span>
               </button>
             ))}
           </div>
@@ -447,6 +459,7 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
   const [maWindow, setMaWindow] = useState(50);
+  const [regimeLoading, setRegimeLoading] = useState(false);
   const [regimeData, setRegimeData] = useState<{
     regimes: Record<string, string>;
     summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>;
@@ -490,10 +503,11 @@ export default function PerformancePage() {
   }, [universe, rebalType, startDate, endDate]);
 
   useEffect(() => {
-    setRegimeData(null);
+    setRegimeLoading(true);
     getRegimeAnalysis({ start: startDate, end: endDate, universe, rebal_type: rebalType }, maWindow)
       .then(setRegimeData)
-      .catch(() => setRegimeData(null));
+      .catch(() => setRegimeData(null))
+      .finally(() => setRegimeLoading(false));
   }, [universe, rebalType, startDate, endDate, maWindow]);
 
   // All keys available for selection
@@ -1008,9 +1022,10 @@ export default function PerformancePage() {
       )}
 
       {/* Regime Analysis */}
-      {regimeData && (
+      {(regimeData || regimeLoading) && (
         <RegimeSection
           regimeData={regimeData}
+          regimeLoading={regimeLoading}
           strategyKeys={strategyKeys}
           labels={labels}
           colors={colors}
