@@ -349,16 +349,22 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow
               if (e.key === 'Enter') {
                 const v = parseInt(localInput);
                 if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+                else setLocalInput(String(maWindow));
               }
-            }}
-            onBlur={() => {
-              const v = parseInt(localInput);
-              if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
-              else setLocalInput(String(maWindow));
             }}
             className="w-16 px-2 py-1 rounded border border-border bg-surface text-center text-sm"
           />
           <span className="text-xs text-muted">일</span>
+          <button
+            onClick={() => {
+              const v = parseInt(localInput);
+              if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
+              else setLocalInput(String(maWindow));
+            }}
+            className="px-2 py-1 text-xs rounded bg-primary/20 text-primary hover:bg-primary/30"
+          >
+            적용
+          </button>
         </div>
       </div>
       <div className="flex gap-6 text-xs text-muted bg-surface/50 rounded-lg px-4 py-2.5 border border-border">
