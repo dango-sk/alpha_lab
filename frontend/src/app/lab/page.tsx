@@ -693,9 +693,20 @@ export default function LabPage() {
           <button
             onClick={handleBacktest}
             disabled={running || !code.trim()}
-            className="px-6 py-2.5 rounded-lg bg-primary text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all disabled:cursor-not-allowed ${
+              running
+                ? 'bg-primary/30 text-primary border border-primary/40 animate-pulse cursor-not-allowed'
+                : 'bg-primary text-background hover:opacity-90 disabled:opacity-40'
+            }`}
           >
-            {running ? '실행 중...' : '백테스트 실행'}
+            {running ? (
+              <span className="flex items-center gap-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span>{progressMsg || '실행 중...'}</span>
+              </span>
+            ) : '백테스트 실행'}
           </button>
 
           {/* Save inline */}
