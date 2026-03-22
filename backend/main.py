@@ -326,6 +326,26 @@ def api_latest_price_date():
     return {"date": date}
 
 
+@app.get("/api/debug-db")
+def api_debug_db():
+    from lib.db import get_conn, DATABASE_URL, _is_pg
+    conn = get_conn()
+    try:
+        universe_count = conn.execute("SELECT COUNT(*) FROM universe WHERE rebal_type='monthly'").fetchone()[0]
+        a0_return = None
+        try:
+            import json as _json
+            row = conn.execute("SELECT results_json FROM backtest_cache WHERE name='A0' AND universe='KOSPI' AND rebal_type='monthly'").fetchone()
+            if row:
+                data = _json.loads(row[0]) if isinstance(row[0], str) else row[0]
+                a0_return = data.get('total_return')
+        except Exception:
+            pass
+        return {"is_pg": _is_pg, "db_url_prefix": DATABASE_URL[:30] if DATABASE_URL else None, "universe_monthly_rows": universe_count, "a0_total_return": a0_return}
+    finally:
+        conn.close()
+
+
 # ══════════════════════════════════════════════
 # 3. GET /api/results
 # ══════════════════════════════════════════════
