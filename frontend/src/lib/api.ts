@@ -99,6 +99,19 @@ export async function getFirstEntryDates(
   return fetchApi(`/api/first-entry-dates?${qs}`);
 }
 
+export async function getRegimeComboPreview(
+  bull_key: string,
+  bear_key: string,
+  universe?: string,
+  rebal_type?: string
+) {
+  const params: Record<string, string> = { bull_key, bear_key };
+  if (universe) params.universe = universe;
+  if (rebal_type) params.rebal_type = rebal_type;
+  const qs = new URLSearchParams(params).toString();
+  return fetchApi(`/api/regime-combo-preview?${qs}`);
+}
+
 export async function getRegimeCombo(
   bull_key: string,
   bear_key: string,

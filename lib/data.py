@@ -1693,3 +1693,99 @@ def compute_regime_analysis(
         "summary": summary,
         "regime_counts": regime_counts,
     }
+
+
+def compute_regime_combo_preview(
+    bull_key: str,
+    bear_key: str,
+    universe: str = None,
+    rebal_type: str = None,
+) -> dict:
+    """레짐 조합 백테스트 실행 전 미리 볼 수 있는 지표 계산.
+
+    Returns:
+        overlap_pct       : 두 전략 평균 종목 겹침율 (%)
+        transition_count  : Bull↔Bear 전환 횟수
+        avg_bull_duration : Bull 구간 평균 지속 기간 (개월)
+        avg_bear_duration : Bear 구간 평균 지속 기간 (개월)
+    """
+    from step7_backtest import get_rebalance_dates, get_universe_stocks, get_db
+    from lib.factor_engine import score_stocks_from_strategy, prefetch_all_data
+    from lib.db import get_conn as _get_conn
+
+    _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    _universe = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
+    _top_n = BACKTEST_CONFIG.get("top_n_stocks", 30)
+    _min_mc = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
+
+    # ── 두 전략 모듈 로드 ──────────────────────────────────────
+    def _get_module(key):
+        for u in [_universe, "KOSPI", "KOSPI+KOSDAQ"]:
+            for r in [_rebal, "monthly", "biweekly"]:
+                d = load_strategy(key, rebal_type=r, universe=u)
+                if d and d.get("code"):
+                    return _load_strategy_module(d["code"])
+        code = _BASE_STRATEGY_CODES.get(key, "")
+        return _load_strategy_module(code) if code else None
+
+    bull_module = _get_module(bull_key)
+    bear_module = _get_module(bear_key)
+    if not bull_module or not bear_module:
+        return {"error": "전략 코드를 찾을 수 없습니다"}
+
+    # ── 겹침율 계산 ──────────────────────────────────────────
+    pf_conn = get_db()
+    prefetch_all_data(pf_conn)
+    dates = get_rebalance_dates(pf_conn, _rebal)
+    pf_conn.close()
+
+    overlaps = []
+    score_conn = _get_conn()
+    for date in dates:
+        try:
+            universe_set = get_universe_stocks(score_conn, date, _rebal, _min_mc)
+            bull_stocks = {c for c, _ in score_stocks_from_strategy(score_conn, date, bull_module) if c in universe_set}
+            bear_stocks = {c for c, _ in score_stocks_from_strategy(score_conn, date, bear_module) if c in universe_set}
+            bull_top = set(list(bull_stocks)[:_top_n])
+            bear_top = set(list(bear_stocks)[:_top_n])
+            if bull_top and bear_top:
+                overlaps.append(len(bull_top & bear_top) / _top_n)
+        except Exception:
+            continue
+    score_conn.close()
+
+    avg_overlap = float(np.mean(overlaps) * 100) if overlaps else 0.0
+
+    # ── 레짐 전환 횟수 & 평균 지속 기간 ─────────────────────────
+    # compute_regime_analysis의 regimes_by_date 재활용
+    regime_data = compute_regime_analysis(universe=_universe, rebal_type=_rebal)
+    regimes_by_date = regime_data.get("regimes", {})
+
+    sorted_regimes = [regimes_by_date[d] for d in sorted(regimes_by_date.keys())]
+
+    transition_count = sum(
+        1 for i in range(1, len(sorted_regimes))
+        if sorted_regimes[i] != sorted_regimes[i - 1]
+    )
+
+    # 각 구간(연속된 같은 레짐)의 길이를 계산
+    bull_durations, bear_durations = [], []
+    if sorted_regimes:
+        cur_regime, cur_len = sorted_regimes[0], 1
+        for r in sorted_regimes[1:]:
+            if r == cur_regime:
+                cur_len += 1
+            else:
+                (bull_durations if cur_regime == "Bull" else bear_durations).append(cur_len)
+                cur_regime, cur_len = r, 1
+        (bull_durations if cur_regime == "Bull" else bear_durations).append(cur_len)
+
+    avg_bull = round(float(np.mean(bull_durations)), 1) if bull_durations else 0.0
+    avg_bear = round(float(np.mean(bear_durations)), 1) if bear_durations else 0.0
+
+    return {
+        "overlap_pct": round(avg_overlap, 1),
+        "transition_count": transition_count,
+        "avg_bull_duration": avg_bull,
+        "avg_bear_duration": avg_bear,
+    }

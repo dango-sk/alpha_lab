@@ -70,6 +70,7 @@ from lib.data import (
     run_strategy_backtest,
     compute_regime_analysis,
     run_regime_combo_backtest,
+    compute_regime_combo_preview,
     STRATEGY_LABELS,
     STRATEGY_COLORS,
     ALL_KEYS,
@@ -1016,6 +1017,19 @@ def api_regime_combo_start(
     )
     t.start()
     return {"job_id": job_id, "status": "running"}
+
+
+@app.get("/api/regime-combo-preview")
+def api_regime_combo_preview(
+    bull_key: str,
+    bear_key: str,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    result = compute_regime_combo_preview(bull_key, bear_key, universe=universe, rebal_type=rebal_type)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
 
 
 @app.get("/api/regime-combo/{job_id}")
