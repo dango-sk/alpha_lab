@@ -886,33 +886,31 @@ export default function LabPage() {
 
           return (
             <>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-xs text-muted font-medium">MA 기간 (KOSPI 200 기준)</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={500}
+                  value={regimeMaWindowInput}
+                  onChange={(e) => setRegimeMaWindowInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const v = parseInt(regimeMaWindowInput);
+                      if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
+                    }
+                  }}
+                  onBlur={() => {
+                    const v = parseInt(regimeMaWindowInput);
+                    if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
+                    else setRegimeMaWindowInput(String(regimeMaWindow));
+                  }}
+                  className="w-20 px-2 py-1 rounded border border-border bg-background text-center text-sm"
+                />
+                <span className="text-xs text-muted">일</span>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-muted font-medium">MA 기간 (KOSPI 200 기준)</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min={5}
-                        max={500}
-                        value={regimeMaWindowInput}
-                        onChange={(e) => setRegimeMaWindowInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const v = parseInt(regimeMaWindowInput);
-                            if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
-                          }
-                        }}
-                        onBlur={() => {
-                          const v = parseInt(regimeMaWindowInput);
-                          if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
-                          else setRegimeMaWindowInput(String(regimeMaWindow));
-                        }}
-                        className="w-20 px-2 py-1 rounded border border-border bg-background text-center text-sm"
-                      />
-                      <span className="text-xs text-muted">일</span>
-                    </div>
-                  </div>
                   <label className="text-xs text-muted font-medium">강세장 전략 (Bull: KOSPI 200 ≥ {regimeMaWindow}일 MA)</label>
                   <select
                     value={regimeBullKey}
