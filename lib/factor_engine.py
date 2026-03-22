@@ -322,7 +322,8 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         master_df = _get_master_for_date(calc_date)
     else:
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
-        # TTM 데이터 조회
+        # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
+        _ttm_year, _ttm_qtr = _available_ttm_quarter(calc_date)
         ttm_df = read_sql("""
             SELECT ff.stock_code, ff.fiscal_year,
                    ff.pbr, ff.roe, ff.roic,
@@ -332,15 +333,8 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
                    ff.revenue, ff.operating_income, ff.net_income,
                    ff.oi_margin, ff.div_yield, ff.pcf
             FROM fnspace_finance ff
-            INNER JOIN (
-                SELECT stock_code, MAX(fiscal_year) as max_year
-                FROM fnspace_finance
-                WHERE fiscal_quarter IN ('TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q', 'TTM') AND fiscal_year <= ?
-                GROUP BY stock_code
-            ) latest ON ff.stock_code = latest.stock_code
-                AND ff.fiscal_year = latest.max_year
-                AND ff.fiscal_quarter IN ('TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q', 'TTM')
-        """, conn, params=(max_usable_year,))
+            WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
+        """, conn, params=(_ttm_qtr, _ttm_year))
 
         # Annual fallback (TTM 없는 종목)
         annual_df = read_sql("""
@@ -370,11 +364,11 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         if fin_df.empty:
             return None
 
-        # prev_revenue: TTM 전년도 우선
+        # prev_revenue: TTM 전년도 우선 (같은 분기 기준)
         prev_ttm = read_sql("""
             SELECT stock_code, revenue as prev_revenue
-            FROM fnspace_finance WHERE fiscal_quarter IN ('TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q') AND fiscal_year=?
-        """, conn, params=(max_usable_year - 1,))
+            FROM fnspace_finance WHERE fiscal_quarter = ? AND fiscal_year=?
+        """, conn, params=(_ttm_qtr, _ttm_year - 1,))
         prev_annual = read_sql("""
             SELECT stock_code, revenue as prev_revenue
             FROM fnspace_finance WHERE fiscal_quarter='Annual' AND fiscal_year=?

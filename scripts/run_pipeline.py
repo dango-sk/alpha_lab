@@ -470,10 +470,9 @@ def step_collect_finance():
 # ═══════════════════════════════════════════════════════════
 
 def step_calc_ttm():
-    """분기 재무 → TTM 계산 → fnspace_finance에 저장 → PG 업로드"""
-    from step5b_calc_ttm import calc_ttm, upload_ttm_to_pg
+    """분기 재무 → TTM 계산 → fnspace_finance에 저장"""
+    from step5b_calc_ttm import calc_ttm
     calc_ttm()
-    upload_ttm_to_pg()
 
 
 # ═══════════════════════════════════════════════════════════

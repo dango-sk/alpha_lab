@@ -14,6 +14,14 @@ import calendar
 from pathlib import Path
 from datetime import datetime
 
+# .env 자동 로드
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        if _line.strip() and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
 import numpy as np
 import pandas as pd
 from psycopg2.extras import execute_values
@@ -56,7 +64,8 @@ def load_mcap_map(conn) -> dict:
     from collections import defaultdict
     by_code = defaultdict(dict)
     for code, td, mc in rows:
-        by_code[code][td] = mc
+        td_str = td.strftime("%Y-%m-%d") if hasattr(td, "strftime") else str(td)
+        by_code[code][td_str] = mc
 
     mcap_map = {}
     for code, date_mc in by_code.items():
