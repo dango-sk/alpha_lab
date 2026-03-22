@@ -214,12 +214,26 @@ export default function LabPage() {
       const data = await getStrategy(name, universe, rebalType);
       if (data?.code) {
         setCode(data.code);
+        // 코드에서 파싱
         const parsed = parseStrategyParams(data.code);
-        if (parsed.weightCapPct !== undefined) setWeightCapPct(parsed.weightCapPct);
-        if (parsed.topN !== undefined) setTopN(parsed.topN);
-        if (parsed.txCostBp !== undefined) setTxCostBp(parsed.txCostBp);
+        // 전략 이름에서 파싱 (코드보다 더 신뢰성 높음 - 실제 저장 시점의 값)
+        const capFromName = name.match(/cap(\d+)%/);
+        const topFromName = name.match(/top(\d+)/);
+        const txFromName = name.match(/tx(\d+)bp/);
+        const capVal = capFromName ? parseInt(capFromName[1]) : parsed.weightCapPct;
+        const topVal = topFromName ? parseInt(topFromName[1]) : parsed.topN;
+        const txVal = txFromName ? parseInt(txFromName[1]) : parsed.txCostBp;
+
+        if (capVal !== undefined) setWeightCapPct(capVal);
+        if (topVal !== undefined) setTopN(topVal);
+        if (txVal !== undefined) setTxCostBp(txVal);
         if (parsed.universe) setUniverse(parsed.universe);
         if (parsed.rebalType) setRebalType(parsed.rebalType);
+        // 유니버스/리밸런싱은 전략 이름에서도 파싱
+        if (/코스피\+코스닥|KOSPI\+KOSDAQ/i.test(name)) setUniverse('KOSPI+KOSDAQ');
+        else if (/코스피|KOSPI/i.test(name)) setUniverse('KOSPI');
+        if (/격주|biweekly/i.test(name)) setRebalType('biweekly');
+        else if (/월간|monthly/i.test(name)) setRebalType('monthly');
       }
     } catch {
       // 코드 없는 전략 (레짐 조합 등)은 무시
