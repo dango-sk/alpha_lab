@@ -536,30 +536,6 @@ export default function PortfolioPage() {
         <LoadingState message="포트폴리오 데이터를 불러오는 중..." />
       ) : (
         <>
-          {/* 전략 간 종목 겹침율 */}
-          {strategyKeys.length >= 2 && (
-            <section>
-              <h3 className="text-sm font-medium text-muted mb-3">전략 간 종목 겹침율</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {strategyKeys.flatMap((a, i) =>
-                  strategyKeys.slice(i + 1).map((b) => {
-                    const aSet = new Set((holdingsMap[a] || []).map((h) => h['종목코드']));
-                    const bSet = new Set((holdingsMap[b] || []).map((h) => h['종목코드']));
-                    const inter = [...aSet].filter((c) => bSet.has(c)).length;
-                    const total = Math.max(aSet.size, bSet.size, 1);
-                    const pct = Math.round((inter / total) * 100);
-                    return (
-                      <div key={`${a}-${b}`} className="bg-surface/50 border border-border rounded-lg p-3 text-center">
-                        <p className="text-xs text-muted mb-1">{labels[a] || a} × {labels[b] || b}</p>
-                        <p className={`text-2xl font-bold ${pct < 30 ? 'text-red-400' : pct < 60 ? 'text-yellow-400' : 'text-green-400'}`}>{pct}%</p>
-                        <p className="text-[10px] text-muted mt-0.5">공통 {inter}종목</p>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-          )}
 
           {/* Portfolio Characteristics */}
           <section>
