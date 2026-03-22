@@ -1703,58 +1703,44 @@ def compute_regime_combo_preview(
 ) -> dict:
     """레짐 조합 백테스트 실행 전 미리 볼 수 있는 지표 계산.
 
+    겹침율은 캐시된 holdings 데이터에서 빠르게 계산.
+    캐시가 없으면 None 반환.
+
     Returns:
-        overlap_pct       : 두 전략 평균 종목 겹침율 (%)
+        overlap_pct       : 두 전략 평균 종목 겹침율 (%) 또는 None
         transition_count  : Bull↔Bear 전환 횟수
         avg_bull_duration : Bull 구간 평균 지속 기간 (개월)
         avg_bear_duration : Bear 구간 평균 지속 기간 (개월)
     """
-    from step7_backtest import get_rebalance_dates, get_universe_stocks, get_db
-    from lib.factor_engine import score_stocks_from_strategy, prefetch_all_data
-    from lib.db import get_conn as _get_conn
+    import json as _json
+    from pathlib import Path as _Path
 
     _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
     _universe = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
     _top_n = BACKTEST_CONFIG.get("top_n_stocks", 30)
-    _min_mc = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
 
-    # ── 두 전략 모듈 로드 ──────────────────────────────────────
-    def _get_module(key):
-        for u in [_universe, "KOSPI", "KOSPI+KOSDAQ"]:
-            for r in [_rebal, "monthly", "biweekly"]:
-                d = load_strategy(key, rebal_type=r, universe=u)
-                if d and d.get("code"):
-                    return code_to_module(d["code"])
-        code = _BASE_STRATEGY_CODES.get(key, "")
-        return code_to_module(code) if code else None
+    # ── 겹침율: holdings 캐시에서 빠르게 계산 ────────────────────
+    uni_key = _universe.replace("+", "_")
+    cache_file = _Path("cache") / f"holdings_{uni_key}_{_rebal}.json"
+    avg_overlap = None
 
-    bull_module = _get_module(bull_key)
-    bear_module = _get_module(bear_key)
-    if not bull_module or not bear_module:
-        return {"error": "전략 코드를 찾을 수 없습니다"}
-
-    # ── 겹침율 계산 ──────────────────────────────────────────
-    pf_conn = get_db()
-    prefetch_all_data(pf_conn)
-    dates = get_rebalance_dates(pf_conn, _rebal)
-    pf_conn.close()
-
-    overlaps = []
-    score_conn = _get_conn()
-    for date in dates:
+    if cache_file.exists():
         try:
-            universe_set = get_universe_stocks(score_conn, date, _rebal, _min_mc)
-            bull_scored = [c for c, _ in score_stocks_from_strategy(score_conn, date, bull_module) if c in universe_set]
-            bear_scored = [c for c, _ in score_stocks_from_strategy(score_conn, date, bear_module) if c in universe_set]
-            bull_top = set(bull_scored[:_top_n])
-            bear_top = set(bear_scored[:_top_n])
-            if bull_top and bear_top:
-                overlaps.append(len(bull_top & bear_top) / _top_n)
+            cache = _json.loads(cache_file.read_text())
+            data = cache.get("data", {})
+            bull_holdings = data.get(bull_key, {})
+            bear_holdings = data.get(bear_key, {})
+            common_dates = set(bull_holdings.keys()) & set(bear_holdings.keys())
+            overlaps = []
+            for date in common_dates:
+                bull_codes = {h["종목코드"] for h in (bull_holdings[date] or [])}
+                bear_codes = {h["종목코드"] for h in (bear_holdings[date] or [])}
+                if bull_codes and bear_codes:
+                    overlaps.append(len(bull_codes & bear_codes) / _top_n)
+            if overlaps:
+                avg_overlap = round(float(np.mean(overlaps)) * 100, 1)
         except Exception:
-            continue
-    score_conn.close()
-
-    avg_overlap = float(np.mean(overlaps) * 100) if overlaps else 0.0
+            avg_overlap = None
 
     # ── 레짐 전환 횟수 & 평균 지속 기간 ─────────────────────────
     # compute_regime_analysis의 regimes_by_date 재활용

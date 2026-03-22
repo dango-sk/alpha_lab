@@ -924,10 +924,16 @@ export default function LabPage() {
                       <div className="grid grid-cols-3 gap-3">
                         <div className="text-center">
                           <p className="text-xs text-muted">종목 겹침율</p>
-                          <p className={`text-lg font-semibold ${regimePreview.overlap_pct < 30 ? 'text-red-400' : regimePreview.overlap_pct < 60 ? 'text-yellow-400' : 'text-green-400'}`}>
-                            {regimePreview.overlap_pct}%
-                          </p>
-                          <p className="text-[10px] text-muted">{regimePreview.overlap_pct < 30 ? '낮음 → 전환 비용 주의' : regimePreview.overlap_pct < 60 ? '보통' : '높음 → 전환 비용 적음'}</p>
+                          {regimePreview.overlap_pct != null ? (
+                            <>
+                              <p className={`text-lg font-semibold ${regimePreview.overlap_pct < 30 ? 'text-red-400' : regimePreview.overlap_pct < 60 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                {regimePreview.overlap_pct}%
+                              </p>
+                              <p className="text-[10px] text-muted">{regimePreview.overlap_pct < 30 ? '낮음 → 전환 비용 주의' : regimePreview.overlap_pct < 60 ? '보통' : '높음 → 전환 비용 적음'}</p>
+                            </>
+                          ) : (
+                            <p className="text-lg font-semibold text-muted">-</p>
+                          )}
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-muted">레짐 전환 횟수</p>
