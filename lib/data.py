@@ -1541,6 +1541,7 @@ def compute_regime_analysis(
     end: str = None,
     universe: str = None,
     rebal_type: str = None,
+    ma_window: int = 50,
 ) -> dict:
     """KOSPI 200 50일 이동평균 기준으로 시장 국면(Bull/Bear)을 분류하고,
     각 전략의 국면별 성과 통계를 반환한다.
