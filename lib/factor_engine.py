@@ -357,7 +357,10 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
 
         if not ttm_df.empty:
             fallback = annual_df[~annual_df["stock_code"].isin(ttm_df["stock_code"])] if not annual_df.empty else pd.DataFrame()
-            fin_df = pd.concat([ttm_df, fallback], ignore_index=True)
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                fin_df = pd.concat([ttm_df, fallback], ignore_index=True)
         else:
             fin_df = annual_df
 

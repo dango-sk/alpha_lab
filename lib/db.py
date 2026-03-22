@@ -122,10 +122,14 @@ def get_conn():
 
 def read_sql(sql: str, conn, params=None):
     """pd.read_sql_query의 래퍼. PostgreSQL일 때 SQL/placeholder 자동 변환."""
+    import warnings
     import pandas as pd
     if _is_pg:
         sql = _translate_sql(sql)
         raw_conn = conn._conn if isinstance(conn, _PgConnWrapper) else conn
-        return pd.read_sql_query(sql, raw_conn, params=params)
+        cur = raw_conn.cursor()
+        cur.execute(sql, params or ())
+        cols = [desc[0] for desc in cur.description]
+        return pd.DataFrame(cur.fetchall(), columns=cols)
     else:
         return pd.read_sql_query(sql, conn, params=params)

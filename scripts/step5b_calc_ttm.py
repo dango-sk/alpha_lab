@@ -151,8 +151,9 @@ def calc_ttm():
             oi = values.get("operating_income")
             values["oi_margin"] = (oi / rev * 100) if (rev and rev > 0 and oi is not None) else None
 
-            # EV = 시가총액 + net_debt
-            mcap = mcap_map.get((code, end_year, qtr_num))
+            # EV = 시가총액 + net_debt (daily_price는 A 접두사 없는 코드)
+            dp_code = code[1:] if code.startswith("A") else code
+            mcap = mcap_map.get((dp_code, end_year, qtr_num))
             nd = values.get("net_debt")
             ev = (mcap + nd) if (mcap is not None and nd is not None) else None
             values["ev"] = ev
