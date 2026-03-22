@@ -1166,10 +1166,13 @@ def load_strategy(name: str, rebal_type: str = None, universe: str = None) -> di
             WHERE name = %s AND universe = %s AND rebal_type = %s
         """, (name, _uni, _rt)).fetchone()
         if not row:
+            # 사전 정의 전략 fallback
+            if name in _BASE_STRATEGY_CODES:
+                return {"name": name, "code": _BASE_STRATEGY_CODES[name], "description": "", "results": {}, "holdings": None}
             return {}
         result = {
             "name": row[0],
-            "code": row[1] or "",
+            "code": row[1] or _BASE_STRATEGY_CODES.get(row[0], ""),
             "description": row[2] or "",
             "results": row[3] or {},
             "holdings": row[4],
