@@ -242,6 +242,19 @@ export default function LabPage() {
     }
   }, [defaultCode]);
 
+  // ─── Regime Combo Preview ───
+  useEffect(() => {
+    if (!regimeBullKey || !regimeBearKey) { setRegimePreview(null); return; }
+    let cancelled = false;
+    setRegimePreviewLoading(true);
+    setRegimePreview(null);
+    getRegimeComboPreview(regimeBullKey, regimeBearKey, universe, rebalType)
+      .then((res) => { if (!cancelled) setRegimePreview(res); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setRegimePreviewLoading(false); });
+    return () => { cancelled = true; };
+  }, [regimeBullKey, regimeBearKey, universe, rebalType]);
+
   // ─── Delete strategy ───
   const deleteStrategy = useCallback(async () => {
     if (!selectedStrategy) return;
@@ -828,19 +841,6 @@ export default function LabPage() {
           const labels: Record<string, string> = Object.fromEntries(
             stratKeys.map((k) => [k, savedNameMap[k] || cfgLabels[k] || k])
           );
-
-          // 두 전략 선택 시 preview 자동 호출
-          useEffect(() => {
-            if (!regimeBullKey || !regimeBearKey) { setRegimePreview(null); return; }
-            let cancelled = false;
-            setRegimePreviewLoading(true);
-            setRegimePreview(null);
-            getRegimeComboPreview(regimeBullKey, regimeBearKey, universe, rebalType)
-              .then((res) => { if (!cancelled) setRegimePreview(res); })
-              .catch(() => {})
-              .finally(() => { if (!cancelled) setRegimePreviewLoading(false); });
-            return () => { cancelled = true; };
-          }, [regimeBullKey, regimeBearKey, universe, rebalType]);
 
           const handleRun = async () => {
             if (!regimeBullKey || !regimeBearKey) return;
