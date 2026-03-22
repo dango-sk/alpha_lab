@@ -1511,6 +1511,8 @@ def run_regime_combo_backtest(
         BACKTEST_CONFIG["rebal_type"] = _rebal
         BACKTEST_CONFIG["universe"] = _universe
 
+        print(f"[REGIME_COMBO] CONFIG: top_n={top_n}, tx_cost={tx_cost_bp}bp, weight_cap={weight_cap_pct}%, universe={_universe}, rebal={_rebal}", flush=True)
+
         _pf_conn = get_db()
         prefetch_all_data(_pf_conn)
         _pf_conn.close()
@@ -1547,6 +1549,7 @@ def run_regime_combo_backtest(
 
         results = {}
         if result:
+            print(f"[REGIME_COMBO] total_return={result.get('total_return')}", flush=True)
             result["strategy"] = "레짐 조합"
             result["bull_key"] = bull_key
             result["bear_key"] = bear_key
