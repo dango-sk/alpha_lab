@@ -213,17 +213,16 @@ const regimePerfColumns = [
   },
 ];
 
-function RegimeSection({ regimeData, strategyKeys, labels, maWindow, maWindowInput, setMaWindowInput, setMaWindow }: {
+function RegimeSection({ regimeData, strategyKeys, labels, maWindow, setMaWindow }: {
   regimeData: { regimes: Record<string, string>; summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>; regime_counts: Record<string, number> };
   strategyKeys: string[];
   labels: Record<string, string>;
   colors: Record<string, string>;
   maWindow: number;
-  maWindowInput: string;
-  setMaWindowInput: (v: string) => void;
   setMaWindow: (v: number) => void;
 }) {
   const [activeRegime, setActiveRegime] = useState<string>('Bull');
+  const [localInput, setLocalInput] = useState(String(maWindow));
 
   const regimeStats = useMemo(() => {
     const sorted = Object.keys(regimeData.regimes).sort().map((d) => regimeData.regimes[d]);
@@ -344,18 +343,18 @@ function RegimeSection({ regimeData, strategyKeys, labels, maWindow, maWindowInp
             type="number"
             min={5}
             max={500}
-            value={maWindowInput}
-            onChange={(e) => setMaWindowInput(e.target.value)}
+            value={localInput}
+            onChange={(e) => setLocalInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                const v = parseInt(maWindowInput);
+                const v = parseInt(localInput);
                 if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
               }
             }}
             onBlur={() => {
-              const v = parseInt(maWindowInput);
+              const v = parseInt(localInput);
               if (!isNaN(v) && v >= 5 && v <= 500) setMaWindow(v);
-              else setMaWindowInput(String(maWindow));
+              else setLocalInput(String(maWindow));
             }}
             className="w-16 px-2 py-1 rounded border border-border bg-surface text-center text-sm"
           />
@@ -442,7 +441,6 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
   const [maWindow, setMaWindow] = useState(50);
-  const [maWindowInput, setMaWindowInput] = useState('50');
   const [regimeData, setRegimeData] = useState<{
     regimes: Record<string, string>;
     summary: Record<string, Record<string, { count: number; avg_monthly_return: number; total_return: number; sharpe: number; win_rate: number; avg_excess: number }>>;
@@ -1011,8 +1009,6 @@ export default function PerformancePage() {
           labels={labels}
           colors={colors}
           maWindow={maWindow}
-          maWindowInput={maWindowInput}
-          setMaWindowInput={setMaWindowInput}
           setMaWindow={setMaWindow}
         />
       )}
