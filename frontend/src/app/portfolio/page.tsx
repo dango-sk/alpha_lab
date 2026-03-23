@@ -107,7 +107,7 @@ export default function PortfolioPage() {
       .then(([cfg, res]) => {
         setConfig(cfg);
         setResults(res);
-        const keys = (cfg.all_keys || Object.keys(res)).filter((k: string) => res[k]);
+        const keys = Object.keys(res).filter((k: string) => res[k]);
         const nonBm = keys.filter((k: string) => k !== 'KOSPI' && k !== 'KOSDAQ');
         setSelectedStrategies(nonBm.slice(0, 3));
         for (const key of keys) {
@@ -140,8 +140,7 @@ export default function PortfolioPage() {
 
   // All available strategy keys (for selector)
   const allStrategyKeys = useMemo(() => {
-    if (!config) return Object.keys(results);
-    return (config.all_keys || Object.keys(results)).filter((k) => results[k] && k !== 'KOSPI' && k !== 'KOSDAQ');
+    return Object.keys(results).filter((k) => results[k] && k !== 'KOSPI' && k !== 'KOSDAQ');
   }, [config, results]);
 
   // Active strategy keys (filtered by selection)
