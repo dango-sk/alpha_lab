@@ -75,11 +75,11 @@ function parseStrategyParams(code: string): {
   rebalType?: 'monthly' | 'biweekly';
 } {
   const result: ReturnType<typeof parseStrategyParams> = {};
-  const cap = code.match(/weight_cap_pct\s*[=:]\s*(\d+)/);
+  const cap = code.match(/weight_cap_pct["']?\s*[=:]\s*(\d+)/);
   if (cap) result.weightCapPct = parseInt(cap[1]);
-  const top = code.match(/top_n(?:_stocks)?\s*[=:]\s*(\d+)/);
+  const top = code.match(/top_n(?:_stocks)?["']?\s*[=:]\s*(\d+)/);
   if (top) result.topN = parseInt(top[1]);
-  const tx = code.match(/transaction_cost_bp\s*[=:]\s*(\d+)/);
+  const tx = code.match(/(?:transaction_cost_bp|tx_cost_bp)["']?\s*[=:]\s*(\d+)/);
   if (tx) result.txCostBp = parseInt(tx[1]);
   if (/KOSPI\+KOSDAQ|kospi.*kosdaq/i.test(code)) result.universe = 'KOSPI+KOSDAQ';
   else if (/KOSPI/i.test(code)) result.universe = 'KOSPI';
