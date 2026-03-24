@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface DatePickerProps {
   value: string;
@@ -10,7 +11,7 @@ interface DatePickerProps {
 
 export default function DatePicker({ value, options, onChange }: DatePickerProps) {
   const [open, setOpen] = useState(false);
-  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const [rect, setRect] = useState<DOMRect | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
@@ -18,9 +19,10 @@ export default function DatePicker({ value, options, onChange }: DatePickerProps
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
-        btnRef.current && !btnRef.current.contains(e.target as Node) &&
-        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
-      ) setOpen(false);
+        btnRef.current?.contains(e.target as Node) ||
+        dropdownRef.current?.contains(e.target as Node)
+      ) return;
+      setOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -33,12 +35,38 @@ export default function DatePicker({ value, options, onChange }: DatePickerProps
   }, [open]);
 
   function handleOpen() {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setDropdownStyle({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    }
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
     setOpen((v) => !v);
   }
+
+  const dropdown = open && rect && (
+    <div
+      ref={dropdownRef}
+      style={{
+        position: 'fixed',
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        zIndex: 99999,
+      }}
+      className="bg-surface border border-border rounded-lg shadow-xl py-1 min-w-[160px] max-h-72 overflow-y-auto"
+    >
+      {[...options].reverse().map((d) => {
+        const isSelected = d === value;
+        return (
+          <button
+            key={d}
+            ref={isSelected ? selectedRef : undefined}
+            onClick={() => { onChange(d); setOpen(false); }}
+            className={`w-full text-left px-4 py-2 text-xs transition-colors ${
+              isSelected ? 'bg-primary text-white font-medium' : 'text-foreground hover:bg-white/5'
+            }`}
+          >
+            {d}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <>
@@ -55,32 +83,7 @@ export default function DatePicker({ value, options, onChange }: DatePickerProps
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-
-      {open && (
-        <div
-          ref={dropdownRef}
-          className="fixed z-[9999] bg-surface border border-border rounded-lg shadow-xl py-1 min-w-[160px] max-h-72 overflow-y-auto"
-          style={{ top: dropdownStyle.top, right: dropdownStyle.right }}
-        >
-          {[...options].reverse().map((d) => {
-            const isSelected = d === value;
-            return (
-              <button
-                key={d}
-                ref={isSelected ? selectedRef : undefined}
-                onClick={() => { onChange(d); setOpen(false); }}
-                className={`w-full text-left px-4 py-2 text-xs transition-colors ${
-                  isSelected
-                    ? 'bg-primary text-white font-medium'
-                    : 'text-foreground hover:bg-white/5'
-                }`}
-              >
-                {d}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {typeof window !== 'undefined' && createPortal(dropdown, document.body)}
     </>
   );
 }

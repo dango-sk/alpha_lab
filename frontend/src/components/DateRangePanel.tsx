@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface DateRangePanelProps {
   startDate: string;
@@ -12,10 +13,10 @@ interface DateRangePanelProps {
 
 export default function DateRangePanel({ startDate, endDate, isOosSplit, onApply }: DateRangePanelProps) {
   const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
   const [dStart, setDStart] = useState(startDate);
   const [dEnd, setDEnd] = useState(endDate);
   const [dSplit, setDSplit] = useState(isOosSplit);
-  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,19 +27,17 @@ export default function DateRangePanel({ startDate, endDate, isOosSplit, onApply
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
-        btnRef.current && !btnRef.current.contains(e.target as Node) &&
-        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
-      ) setOpen(false);
+        btnRef.current?.contains(e.target as Node) ||
+        dropdownRef.current?.contains(e.target as Node)
+      ) return;
+      setOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   function handleOpen() {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setDropdownStyle({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    }
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
     setOpen((v) => !v);
   }
 
@@ -48,6 +47,43 @@ export default function DateRangePanel({ startDate, endDate, isOosSplit, onApply
   }
 
   const label = startDate && endDate ? `${startDate} ~ ${endDate}` : '기간 설정';
+
+  const dropdown = open && rect && (
+    <div
+      ref={dropdownRef}
+      style={{
+        position: 'fixed',
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        zIndex: 99999,
+      }}
+      className="bg-surface border border-border rounded-lg shadow-xl p-4 w-[420px]"
+    >
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        <div>
+          <label className="block text-[10px] text-muted mb-1 font-medium">시작일</label>
+          <input type="date" value={dStart} onChange={(e) => setDStart(e.target.value)}
+            className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+        </div>
+        <div>
+          <label className="block text-[10px] text-muted mb-1 font-medium">종료일</label>
+          <input type="date" value={dEnd} onChange={(e) => setDEnd(e.target.value)}
+            className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+        </div>
+        <div>
+          <label className="block text-[10px] text-muted mb-1 font-medium">IS/OOS 분할점</label>
+          <input type="date" value={dSplit} onChange={(e) => setDSplit(e.target.value)}
+            className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button onClick={handleApply}
+          className="px-4 py-1.5 text-xs font-medium rounded-lg bg-primary text-white hover:opacity-90 transition-opacity">
+          적용
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -64,52 +100,7 @@ export default function DateRangePanel({ startDate, endDate, isOosSplit, onApply
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-
-      {open && (
-        <div
-          ref={dropdownRef}
-          className="fixed z-[9999] bg-surface border border-border rounded-lg shadow-xl p-4 w-[420px]"
-          style={{ top: dropdownStyle.top, right: dropdownStyle.right }}
-        >
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            <div>
-              <label className="block text-[10px] text-muted mb-1 font-medium">시작일</label>
-              <input
-                type="date"
-                value={dStart}
-                onChange={(e) => setDStart(e.target.value)}
-                className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-muted mb-1 font-medium">종료일</label>
-              <input
-                type="date"
-                value={dEnd}
-                onChange={(e) => setDEnd(e.target.value)}
-                className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-muted mb-1 font-medium">IS/OOS 분할점</label>
-              <input
-                type="date"
-                value={dSplit}
-                onChange={(e) => setDSplit(e.target.value)}
-                className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={handleApply}
-              className="px-4 py-1.5 text-xs font-medium rounded-lg bg-primary text-white hover:opacity-90 transition-opacity"
-            >
-              적용
-            </button>
-          </div>
-        </div>
-      )}
+      {typeof window !== 'undefined' && createPortal(dropdown, document.body)}
     </>
   );
 }
