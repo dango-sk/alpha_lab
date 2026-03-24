@@ -596,6 +596,7 @@ export default function PerformancePage() {
 
   // ─── Selected strategy for yearly detail (first strategy = A0) ───
   const [selectedStrategy, setSelectedStrategy] = useState<string>('');
+  const [detailTab, setDetailTab] = useState<'summary' | 'yearly' | 'isoos' | 'rolling' | 'regime'>('summary');
 
   useEffect(() => {
     if (strategyKeys.length > 0 && !strategyKeys.includes(selectedStrategy)) {
@@ -838,67 +839,61 @@ export default function PerformancePage() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <SectionHeader title="성과 비교" subtitle="전략별 누적 수익률 및 핵심 지표" />
-
-      <DateRangePanel
-        startDate={startDate}
-        endDate={endDate}
-        isOosSplit={isOosSplit}
-        onApply={applyDates}
-      />
-
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <FilterBar
-          universe={universe}
-          onUniverseChange={setUniverse}
-          rebalType={rebalType}
-          onRebalTypeChange={setRebalType}
-        />
-      </div>
-
-      {/* Strategy selector */}
-      <div className="space-y-2">
-        <label className="text-xs text-muted font-medium">전략 선택</label>
-        <div className="flex flex-wrap gap-2">
-          {allStrategyKeys.map((key) => {
-            const selected = selectedStrategies.includes(key);
-            const lbl = labels[key] || key;
-            const color = colors[key] || '#6366f1';
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  if (selected) {
-                    setSelectedStrategies((prev) => prev.filter((k) => k !== key));
-                  } else {
-                    setSelectedStrategies((prev) => [...prev, key]);
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
-                style={{
-                  backgroundColor: selected ? color + '20' : 'transparent',
-                  borderColor: selected ? color : 'var(--color-border)',
-                  color: selected ? color : 'var(--color-muted)',
-                }}
-              >
-                {lbl}
-                {selected && <span className="ml-1 opacity-60">&times;</span>}
-              </button>
-            );
-          })}
+    <div className="animate-fade-in -mt-2">
+      {/* ─── 상단: 필터 + 전략 선택 (compact) ─── */}
+      <div className="glass-card p-3 mb-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <FilterBar
+            universe={universe}
+            onUniverseChange={setUniverse}
+            rebalType={rebalType}
+            onRebalTypeChange={setRebalType}
+          />
+          <div className="flex flex-wrap gap-2">
+            {allStrategyKeys.map((key) => {
+              const selected = selectedStrategies.includes(key);
+              const lbl = labels[key] || key;
+              const color = colors[key] || '#6366f1';
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    if (selected) {
+                      setSelectedStrategies((prev) => prev.filter((k) => k !== key));
+                    } else {
+                      setSelectedStrategies((prev) => [...prev, key]);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
+                  style={{
+                    backgroundColor: selected ? color + '20' : 'transparent',
+                    borderColor: selected ? color : 'var(--color-border)',
+                    color: selected ? color : 'var(--color-muted)',
+                  }}
+                >
+                  {lbl}
+                  {selected && <span className="ml-1 opacity-60">&times;</span>}
+                </button>
+              );
+            })}
+          </div>
+          <DateRangePanel
+            startDate={startDate}
+            endDate={endDate}
+            isOosSplit={isOosSplit}
+            onApply={applyDates}
+          />
         </div>
+        {bc && (
+          <p className="text-xs text-muted mt-2">
+            기간: {startDate} ~ {endDate} | 리밸런싱: {rebalType === 'monthly' ? '월간' : '격주'}, 상위 {bc.top_n_stocks}종목 | 비중: 시총비례 + {bc.weight_cap_pct}% 캡 | 거래비용: 편도 {bc.transaction_cost_bp}bp | 유니버스: {universe} (BM: {universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200'})
+          </p>
+        )}
       </div>
 
-      {bc && (
-        <p className="text-xs text-muted">
-          기간: {startDate} ~ {endDate} | 리밸런싱: {rebalType === 'monthly' ? '월간' : '격주'}, 상위 {bc.top_n_stocks}종목 | 비중: 시총비례 + {bc.weight_cap_pct}% 캡 | 거래비용: 편도 {bc.transaction_cost_bp}bp | 유니버스: {universe} (BM: {universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200'})
-        </p>
-      )}
-
-      {/* KPI Cards */}
+      {/* ─── KPI Cards ─── */}
       {primary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           {strategyKeys.map((key) => {
             const r = results[key];
             const borderColors: Record<string, string> = {
@@ -925,79 +920,73 @@ export default function PerformancePage() {
         </div>
       )}
 
-      {/* Performance Comparison Table */}
-      <div>
-        <SectionHeader title="성과 요약" />
-        <DataTable
-          columns={comparisonColumns}
-          data={comparisonData}
-          maxHeight="none"
-        />
-      </div>
-
-      {/* Cumulative Return Chart */}
-      <div>
-        <SectionHeader title="누적 수익률" />
-        <PlotlyChart data={cumRetTraces} layout={cumRetLayout} height={400} />
-      </div>
-
-      {/* Drawdown Chart */}
-      <div>
-        <SectionHeader title="Drawdown" />
-        <LazyChart height={300}>
-          <PlotlyChart data={ddTraces} layout={ddLayout} height={300} />
-        </LazyChart>
-      </div>
-
-      {/* Yearly Performance */}
-      <div>
-        <SectionHeader title="연도별 성과">
-          <select
-            value={selectedStrategy}
-            onChange={(e) => setSelectedStrategy(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-surface border border-border rounded-lg text-foreground"
-          >
-            {strategyKeys.map((key) => (
-              <option key={key} value={key}>
-                {labels[key] || key}
-              </option>
-            ))}
-          </select>
-        </SectionHeader>
-
-        <div className="space-y-4">
-          <DataTable
-            columns={monthlyColumns}
-            data={monthlyRows}
-            maxHeight="none"
-          />
-          <DataTable
-            columns={yearlyStatsColumns}
-            data={yearlyStats}
-            maxHeight="none"
-          />
+      {/* ─── 차트 나란히 ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div className="glass-card p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">누적 수익률</h3>
+          <PlotlyChart data={cumRetTraces} layout={cumRetLayout} height={350} />
+        </div>
+        <div className="glass-card p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">Drawdown</h3>
+          <LazyChart height={350}>
+            <PlotlyChart data={ddTraces} layout={ddLayout} height={350} />
+          </LazyChart>
         </div>
       </div>
 
-      {/* IS/OOS Comparison */}
-      <div>
-        <SectionHeader
-          title="In-Sample / Out-of-Sample 비교"
-          subtitle={`IS: ${startDate} ~ ${isOosSplit} | OOS: ${isOosSplit} ~ ${endDate}`}
-        />
-        <DataTable
-          columns={isOosColumns}
-          data={isOosData}
-          maxHeight="none"
-        />
+      {/* ─── 상세 분석 탭 ─── */}
+      <div className="flex gap-0 border-b border-border mb-4">
+        {(['summary', 'yearly', 'isoos', 'rolling', 'regime'] as const).map((tab) => {
+          const tabLabels = { summary: '성과 요약', yearly: '연도별 성과', isoos: 'IS/OOS', rolling: '초과수익률', regime: '레짐 분석' };
+          return (
+            <button key={tab} onClick={() => setDetailTab(tab)}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                detailTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-foreground'
+              }`}>
+              {tabLabels[tab]}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Rolling 12-month Excess Return */}
-      {rollingExcessTraces.length > 0 && (
+      {detailTab === 'summary' && (
+        <DataTable columns={comparisonColumns} data={comparisonData} maxHeight="none" />
+      )}
+
+      {detailTab === 'yearly' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-foreground">연도별 성과</h3>
+            <select
+              value={selectedStrategy}
+              onChange={(e) => setSelectedStrategy(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-surface border border-border rounded-lg text-foreground"
+            >
+              {strategyKeys.map((key) => (
+                <option key={key} value={key}>
+                  {labels[key] || key}
+                </option>
+              ))}
+            </select>
+          </div>
+          <DataTable columns={monthlyColumns} data={monthlyRows} maxHeight="none" />
+          <DataTable columns={yearlyStatsColumns} data={yearlyStats} maxHeight="none" />
+        </div>
+      )}
+
+      {detailTab === 'isoos' && (
         <div>
-          <h3 className="text-sm font-medium text-muted mb-2">
-            롤링 12개월 누적 초과수익률 (vs 벤치마크)
+          <h3 className="text-sm font-semibold text-foreground mb-2">
+            In-Sample / Out-of-Sample 비교
+            <span className="text-xs text-muted ml-2">IS: {startDate} ~ {isOosSplit} | OOS: {isOosSplit} ~ {endDate}</span>
           </h3>
+          <DataTable columns={isOosColumns} data={isOosData} maxHeight="none" />
+        </div>
+      )}
+
+      {detailTab === 'rolling' && rollingExcessTraces.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-foreground mb-2">롤링 12개월 누적 초과수익률 (vs 벤치마크)</h3>
           <LazyChart height={350}>
             <PlotlyChart
               data={rollingExcessTraces}
@@ -1022,8 +1011,7 @@ export default function PerformancePage() {
         </div>
       )}
 
-      {/* Regime Analysis */}
-      {(regimeData || regimeLoading) && (
+      {detailTab === 'regime' && (regimeData || regimeLoading) && (
         <RegimeSection
           regimeData={regimeData}
           regimeLoading={regimeLoading}
