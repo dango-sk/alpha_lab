@@ -598,7 +598,7 @@ export default function PerformancePage() {
 
   // ─── Selected strategy for yearly detail (first strategy = A0) ───
   const [selectedStrategy, setSelectedStrategy] = useState<string>('');
-  const [detailTab, setDetailTab] = useState<'chart' | 'summary' | 'yearly' | 'isoos' | 'rolling' | 'regime'>('chart');
+  const [detailTab, setDetailTab] = useState<'summary' | 'yearly' | 'isoos' | 'rolling' | 'regime'>('summary');
 
   useEffect(() => {
     if (strategyKeys.length > 0 && !strategyKeys.includes(selectedStrategy)) {
@@ -872,39 +872,10 @@ export default function PerformancePage() {
         )}
       </div>
 
-      {/* ─── KPI Cards ─── */}
-      {primary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          {strategyKeys.map((key) => {
-            const r = results[key];
-            const borderColors: Record<string, string> = {
-              0: 'border-t-accent-blue',
-              1: 'border-t-[#90A4AE]',
-              2: 'border-t-accent-green',
-              3: 'border-t-accent-yellow',
-            };
-            const idx = strategyKeys.indexOf(key);
-            return (
-              <KpiCard
-                key={key}
-                label={labels[key] || key}
-                value={fmtPct(r.total_return)}
-                borderColor={borderColors[idx] || 'border-t-primary'}
-                valueColor={valueColor(r.total_return)}
-                subItems={[
-                  { label: 'MDD', value: fmtPct(r.mdd), color: 'text-accent-red' },
-                  { label: 'Sharpe', value: fmtNum(r.sharpe) },
-                ]}
-              />
-            );
-          })}
-        </div>
-      )}
-
       {/* ─── 탭 ─── */}
       <div className="glass-card p-1 mb-4 flex gap-0 rounded-lg sticky top-0 z-10">
-        {(['chart', 'summary', 'yearly', 'isoos', 'rolling', 'regime'] as const).map((tab) => {
-          const tabLabels = { chart: '차트', summary: '성과 요약', yearly: '연도별 성과', isoos: 'IS/OOS', rolling: '초과수익률', regime: '레짐 분석' };
+        {(['summary', 'yearly', 'isoos', 'rolling', 'regime'] as const).map((tab) => {
+          const tabLabels = { summary: '성과 요약', yearly: '연도별 성과', isoos: 'IS/OOS', rolling: '초과수익률', regime: '레짐 분석' };
           return (
             <button key={tab} onClick={() => setDetailTab(tab)}
               className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all ${
@@ -916,23 +887,49 @@ export default function PerformancePage() {
         })}
       </div>
 
-      {detailTab === 'chart' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-2">누적 수익률</h3>
-            <PlotlyChart data={cumRetTraces} layout={cumRetLayout} height={320} />
-          </div>
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-2">Drawdown</h3>
-            <LazyChart height={320}>
-              <PlotlyChart data={ddTraces} layout={ddLayout} height={320} />
-            </LazyChart>
-          </div>
-        </div>
-      )}
-
       {detailTab === 'summary' && (
-        <DataTable columns={comparisonColumns} data={comparisonData} maxHeight="none" />
+        <div className="space-y-4">
+          {primary && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {strategyKeys.map((key) => {
+                const r = results[key];
+                const borderColors: Record<string, string> = {
+                  0: 'border-t-accent-blue',
+                  1: 'border-t-[#90A4AE]',
+                  2: 'border-t-accent-green',
+                  3: 'border-t-accent-yellow',
+                };
+                const idx = strategyKeys.indexOf(key);
+                return (
+                  <KpiCard
+                    key={key}
+                    label={labels[key] || key}
+                    value={fmtPct(r.total_return)}
+                    borderColor={borderColors[idx] || 'border-t-primary'}
+                    valueColor={valueColor(r.total_return)}
+                    subItems={[
+                      { label: 'MDD', value: fmtPct(r.mdd), color: 'text-accent-red' },
+                      { label: 'Sharpe', value: fmtNum(r.sharpe) },
+                    ]}
+                  />
+                );
+              })}
+            </div>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="glass-card p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-2">누적 수익률</h3>
+              <PlotlyChart data={cumRetTraces} layout={cumRetLayout} height={300} />
+            </div>
+            <div className="glass-card p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-2">Drawdown</h3>
+              <LazyChart height={300}>
+                <PlotlyChart data={ddTraces} layout={ddLayout} height={300} />
+              </LazyChart>
+            </div>
+          </div>
+          <DataTable columns={comparisonColumns} data={comparisonData} maxHeight="none" />
+        </div>
       )}
 
       {detailTab === 'yearly' && (
