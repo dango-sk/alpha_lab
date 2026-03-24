@@ -106,8 +106,8 @@ export default function PortfolioPage() {
         setConfig(cfg);
         setResults(res);
         const keys = Object.keys(res).filter((k: string) => res[k]);
-        const nonBm = keys.filter((k: string) => k !== 'KOSPI' && k !== 'KOSDAQ');
-        setSelectedStrategies(nonBm.slice(0, 3));
+        const bm = universe === 'KOSPI+KOSDAQ' ? 'KOSDAQ' : 'KOSPI';
+        setSelectedStrategies([bm, 'A0'].filter((k) => keys.includes(k)));
         for (const key of keys) {
           if (res[key]?.rebalance_dates?.length >= 2) {
             const dates = res[key].rebalance_dates;

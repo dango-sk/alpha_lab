@@ -497,8 +497,9 @@ export default function PerformancePage() {
     getResults({ start: startDate, end: endDate, universe, rebal_type: rebalType })
       .then((res) => {
         setResults(res);
-        // Auto-select all strategies on first load
-        setSelectedStrategies((prev) => prev.length > 0 ? prev.filter((k) => res[k]) : Object.keys(res));
+        // Auto-select benchmark + A0 on first load
+        const bm = universe === 'KOSPI+KOSDAQ' ? 'KOSDAQ' : 'KOSPI';
+        setSelectedStrategies((prev) => prev.length > 0 ? prev.filter((k) => res[k]) : [bm, 'A0'].filter((k) => res[k]));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
