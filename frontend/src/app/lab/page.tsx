@@ -656,13 +656,6 @@ export default function LabPage() {
                   >
                     비중 50% 축소
                   </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'redistribute' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
-                    onClick={() => setStopLossMode('redistribute')}
-                    disabled={!stopLossEnabled}
-                  >
-                    비중 재배분
-                  </button>
                 </div>
               </div>
             </div>
