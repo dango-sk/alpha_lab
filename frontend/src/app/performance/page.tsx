@@ -8,6 +8,7 @@ import KpiCard from '@/components/KpiCard';
 import DataTable from '@/components/DataTable';
 import PlotlyChart from '@/components/PlotlyChart';
 import FilterBar from '@/components/FilterBar';
+import StrategySelector from '@/components/StrategySelector';
 import LoadingState from '@/components/LoadingState';
 import DateRangePanel from '@/components/DateRangePanel';
 import LazyChart from '@/components/LazyChart';
@@ -849,34 +850,13 @@ export default function PerformancePage() {
             rebalType={rebalType}
             onRebalTypeChange={setRebalType}
           />
-          <div className="flex flex-wrap gap-2">
-            {allStrategyKeys.map((key) => {
-              const selected = selectedStrategies.includes(key);
-              const lbl = labels[key] || key;
-              const color = colors[key] || '#6366f1';
-              return (
-                <button
-                  key={key}
-                  onClick={() => {
-                    if (selected) {
-                      setSelectedStrategies((prev) => prev.filter((k) => k !== key));
-                    } else {
-                      setSelectedStrategies((prev) => [...prev, key]);
-                    }
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
-                  style={{
-                    backgroundColor: selected ? color + '20' : 'transparent',
-                    borderColor: selected ? color : 'var(--color-border)',
-                    color: selected ? color : 'var(--color-muted)',
-                  }}
-                >
-                  {lbl}
-                  {selected && <span className="ml-1 opacity-60">&times;</span>}
-                </button>
-              );
-            })}
-          </div>
+          <StrategySelector
+            allKeys={allStrategyKeys}
+            selected={selectedStrategies}
+            labels={labels}
+            colors={colors}
+            onChange={setSelectedStrategies}
+          />
           <DateRangePanel
             startDate={startDate}
             endDate={endDate}

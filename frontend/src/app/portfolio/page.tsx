@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution, getFirstEntryDates } from '@/lib/api';
-import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
+import { StrategyResult, Config, valueColor, fmtPct } from '@/lib/hooks';
 import KpiCard from '@/components/KpiCard';
 import DataTable from '@/components/DataTable';
 import PlotlyChart from '@/components/PlotlyChart';
 import FilterBar from '@/components/FilterBar';
+import StrategySelector from '@/components/StrategySelector';
 import LoadingState from '@/components/LoadingState';
 
 interface Holding {
@@ -50,9 +51,6 @@ function classifyCap(marketCap: number): CapCategory {
   return '소형';
 }
 
-function computeHHI(holdings: Holding[]): number {
-  return holdings.reduce((sum, h) => sum + (h['비중(%)'] / 100) ** 2, 0) * 10000;
-}
 
 function computeTop5Weight(holdings: Holding[]): number {
   const sorted = [...holdings].sort((a, b) => b['비중(%)'] - a['비중(%)']);
@@ -486,34 +484,13 @@ export default function PortfolioPage() {
             rebalType={rebalType}
             onRebalTypeChange={setRebalType}
           />
-          <div className="flex flex-wrap gap-2">
-            {allStrategyKeys.map((key) => {
-              const selected = selectedStrategies.includes(key);
-              const label = config?.strategy_labels?.[key] || key;
-              const color = config?.strategy_colors?.[key] || '#6366f1';
-              return (
-                <button
-                  key={key}
-                  onClick={() => {
-                    if (selected) {
-                      setSelectedStrategies((prev) => prev.filter((k) => k !== key));
-                    } else {
-                      setSelectedStrategies((prev) => [...prev, key]);
-                    }
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
-                  style={{
-                    backgroundColor: selected ? color + '20' : 'transparent',
-                    borderColor: selected ? color : 'var(--color-border)',
-                    color: selected ? color : 'var(--color-muted)',
-                  }}
-                >
-                  {label}
-                  {selected && <span className="ml-1 opacity-60">&times;</span>}
-                </button>
-              );
-            })}
-          </div>
+          <StrategySelector
+            allKeys={allStrategyKeys}
+            selected={selectedStrategies}
+            labels={labels}
+            colors={colors}
+            onChange={setSelectedStrategies}
+          />
           <select
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
@@ -537,13 +514,13 @@ export default function PortfolioPage() {
             {strategyKeys.map((key) => {
               const holdings = holdingsMap[key] || [];
               if (holdings.length === 0) return null;
-              const hhi = computeHHI(holdings);
               const top5 = computeTop5Weight(holdings);
+              const avgCap = computeWeightedAvgMarketCap(holdings);
               return (
                 <KpiCard
                   key={key}
                   label={labels[key] || key}
-                  value={`HHI ${fmtNum(hhi, 0)}`}
+                  value={`가중평균 시총 ${formatMarketCap(avgCap)}`}
                   borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
                   subItems={[
                     { label: 'Top 5 비중', value: `${top5.toFixed(1)}%` },
