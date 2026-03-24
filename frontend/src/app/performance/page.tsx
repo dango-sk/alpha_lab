@@ -924,24 +924,24 @@ export default function PerformancePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <div className="glass-card p-4">
           <h3 className="text-sm font-semibold text-foreground mb-2">누적 수익률</h3>
-          <PlotlyChart data={cumRetTraces} layout={cumRetLayout} height={350} />
+          <PlotlyChart data={cumRetTraces} layout={cumRetLayout} height={320} />
         </div>
         <div className="glass-card p-4">
           <h3 className="text-sm font-semibold text-foreground mb-2">Drawdown</h3>
-          <LazyChart height={350}>
-            <PlotlyChart data={ddTraces} layout={ddLayout} height={350} />
+          <LazyChart height={320}>
+            <PlotlyChart data={ddTraces} layout={ddLayout} height={320} />
           </LazyChart>
         </div>
       </div>
 
       {/* ─── 상세 분석 탭 ─── */}
-      <div className="flex gap-0 border-b border-border mb-4">
+      <div className="glass-card p-1 mb-4 flex gap-0 rounded-lg sticky top-0 z-10">
         {(['summary', 'yearly', 'isoos', 'rolling', 'regime'] as const).map((tab) => {
           const tabLabels = { summary: '성과 요약', yearly: '연도별 성과', isoos: 'IS/OOS', rolling: '초과수익률', regime: '레짐 분석' };
           return (
             <button key={tab} onClick={() => setDetailTab(tab)}
-              className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                detailTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-foreground'
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                detailTab === tab ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground hover:bg-surface'
               }`}>
               {tabLabels[tab]}
             </button>
