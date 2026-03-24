@@ -140,7 +140,7 @@ export default function LabPage() {
   // ─── Stop Loss ───
   const [stopLossEnabled, setStopLossEnabled] = useState(false);
   const [stopLossPct, setStopLossPct] = useState(15);
-  const [stopLossMode, setStopLossMode] = useState<'sell' | 'reduce'>('sell');
+  const [stopLossMode, setStopLossMode] = useState<'sell' | 'reduce' | 'redistribute'>('sell');
 
   // ─── Code ───
   const [code, setCode] = useState('');
@@ -159,6 +159,9 @@ export default function LabPage() {
   const [saveDesc, setSaveDesc] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+
+  // ─── Tab ───
+  const [activeTab, setActiveTab] = useState<'single' | 'regime'>('single');
 
   // ─── Regime Combo ───
   const [regimeBullKey, setRegimeBullKey] = useState('');
@@ -498,11 +501,11 @@ export default function LabPage() {
 
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="animate-fade-in">
       <SectionHeader title="전략 실험실" subtitle="커스텀 백테스트 및 전략 실험" />
 
       {/* ─── Saved Strategy Selector ─── */}
-      <div className="glass-card p-5">
+      <div className="glass-card p-5 mb-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs text-muted font-medium">저장된 전략</label>
           <select
@@ -535,347 +538,379 @@ export default function LabPage() {
         </div>
       </div>
 
-      {/* ─── Strategy Settings ─── */}
-      <div className="glass-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">전략 설정</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="text-xs text-muted block mb-1">유니버스</label>
-            <select
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              value={universe}
-              onChange={(e) => setUniverse(e.target.value as 'KOSPI' | 'KOSPI+KOSDAQ')}
-            >
-              <option value="KOSPI">KOSPI</option>
-              <option value="KOSPI+KOSDAQ">KOSPI+KOSDAQ</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-muted block mb-1">Weight Cap %</label>
-            <input
-              type="number"
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
-              value={weightCapPct}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setWeightCapPct(parseInt(e.target.value) || 0)}
-              min={1}
-              max={100}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted block mb-1">Top N 종목</label>
-            <input
-              type="number"
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
-              value={topN}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setTopN(parseInt(e.target.value) || 0)}
-              min={5}
-              max={100}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted block mb-1">거래비용 (bp)</label>
-            <input
-              type="number"
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
-              value={txCostBp}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setTxCostBp(parseInt(e.target.value) || 0)}
-              min={0}
-              max={100}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted block mb-1">리밸런싱</label>
-            <select
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              value={rebalType}
-              onChange={(e) => setRebalType(e.target.value as 'monthly' | 'biweekly')}
-            >
-              <option value="monthly">월간</option>
-              <option value="biweekly">격주</option>
-            </select>
-          </div>
-        </div>
-
-        {/* ─── Stop Loss ─── */}
-        <div className="mt-3 flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-            <input
-              type="checkbox"
-              checked={stopLossEnabled}
-              onChange={(e) => setStopLossEnabled(e.target.checked)}
-              className="accent-primary"
-            />
-            손절 (Stop Loss)
-          </label>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted">하락률 %</label>
-            <input
-              type="number"
-              className="w-16 bg-surface border border-border rounded-lg px-2 py-1 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
-              value={stopLossPct}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setStopLossPct(parseInt(e.target.value) || 0)}
-              min={1}
-              max={50}
-              disabled={!stopLossEnabled}
-            />
-          </div>
-          <div className="flex gap-1">
-            <button
-              className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'sell' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
-              onClick={() => setStopLossMode('sell')}
-              disabled={!stopLossEnabled}
-            >
-              전량 매도
-            </button>
-            <button
-              className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'reduce' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
-              onClick={() => setStopLossMode('reduce')}
-              disabled={!stopLossEnabled}
-            >
-              비중 50% 축소
-            </button>
-          </div>
-        </div>
+      {/* ─── Tab Bar ─── */}
+      <div className="flex gap-0 mb-4 border-b border-border">
+        <button onClick={() => setActiveTab('single')} className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'single' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-foreground'}`}>
+          전략 백테스트
+        </button>
+        <button onClick={() => setActiveTab('regime')} className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'regime' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-foreground'}`}>
+          레짐 조합
+        </button>
       </div>
 
-      {/* ─── Factor Weights Editor ─── */}
-      {Object.keys(weights).length > 0 && (() => {
-        const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0);
-        const categoryData = Object.entries(FACTOR_CATEGORIES).map(([cat, { factors, color }]) => {
-          const active = factors.filter((f) => weights[f] !== undefined);
-          const catSum = active.reduce((s, f) => s + (weights[f] ?? 0), 0);
-          return { cat, color, active, catSum };
-        }).filter((d) => d.active.length > 0);
-
-        return (
-          <div className="glass-card p-5">
-            <h3 className="text-sm font-semibold text-foreground mb-4">팩터 가중치</h3>
-
-            {/* Category summary bar */}
-            <div className="flex rounded-lg overflow-hidden h-10 mb-6">
-              {categoryData.map(({ cat, color, catSum }) => {
-                const pct = totalWeight > 0 ? (catSum / totalWeight) * 100 : 0;
-                if (pct <= 0) return null;
-                return (
-                  <div
-                    key={cat}
-                    className="flex items-center justify-center text-xs font-semibold text-white"
-                    style={{ backgroundColor: color, width: `${pct}%`, minWidth: pct > 5 ? undefined : '2rem' }}
+      {/* ─── Single Strategy Tab ─── */}
+      {activeTab === 'single' && (
+        <div className="flex gap-5">
+          {/* LEFT PANEL */}
+          <div className="w-[420px] min-w-[420px] space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+            {/* ─── Strategy Settings ─── */}
+            <div className="glass-card p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-4">전략 설정</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-muted block mb-1">유니버스</label>
+                  <select
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={universe}
+                    onChange={(e) => setUniverse(e.target.value as 'KOSPI' | 'KOSPI+KOSDAQ')}
                   >
-                    {pct >= 10 && <span>{cat}<br />{Math.round(pct)}%</span>}
-                    {pct < 10 && <span>{Math.round(pct)}%</span>}
-                  </div>
-                );
-              })}
+                    <option value="KOSPI">KOSPI</option>
+                    <option value="KOSPI+KOSDAQ">KOSPI+KOSDAQ</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted block mb-1">Weight Cap %</label>
+                  <input
+                    type="number"
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={weightCapPct}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setWeightCapPct(parseInt(e.target.value) || 0)}
+                    min={1}
+                    max={100}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted block mb-1">Top N 종목</label>
+                  <input
+                    type="number"
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={topN}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setTopN(parseInt(e.target.value) || 0)}
+                    min={5}
+                    max={100}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted block mb-1">거래비용 (bp)</label>
+                  <input
+                    type="number"
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={txCostBp}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setTxCostBp(parseInt(e.target.value) || 0)}
+                    min={0}
+                    max={100}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-muted block mb-1">리밸런싱</label>
+                  <select
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={rebalType}
+                    onChange={(e) => setRebalType(e.target.value as 'monthly' | 'biweekly')}
+                  >
+                    <option value="monthly">월간</option>
+                    <option value="biweekly">격주</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* ─── Stop Loss ─── */}
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={stopLossEnabled}
+                    onChange={(e) => setStopLossEnabled(e.target.checked)}
+                    className="accent-primary"
+                  />
+                  손절 (Stop Loss)
+                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted">하락률 %</label>
+                  <input
+                    type="number"
+                    className="w-16 bg-surface border border-border rounded-lg px-2 py-1 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+                    value={stopLossPct}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setStopLossPct(parseInt(e.target.value) || 0)}
+                    min={1}
+                    max={50}
+                    disabled={!stopLossEnabled}
+                  />
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'sell' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
+                    onClick={() => setStopLossMode('sell')}
+                    disabled={!stopLossEnabled}
+                  >
+                    전량 매도
+                  </button>
+                  <button
+                    className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'reduce' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
+                    onClick={() => setStopLossMode('reduce')}
+                    disabled={!stopLossEnabled}
+                  >
+                    비중 50% 축소
+                  </button>
+                  <button
+                    className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'redistribute' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
+                    onClick={() => setStopLossMode('redistribute')}
+                    disabled={!stopLossEnabled}
+                  >
+                    비중 재배분
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Total */}
-            <div className="flex justify-end mb-4 text-xs text-muted">
-              전체 합계: <span className={`ml-1 font-semibold ${Math.abs(totalWeight - 1) < 0.01 ? 'text-accent-green' : 'text-accent-red'}`}>
-                {(totalWeight * 100).toFixed(0)}%
-              </span>
-            </div>
+            {/* ─── Factor Weights Editor ─── */}
+            {Object.keys(weights).length > 0 && (() => {
+              const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0);
+              const categoryData = Object.entries(FACTOR_CATEGORIES).map(([cat, { factors, color }]) => {
+                const active = factors.filter((f) => weights[f] !== undefined);
+                const catSum = active.reduce((s, f) => s + (weights[f] ?? 0), 0);
+                return { cat, color, active, catSum };
+              }).filter((d) => d.active.length > 0);
 
-            {/* Category sections */}
-            <div className="space-y-6">
-              {categoryData.map(({ cat, color, active, catSum }) => (
-                <div key={cat} className="rounded-lg border border-border overflow-hidden">
-                  {/* Category header */}
-                  <div className="flex items-center justify-between px-4 py-3" style={{ borderLeft: `3px solid ${color}` }}>
-                    <span className="text-sm font-semibold text-foreground">{cat}</span>
-                    <span className="text-sm font-semibold" style={{ color }}>
-                      {(catSum * 100).toFixed(0)}%
-                    </span>
-                  </div>
+              return (
+                <div className="glass-card p-5">
+                  <h3 className="text-sm font-semibold text-foreground mb-4">팩터 가중치</h3>
 
-                  {/* Factor rows */}
-                  <div className="px-4 pb-3 space-y-2">
-                    {active.map((factor) => {
-                      const w = weights[factor] ?? 0;
-                      const barPct = totalWeight > 0 ? (Math.abs(w) / totalWeight) * 100 : 0;
+                  {/* Category summary bar */}
+                  <div className="flex rounded-lg overflow-hidden h-10 mb-6">
+                    {categoryData.map(({ cat, color, catSum }) => {
+                      const pct = totalWeight > 0 ? (catSum / totalWeight) * 100 : 0;
+                      if (pct <= 0) return null;
                       return (
-                        <div key={factor} className="flex items-center gap-3">
-                          <span className="text-xs text-muted w-44 flex-shrink-0 truncate">
-                            {FACTOR_LABELS[factor] || factor}
-                          </span>
-                          <div className="flex-1 h-4 bg-background rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{ backgroundColor: color, width: `${Math.min(barPct * 2, 100)}%`, opacity: 0.8 }}
-                            />
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={Math.round(w * 100)}
-                              onFocus={(e) => e.target.select()}
-                              onChange={(e) => {
-                                const raw = e.target.value.replace(/[^0-9-]/g, '');
-                                if (raw === '' || raw === '-') return;
-                                const v = parseInt(raw);
-                                if (!isNaN(v)) {
-                                  setCode((prev) => updateWeightInCode(prev, factor, v / 100));
-                                }
-                              }}
-                              className="w-12 text-xs font-num text-foreground text-right bg-surface border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            <span className="text-xs text-muted">%</span>
-                          </div>
+                        <div
+                          key={cat}
+                          className="flex items-center justify-center text-xs font-semibold text-white"
+                          style={{ backgroundColor: color, width: `${pct}%`, minWidth: pct > 5 ? undefined : '2rem' }}
+                        >
+                          {pct >= 10 && <span>{cat}<br />{Math.round(pct)}%</span>}
+                          {pct < 10 && <span>{Math.round(pct)}%</span>}
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Total */}
+                  <div className="flex justify-end mb-4 text-xs text-muted">
+                    전체 합계: <span className={`ml-1 font-semibold ${Math.abs(totalWeight - 1) < 0.01 ? 'text-accent-green' : 'text-accent-red'}`}>
+                      {(totalWeight * 100).toFixed(0)}%
+                    </span>
+                  </div>
+
+                  {/* Category sections */}
+                  <div className="space-y-6">
+                    {categoryData.map(({ cat, color, active, catSum }) => (
+                      <div key={cat} className="rounded-lg border border-border overflow-hidden">
+                        {/* Category header */}
+                        <div className="flex items-center justify-between px-4 py-3" style={{ borderLeft: `3px solid ${color}` }}>
+                          <span className="text-sm font-semibold text-foreground">{cat}</span>
+                          <span className="text-sm font-semibold" style={{ color }}>
+                            {(catSum * 100).toFixed(0)}%
+                          </span>
+                        </div>
+
+                        {/* Factor rows */}
+                        <div className="px-4 pb-3 space-y-2">
+                          {active.map((factor) => {
+                            const w = weights[factor] ?? 0;
+                            const barPct = totalWeight > 0 ? (Math.abs(w) / totalWeight) * 100 : 0;
+                            return (
+                              <div key={factor} className="flex items-center gap-3">
+                                <span className="text-xs text-muted w-44 flex-shrink-0 truncate">
+                                  {FACTOR_LABELS[factor] || factor}
+                                </span>
+                                <div className="flex-1 h-4 bg-background rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{ backgroundColor: color, width: `${Math.min(barPct * 2, 100)}%`, opacity: 0.8 }}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={Math.round(w * 100)}
+                                    onFocus={(e) => e.target.select()}
+                                    onChange={(e) => {
+                                      const raw = e.target.value.replace(/[^0-9-]/g, '');
+                                      if (raw === '' || raw === '-') return;
+                                      const v = parseInt(raw);
+                                      if (!isNaN(v)) {
+                                        setCode((prev) => updateWeightInCode(prev, factor, v / 100));
+                                      }
+                                    }}
+                                    className="w-12 text-xs font-num text-foreground text-right bg-surface border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                                  />
+                                  <span className="text-xs text-muted">%</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              );
+            })()}
+
+            {/* ─── Run Button ─── */}
+            <button
+              onClick={handleBacktest}
+              disabled={running || !code.trim()}
+              className={`w-full px-6 py-2.5 rounded-lg text-sm font-medium transition-all disabled:cursor-not-allowed ${
+                running
+                  ? 'bg-primary/30 text-primary border border-primary/40 animate-pulse cursor-not-allowed'
+                  : 'bg-primary text-background hover:opacity-90 disabled:opacity-40'
+              }`}
+            >
+              {running ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span>{progressMsg || '실행 중...'}</span>
+                </span>
+              ) : '백테스트 실행'}
+            </button>
+
+            {/* ─── Progress Bar ─── */}
+            {running && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="animate-typing">{progressMsg}</span>
+                  <span className="animate-blink text-primary font-light">|</span>
+                </div>
+                <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted/60 font-num">{progress}%</span>
+              </div>
+            )}
+
+            {/* ─── Code Viewer ─── */}
+            <div className="glass-card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-foreground">전략 코드</h3>
+                <button
+                  onClick={() => setCodeExpanded(!codeExpanded)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {codeExpanded ? '접기' : '펼치기'}
+                </button>
+              </div>
+              {codeExpanded && (
+                <textarea
+                  className="w-full bg-surface border border-border rounded-lg p-4 text-xs text-foreground font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+                  rows={24}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  spellCheck={false}
+                />
+              )}
+              {!codeExpanded && (
+                <div className="bg-surface border border-border rounded-lg p-4 max-h-24 overflow-hidden relative">
+                  <pre className="text-xs text-muted font-mono whitespace-pre-wrap leading-relaxed">
+                    {code.slice(0, 500)}
+                    {code.length > 500 && '...'}
+                  </pre>
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-surface to-transparent" />
+                </div>
+              )}
             </div>
           </div>
-        );
-      })()}
 
-      {/* ─── Code Viewer ─── */}
-      <div className="glass-card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground">전략 코드</h3>
-          <button
-            onClick={() => setCodeExpanded(!codeExpanded)}
-            className="text-xs text-primary hover:underline"
-          >
-            {codeExpanded ? '접기' : '펼치기'}
-          </button>
-        </div>
-        {codeExpanded && (
-          <textarea
-            className="w-full bg-surface border border-border rounded-lg p-4 text-xs text-foreground font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary resize-y"
-            rows={24}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            spellCheck={false}
-          />
-        )}
-        {!codeExpanded && (
-          <div className="bg-surface border border-border rounded-lg p-4 max-h-24 overflow-hidden relative">
-            <pre className="text-xs text-muted font-mono whitespace-pre-wrap leading-relaxed">
-              {code.slice(0, 500)}
-              {code.length > 500 && '...'}
-            </pre>
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-surface to-transparent" />
-          </div>
-        )}
-      </div>
-
-      {/* ─── Backtest & Save ─── */}
-      <div className="glass-card p-5 space-y-4">
-        <div className="flex flex-wrap items-end gap-4">
-          <button
-            onClick={handleBacktest}
-            disabled={running || !code.trim()}
-            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all disabled:cursor-not-allowed ${
-              running
-                ? 'bg-primary/30 text-primary border border-primary/40 animate-pulse cursor-not-allowed'
-                : 'bg-primary text-background hover:opacity-90 disabled:opacity-40'
-            }`}
-          >
-            {running ? (
-              <span className="flex items-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                <span>{progressMsg || '실행 중...'}</span>
-              </span>
-            ) : '백테스트 실행'}
-          </button>
-
-          {/* Save inline */}
-          <div className="flex items-end gap-2 ml-auto">
-            <div>
-              <label className="text-xs text-muted block mb-1">전략 이름</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  className="w-48 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  value={saveName}
-                  onChange={(e) => setSaveName(e.target.value)}
-                  placeholder={autoName}
-                />
+          {/* RIGHT PANEL */}
+          <div className="flex-1 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+            {/* ─── Save Bar ─── */}
+            <div className="glass-card p-5">
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="text-xs text-muted block mb-1">전략 이름</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      className="w-48 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      value={saveName}
+                      onChange={(e) => setSaveName(e.target.value)}
+                      placeholder={autoName}
+                    />
+                    <button
+                      onClick={() => setSaveName(autoName)}
+                      className="px-2 py-2 text-xs rounded-lg bg-surface border border-border text-muted hover:text-foreground transition-colors whitespace-nowrap"
+                      title="자동 이름 채우기"
+                    >
+                      자동
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted block mb-1">설명</label>
+                  <input
+                    type="text"
+                    className="w-56 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={saveDesc}
+                    onChange={(e) => setSaveDesc(e.target.value)}
+                    placeholder="변경 사항 메모"
+                  />
+                </div>
                 <button
-                  onClick={() => setSaveName(autoName)}
-                  className="px-2 py-2 text-xs rounded-lg bg-surface border border-border text-muted hover:text-foreground transition-colors whitespace-nowrap"
-                  title="자동 이름 채우기"
+                  onClick={handleSave}
+                  disabled={saving || !saveName.trim()}
+                  className="px-4 py-2 rounded-lg bg-accent-green/20 text-accent-green text-sm font-medium hover:bg-accent-green/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  자동
+                  {saving ? '저장 중...' : '저장'}
                 </button>
               </div>
             </div>
-            <div>
-              <label className="text-xs text-muted block mb-1">설명</label>
-              <input
-                type="text"
-                className="w-56 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                value={saveDesc}
-                onChange={(e) => setSaveDesc(e.target.value)}
-                placeholder="변경 사항 메모"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              disabled={saving || !saveName.trim()}
-              className="px-4 py-2 rounded-lg bg-accent-green/20 text-accent-green text-sm font-medium hover:bg-accent-green/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {saving ? '저장 중...' : '저장'}
-            </button>
+            {saveMsg && (
+              <p className={`text-xs ${saveMsg.includes('실패') ? 'text-accent-red' : 'text-accent-green'}`}>
+                {saveMsg}
+              </p>
+            )}
+
+            {/* ─── Results ─── */}
+            {tableData.length > 0 ? (
+              <div className="space-y-4">
+                <DataTable columns={tableColumns} data={tableData} maxHeight="300px" />
+
+                {/* Cumulative return chart */}
+                {chartData.length > 0 && (
+                  <PlotlyChart
+                    data={chartData}
+                    layout={{
+                      title: { text: '누적 수익률 비교', font: { size: 13 } },
+                      yaxis: { title: { text: '포트폴리오 가치' }, tickformat: ',.0f' },
+                      xaxis: { title: { text: '' } },
+                      legend: { orientation: 'h', y: -0.15 },
+                    }}
+                    height={400}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-muted text-sm">
+                백테스트를 실행하면 결과가 여기에 표시됩니다
+              </div>
+            )}
           </div>
         </div>
+      )}
 
-        {running && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="animate-typing">{progressMsg}</span>
-              <span className="animate-blink text-primary font-light">|</span>
-            </div>
-            <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-700 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span className="text-xs text-muted/60 font-num">{progress}%</span>
-          </div>
-        )}
-        {saveMsg && (
-          <p className={`text-xs ${saveMsg.includes('실패') ? 'text-accent-red' : 'text-accent-green'}`}>
-            {saveMsg}
-          </p>
-        )}
-
-        {/* Results table */}
-        {tableData.length > 0 && (
-          <>
-            <DataTable columns={tableColumns} data={tableData} maxHeight="300px" />
-
-            {/* Cumulative return chart */}
-            {chartData.length > 0 && (
-              <PlotlyChart
-                data={chartData}
-                layout={{
-                  title: { text: '누적 수익률 비교', font: { size: 13 } },
-                  yaxis: { title: { text: '포트폴리오 가치' }, tickformat: ',.0f' },
-                  xaxis: { title: { text: '' } },
-                  legend: { orientation: 'h', y: -0.15 },
-                }}
-                height={400}
-              />
-            )}
-          </>
-        )}
-      </div>
-
-      {/* ─── 레짐 조합 백테스트 ─── */}
+      {/* ─── Regime Combo Tab ─── */}
+      {activeTab === 'regime' && (
       <div id="regime-combo" className="space-y-4 border border-border rounded-xl p-5">
         <div>
           <h2 className="text-base font-semibold text-foreground">레짐 조합 백테스트</h2>
@@ -1216,6 +1251,7 @@ export default function LabPage() {
           );
         })()}
       </div>
+      )}
     </div>
   );
 }

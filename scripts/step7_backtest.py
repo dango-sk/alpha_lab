@@ -196,8 +196,9 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
     하락한 종목에 대해 조치.
 
     stop_loss_mode:
-        "sell"   — 전량 매도, 나머지 기간 현금 보유
-        "reduce" — 비중 50% 매도, 나머지 50%는 기간 끝까지 보유
+        "sell"         — 전량 매도, 나머지 기간 현금 보유
+        "reduce"       — 비중 50% 매도, 나머지 50%는 기간 끝까지 보유
+        "redistribute" — 전량 매도 후, 매도 비중을 나머지 보유 종목에 시총 비례 재배분
 
     Returns:
         (portfolio_return, stoploss_events)
@@ -248,51 +249,89 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
     for code, dt, price in daily_rows:
         daily_map.setdefault(code, []).append((dt, price))
 
-    # ─── 종목별 수익률 (손절 체크) ───
+    # ─── 1차: 종목별 손절 여부 판정 ───
     stoploss_events = []
-    weighted_returns = []
+    # {idx: (trigger_date, trigger_ret)} for stopped stocks
+    stopped_info: dict[int, tuple[str, float]] = {}
 
     for i, code in enumerate(codes):
         entry_price = start_map.get(code, (0, 0))[1] or 0
         if entry_price <= 0:
             continue
-
         daily_prices = daily_map.get(code, [])
-        triggered = False
-
         for dt, price in daily_prices:
             if dt <= start_date:
                 continue
             ret_so_far = (price - entry_price) / entry_price
             if ret_so_far <= threshold:
-                triggered = True
-                if stop_loss_mode == "sell":
-                    # 전량 매도 → 나머지 기간 현금
-                    stoploss_events.append((code, dt, ret_so_far, weights[i]))
-                    weighted_returns.append(ret_so_far * weights[i])
+                stopped_info[i] = (dt, ret_so_far)
+                break
+
+    # ─── 2차: 모드별 수익률 계산 ───
+    weighted_returns = []
+
+    if stop_loss_mode == "redistribute" and stopped_info:
+        # 손절된 비중 합산 → 생존 종목에 시총 비례 재배분
+        freed_weight = sum(weights[i] for i in stopped_info)
+        surviving_indices = [i for i in range(len(codes)) if i not in stopped_info
+                           and (start_map.get(codes[i], (0, 0))[1] or 0) > 0]
+        surviving_mcaps = [raw_mcaps[i] for i in surviving_indices]
+        total_surviving_mcap = sum(surviving_mcaps)
+
+        for i, code in enumerate(codes):
+            entry_price = start_map.get(code, (0, 0))[1] or 0
+            if entry_price <= 0:
+                continue
+            daily_prices = daily_map.get(code, [])
+
+            if i in stopped_info:
+                # 손절 종목: 손절가로 확정
+                trigger_dt, trigger_ret = stopped_info[i]
+                stoploss_events.append((code, trigger_dt, trigger_ret, weights[i]))
+                weighted_returns.append(trigger_ret * weights[i])
+            else:
+                # 생존 종목: 원래 비중 + 재배분 비중
+                extra = 0.0
+                if total_surviving_mcap > 0:
+                    extra = freed_weight * (raw_mcaps[i] / total_surviving_mcap)
+                total_weight = weights[i] + extra
+                if daily_prices:
+                    end_price = daily_prices[-1][1]
+                    ret = (end_price - entry_price) / entry_price
+                    weighted_returns.append(ret * total_weight)
                 else:
-                    # 비중 축소: 50% 매도(손절가로 확정), 50%는 기간 끝까지 보유
+                    weighted_returns.append(-1.0 * total_weight)
+    else:
+        # sell / reduce 모드
+        for i, code in enumerate(codes):
+            entry_price = start_map.get(code, (0, 0))[1] or 0
+            if entry_price <= 0:
+                continue
+            daily_prices = daily_map.get(code, [])
+
+            if i in stopped_info:
+                trigger_dt, trigger_ret = stopped_info[i]
+                if stop_loss_mode == "sell":
+                    stoploss_events.append((code, trigger_dt, trigger_ret, weights[i]))
+                    weighted_returns.append(trigger_ret * weights[i])
+                else:  # reduce
                     sell_weight = weights[i] * reduce_ratio
                     hold_weight = weights[i] * (1 - reduce_ratio)
-                    # 매도 부분: 손절가 수익률로 확정
-                    weighted_returns.append(ret_so_far * sell_weight)
-                    # 보유 부분: 기간 말 가격으로 수익률 계산
+                    weighted_returns.append(trigger_ret * sell_weight)
                     if daily_prices:
                         end_price = daily_prices[-1][1]
                         end_ret = (end_price - entry_price) / entry_price
                         weighted_returns.append(end_ret * hold_weight)
                     else:
-                        weighted_returns.append(ret_so_far * hold_weight)
-                    stoploss_events.append((code, dt, ret_so_far, sell_weight))
-                break
-
-        if not triggered:
-            if daily_prices:
-                end_price = daily_prices[-1][1]
-                ret = (end_price - entry_price) / entry_price
-                weighted_returns.append(ret * weights[i])
+                        weighted_returns.append(trigger_ret * hold_weight)
+                    stoploss_events.append((code, trigger_dt, trigger_ret, sell_weight))
             else:
-                weighted_returns.append(-1.0 * weights[i])
+                if daily_prices:
+                    end_price = daily_prices[-1][1]
+                    ret = (end_price - entry_price) / entry_price
+                    weighted_returns.append(ret * weights[i])
+                else:
+                    weighted_returns.append(-1.0 * weights[i])
 
     portfolio_return = sum(weighted_returns) if weighted_returns else 0.0
     return portfolio_return, stoploss_events
