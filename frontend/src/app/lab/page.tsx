@@ -505,7 +505,7 @@ export default function LabPage() {
       <SectionHeader title="전략 실험실" subtitle="커스텀 백테스트 및 전략 실험" />
 
       {/* ─── Saved Strategy Selector ─── */}
-      <div className="glass-card p-5 mb-4">
+      <div className="glass-card p-4 mb-3">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs text-muted font-medium">저장된 전략</label>
           <select
@@ -539,7 +539,7 @@ export default function LabPage() {
       </div>
 
       {/* ─── Tab Bar ─── */}
-      <div className="flex gap-0 mb-4 border-b border-border">
+      <div className="flex gap-0 mb-3 border-b border-border">
         <button onClick={() => setActiveTab('single')} className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'single' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-foreground'}`}>
           전략 백테스트
         </button>
@@ -550,12 +550,13 @@ export default function LabPage() {
 
       {/* ─── Single Strategy Tab ─── */}
       {activeTab === 'single' && (
-        <div className="flex gap-5">
+        <div className="flex gap-4">
           {/* LEFT PANEL */}
-          <div className="w-[420px] min-w-[420px] space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+          <div className="w-[400px] min-w-[400px] flex flex-col" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
             {/* ─── Strategy Settings ─── */}
-            <div className="glass-card p-5">
-              <h3 className="text-sm font-semibold text-foreground mb-4">전략 설정</h3>
+            <div className="glass-card p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">전략 설정</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-muted block mb-1">유니버스</label>
@@ -677,8 +678,8 @@ export default function LabPage() {
               }).filter((d) => d.active.length > 0);
 
               return (
-                <div className="glass-card p-5">
-                  <h3 className="text-sm font-semibold text-foreground mb-4">팩터 가중치</h3>
+                <div className="glass-card p-4">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">팩터 가중치</h3>
 
                   {/* Category summary bar */}
                   <div className="flex rounded-lg overflow-hidden h-10 mb-6">
@@ -762,46 +763,8 @@ export default function LabPage() {
               );
             })()}
 
-            {/* ─── Run Button ─── */}
-            <button
-              onClick={handleBacktest}
-              disabled={running || !code.trim()}
-              className={`w-full px-6 py-2.5 rounded-lg text-sm font-medium transition-all disabled:cursor-not-allowed ${
-                running
-                  ? 'bg-primary/30 text-primary border border-primary/40 animate-pulse cursor-not-allowed'
-                  : 'bg-primary text-background hover:opacity-90 disabled:opacity-40'
-              }`}
-            >
-              {running ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span>{progressMsg || '실행 중...'}</span>
-                </span>
-              ) : '백테스트 실행'}
-            </button>
-
-            {/* ─── Progress Bar ─── */}
-            {running && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted">
-                  <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  <span className="animate-typing">{progressMsg}</span>
-                  <span className="animate-blink text-primary font-light">|</span>
-                </div>
-                <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-700 ease-out"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <span className="text-xs text-muted/60 font-num">{progress}%</span>
-              </div>
-            )}
-
             {/* ─── Code Viewer ─── */}
-            <div className="glass-card p-5">
+            <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-foreground">전략 코드</h3>
                 <button
@@ -830,7 +793,45 @@ export default function LabPage() {
                 </div>
               )}
             </div>
+          </div>{/* end scrollable area */}
+          {/* ─── Sticky Footer: Run Button ─── */}
+          <div className="pt-3 border-t border-border bg-background">
+            <button
+              onClick={handleBacktest}
+              disabled={running || !code.trim()}
+              className={`w-full px-6 py-2.5 rounded-lg text-sm font-medium transition-all disabled:cursor-not-allowed ${
+                running
+                  ? 'bg-primary/30 text-primary border border-primary/40 animate-pulse cursor-not-allowed'
+                  : 'bg-primary text-background hover:opacity-90 disabled:opacity-40'
+              }`}
+            >
+              {running ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span>{progressMsg || '실행 중...'}</span>
+                </span>
+              ) : '백테스트 실행'}
+            </button>
+            {running && (
+              <div className="space-y-3 mt-3">
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="animate-typing">{progressMsg}</span>
+                  <span className="animate-blink text-primary font-light">|</span>
+                </div>
+                <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted/60 font-num">{progress}%</span>
+              </div>
+            )}
           </div>
+          </div>{/* end left panel column */}
 
           {/* RIGHT PANEL */}
           <div className="flex-1 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
