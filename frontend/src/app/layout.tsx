@@ -26,16 +26,7 @@ export default function RootLayout({
             onToggle={() => setNavCollapsed((v) => !v)}
           />
           <main className="flex-1 min-w-0 overflow-auto">
-            <header className="sticky top-0 z-10 h-14 flex items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
-              <h1 className="text-sm font-semibold tracking-wide">
-                <span className="text-primary">Alpha</span>{' '}
-                <span className="text-foreground">Lab</span>
-              </h1>
-              <div className="flex items-center gap-3 text-xs text-muted">
-                <span className="font-num">Quant Dashboard</span>
-              </div>
-            </header>
-            <div className="p-6">{children}</div>
+            <div className="p-5">{children}</div>
           </main>
           <ChatPanel
             open={chatOpen}
