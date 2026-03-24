@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   BarChart3,
-  Calendar,
   PieChart,
   FlaskConical,
   TestTube2,
@@ -17,8 +16,8 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/performance', label: '성과 비교', icon: BarChart3 },
   { href: '/portfolio', label: '포트폴리오', icon: PieChart },
-  { href: '/statistics', label: '통계 검증', icon: FlaskConical },
   { href: '/lab', label: '전략 실험실', icon: TestTube2 },
+  { href: '/statistics', label: '통계 검증', icon: FlaskConical },
   { href: '/chat', label: 'AI 챗', icon: MessageSquare },
 ];
 
