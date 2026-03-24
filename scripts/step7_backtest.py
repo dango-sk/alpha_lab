@@ -188,6 +188,116 @@ def calc_portfolio_return(conn, stocks, start_date, end_date):
     return sum(weighted_returns) if weighted_returns else 0.0
 
 
+def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
+                                        stop_loss_pct=15, stop_loss_mode="sell"):
+    """손절 로직 포함 포트폴리오 수익률 계산.
+
+    리밸런싱 기간 내 일별 가격을 확인하여, 매입가 대비 -stop_loss_pct% 이하로
+    하락한 종목에 대해 조치.
+
+    stop_loss_mode:
+        "sell"   — 전량 매도, 나머지 기간 현금 보유
+        "reduce" — 비중 50% 매도, 나머지 50%는 기간 끝까지 보유
+
+    Returns:
+        (portfolio_return, stoploss_events)
+        stoploss_events: [(stock_code, trigger_date, loss_pct, weight_sold), ...]
+    """
+    if not stocks:
+        return 0.0, []
+
+    codes = [code for code, _ in stocks]
+    placeholders = ",".join(["?"] * len(codes))
+    threshold = -stop_loss_pct / 100  # e.g. -0.15
+    reduce_ratio = 0.5  # 비중 축소 시 매도 비율
+
+    # ─── 시작일 데이터 (시총 + adj_close) ───
+    start_rows = conn.execute(f"""
+        SELECT dp.stock_code, dp.market_cap, dp.adj_close
+        FROM daily_price dp
+        INNER JOIN (
+            SELECT stock_code, MIN(trade_date) as first_date
+            FROM daily_price
+            WHERE stock_code IN ({placeholders}) AND trade_date >= ?
+            GROUP BY stock_code
+        ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.first_date
+    """, (*codes, start_date)).fetchall()
+    start_map = {r[0]: (r[1], r[2]) for r in start_rows}
+
+    # ─── 시총 비중 + 비중상한 캡 ───
+    raw_mcaps = [start_map.get(code, (0, 0))[0] or 0 for code in codes]
+    cap_pct = BACKTEST_CONFIG.get("weight_cap_pct", 10)
+    if cap_pct > 0:
+        weights = _apply_mcap_cap(raw_mcaps, cap=cap_pct / 100)
+    else:
+        total = sum(raw_mcaps)
+        weights = [w / total for w in raw_mcaps] if total > 0 else [1/len(raw_mcaps)] * len(raw_mcaps)
+
+    # ─── 기간 내 일별 가격 배치 조회 ───
+    daily_rows = conn.execute(f"""
+        SELECT stock_code, trade_date, adj_close
+        FROM daily_price
+        WHERE stock_code IN ({placeholders})
+          AND trade_date >= ? AND trade_date <= ?
+          AND adj_close > 0
+        ORDER BY trade_date
+    """, (*codes, start_date, end_date)).fetchall()
+
+    # stock_code -> [(date, adj_close), ...] 정렬된 리스트
+    daily_map: dict[str, list[tuple[str, float]]] = {}
+    for code, dt, price in daily_rows:
+        daily_map.setdefault(code, []).append((dt, price))
+
+    # ─── 종목별 수익률 (손절 체크) ───
+    stoploss_events = []
+    weighted_returns = []
+
+    for i, code in enumerate(codes):
+        entry_price = start_map.get(code, (0, 0))[1] or 0
+        if entry_price <= 0:
+            continue
+
+        daily_prices = daily_map.get(code, [])
+        triggered = False
+
+        for dt, price in daily_prices:
+            if dt <= start_date:
+                continue
+            ret_so_far = (price - entry_price) / entry_price
+            if ret_so_far <= threshold:
+                triggered = True
+                if stop_loss_mode == "sell":
+                    # 전량 매도 → 나머지 기간 현금
+                    stoploss_events.append((code, dt, ret_so_far, weights[i]))
+                    weighted_returns.append(ret_so_far * weights[i])
+                else:
+                    # 비중 축소: 50% 매도(손절가로 확정), 50%는 기간 끝까지 보유
+                    sell_weight = weights[i] * reduce_ratio
+                    hold_weight = weights[i] * (1 - reduce_ratio)
+                    # 매도 부분: 손절가 수익률로 확정
+                    weighted_returns.append(ret_so_far * sell_weight)
+                    # 보유 부분: 기간 말 가격으로 수익률 계산
+                    if daily_prices:
+                        end_price = daily_prices[-1][1]
+                        end_ret = (end_price - entry_price) / entry_price
+                        weighted_returns.append(end_ret * hold_weight)
+                    else:
+                        weighted_returns.append(ret_so_far * hold_weight)
+                    stoploss_events.append((code, dt, ret_so_far, sell_weight))
+                break
+
+        if not triggered:
+            if daily_prices:
+                end_price = daily_prices[-1][1]
+                ret = (end_price - entry_price) / entry_price
+                weighted_returns.append(ret * weights[i])
+            else:
+                weighted_returns.append(-1.0 * weights[i])
+
+    portfolio_return = sum(weighted_returns) if weighted_returns else 0.0
+    return portfolio_return, stoploss_events
+
+
 def calc_etf_return(conn, etf_code, start_date, end_date):
     """단일 ETF 수익률 계산 (adj_close)"""
     start_price = conn.execute("""
@@ -290,6 +400,32 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     top_n = BACKTEST_CONFIG["top_n_stocks"]
     tx_cost = BACKTEST_CONFIG["transaction_cost_bp"] / 10000
 
+    # ─── 레짐별 동적 cap 설정 ───
+    regime_enabled = BACKTEST_CONFIG.get("regime_cap_enabled", False)
+    regime_bull_cap = BACKTEST_CONFIG.get("regime_bull_cap_pct", 30)
+    regime_bear_cap = BACKTEST_CONFIG.get("regime_bear_cap_pct", 10)
+    regime_ma_window = BACKTEST_CONFIG.get("regime_ma_window", 200)
+
+    # 레짐 판정 캐시 (069500 = KOSPI 200 ETF)
+    _regime_cache: dict[str, str] = {}
+    def _get_regime(calc_date: str) -> str:
+        if calc_date in _regime_cache:
+            return _regime_cache[calc_date]
+        rows = conn.execute(
+            "SELECT close FROM daily_price WHERE stock_code = '069500' "
+            f"AND trade_date <= ? ORDER BY trade_date DESC LIMIT {regime_ma_window + 1}",
+            (calc_date,)
+        ).fetchall()
+        prices = [r[0] for r in rows if r[0]]
+        if len(prices) < regime_ma_window + 1:
+            regime = "Bull"
+        else:
+            current = prices[0]
+            ma_val = float(np.mean(prices[1:regime_ma_window + 1]))
+            regime = "Bull" if current >= ma_val else "Bear"
+        _regime_cache[calc_date] = regime
+        return regime
+
     cumulative = 1.0
     monthly_returns = []
     portfolio_values = [1.0]
@@ -304,6 +440,11 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     for i in range(total_periods):
         start = rebalance_dates[i]
         end = rebalance_dates[i + 1]
+
+        # 레짐별 cap 동적 적용
+        if regime_enabled:
+            regime = _get_regime(start)
+            BACKTEST_CONFIG["weight_cap_pct"] = regime_bull_cap if regime == "Bull" else regime_bear_cap
 
         if progress_callback:
             progress_callback(i, total_periods)
@@ -356,7 +497,19 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         prev_weight_map = current_weight_map
 
         # 수익률 (거래비용 = 턴오버 x (수수료 + 슬리피지) x 양방향)
-        raw_return = calc_portfolio_return(conn, stocks, start, end)
+        sl_enabled = BACKTEST_CONFIG.get("stop_loss_enabled", False)
+        sl_pct = BACKTEST_CONFIG.get("stop_loss_pct", 15)
+
+        sl_mode = BACKTEST_CONFIG.get("stop_loss_mode", "sell")
+
+        if sl_enabled:
+            raw_return, sl_events = calc_portfolio_return_with_stoploss(
+                conn, stocks, start, end, stop_loss_pct=sl_pct, stop_loss_mode=sl_mode
+            )
+        else:
+            raw_return = calc_portfolio_return(conn, stocks, start, end)
+            sl_events = []
+
         if stocks:
             slip_codes = [c for c, _ in stocks]
             slip_ph = ",".join(["?"] * len(slip_codes))
@@ -374,7 +527,16 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
             avg_slippage = np.mean([_calc_slippage(slip_mcap_map.get(c, 0)) for c, _ in stocks])
         else:
             avg_slippage = 0
+
+        # 리밸런싱 턴오버 비용 (양방향)
         net_return = raw_return - (turnover * (tx_cost + avg_slippage) * 2)
+        # 손절 매도 비용 (편도)
+        if sl_events:
+            sl_turnover = sum(w for _, _, _, w in sl_events)
+            net_return -= sl_turnover * (tx_cost + avg_slippage)
+            # 손절된 종목은 기간 말 비중 0 → 다음 기간 턴오버에 반영
+            for sl_code, _, _, _ in sl_events:
+                prev_weight_map.pop(sl_code, None)
 
         monthly_returns.append(net_return)
         cumulative *= (1 + net_return)

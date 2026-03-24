@@ -53,4 +53,11 @@ BACKTEST_CONFIG = {
     "weight_cap_pct": 10,            # 개별종목 비중상한 (%)
     "min_market_cap": 500_000_000_000,  # 유니버스 시총 하한: 5천억원
     "universe": "KOSPI",                # "KOSPI" or "KOSPI+KOSDAQ"
+    "stop_loss_enabled": False,
+    "stop_loss_pct": 15,                 # 손절 기준 (매입가 대비 -N%)
+    "stop_loss_mode": "sell",            # "sell": 전량 매도, "reduce": 비중 50% 축소
+    "regime_cap_enabled": False,
+    "regime_bull_cap_pct": 30,           # 강세장 비중상한 (%)
+    "regime_bear_cap_pct": 10,           # 약세장 비중상한 (%)
+    "regime_ma_window": 200,             # 레짐 판정 MA 기간
 }

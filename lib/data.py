@@ -1443,12 +1443,13 @@ def run_regime_combo_backtest(
     bull_module = code_to_module(bull_data["code"])
     bear_module = code_to_module(bear_data["code"])
 
-    # 3. 파라미터 (bull 전략 기준, tx_cost는 두 전략 평균)
+    # 3. 파라미터 (tx_cost는 두 전략 평균, cap은 레짐별 분리)
     bull_params = getattr(bull_module, "PARAMS", {})
     bear_params = getattr(bear_module, "PARAMS", {})
     top_n = bull_params.get("top_n", 30)
     tx_cost_bp = int((bull_params.get("tx_cost_bp", 30) + bear_params.get("tx_cost_bp", 30)) / 2)
-    weight_cap_pct = bull_params.get("weight_cap_pct", 15)
+    bull_cap_pct = bull_params.get("weight_cap_pct", 15)
+    bear_cap_pct = bear_params.get("weight_cap_pct", 10)
     _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
     _universe = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
 
@@ -1474,10 +1475,12 @@ def run_regime_combo_backtest(
         regime_cache[calc_date] = result_regime
         return result_regime
 
-    # 5. 레짐 기반 stock_selector
+    # 5. 레짐 기반 stock_selector (cap도 레짐별 동적 적용)
     def regime_stock_selector(conn, calc_date, _top_n):
         regime = _get_regime(calc_date)
         module = bull_module if regime == "Bull" else bear_module
+        # 레짐별 cap 동적 적용
+        BACKTEST_CONFIG["weight_cap_pct"] = bull_cap_pct if regime == "Bull" else bear_cap_pct
         universe_set = get_universe_stocks(conn, calc_date)
         candidates = score_stocks_from_strategy(conn, calc_date, module)
         return [(c, s) for c, s in candidates if c in universe_set][:_top_n]
@@ -1492,7 +1495,7 @@ def run_regime_combo_backtest(
     try:
         BACKTEST_CONFIG["top_n_stocks"] = top_n
         BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
-        BACKTEST_CONFIG["weight_cap_pct"] = weight_cap_pct
+        BACKTEST_CONFIG["weight_cap_pct"] = bull_cap_pct  # 초기값은 bull (첫 기간용)
         BACKTEST_CONFIG["rebal_type"] = _rebal
         BACKTEST_CONFIG["universe"] = _universe
 
