@@ -92,7 +92,7 @@ export default function PortfolioPage() {
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [portfolioTab, setPortfolioTab] = useState<'holdings' | 'sector' | 'chars' | 'turnover' | 'attr'>('holdings');
+  const [portfolioTab, setPortfolioTab] = useState<'holdings' | 'sector' | 'chars' | 'turnover'>('holdings');
   const [attrMap, setAttrMap] = useState<Record<string, Record<string, number>>>({});
   const [firstEntryMap, setFirstEntryMap] = useState<Record<string, Record<string, string>>>({});
 
@@ -506,8 +506,8 @@ export default function PortfolioPage() {
         <>
           {/* ─── Tab bar ─── */}
           <div className="glass-card p-1 mb-4 flex gap-0 rounded-lg">
-            {(['holdings', 'sector', 'chars', 'turnover', 'attr'] as const).map((tab) => {
-              const tabLabels = { holdings: '보유 종목', sector: '섹터/시총', chars: '포트폴리오 특성', turnover: '리밸런싱 변화', attr: '종목 수익 기여' };
+            {(['holdings', 'sector', 'chars', 'turnover'] as const).map((tab) => {
+              const tabLabels = { holdings: '보유 종목', sector: '섹터/시총', chars: '포트폴리오 특성', turnover: '리밸런싱 변화' };
               return (
                 <button key={tab} onClick={() => setPortfolioTab(tab)}
                   className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all ${
@@ -694,46 +694,6 @@ export default function PortfolioPage() {
             </div>
           )}
 
-          {portfolioTab === 'attr' && (
-            <div className="space-y-6">
-              {strategyKeys.map((key) => {
-                const holdings = holdingsMap[key] || [];
-                if (holdings.length === 0) return null;
-                const returnMap = attrMap[key] || {};
-                const sorted = [...holdings]
-                  .map((h) => ({
-                    종목명: h.종목명,
-                    섹터: h.섹터,
-                    '비중(%)': h['비중(%)'],
-                    '종목수익률(%)': returnMap[h.종목명] ?? null,
-                    '기여도(%)': returnMap[h.종목명] != null ? (h['비중(%)'] / 100) * returnMap[h.종목명] : null,
-                  }))
-                  .sort((a, b) => (b['기여도(%)'] ?? -Infinity) - (a['기여도(%)'] ?? -Infinity));
-                return (
-                  <div key={key}>
-                    <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                      <span
-                        className="inline-block w-3 h-3 rounded-full"
-                        style={{ backgroundColor: colors[key] || '#6366f1' }}
-                      />
-                      {labels[key] || key}
-                    </h4>
-                    <DataTable
-                      columns={[
-                        { key: '종목명', label: '종목명', align: 'left' as const },
-                        { key: '섹터', label: '섹터', align: 'left' as const },
-                        { key: '비중(%)', label: '비중(%)', align: 'right' as const, mono: true, format: (v: unknown) => typeof v === 'number' ? v.toFixed(2) : '-' },
-                        { key: '종목수익률(%)', label: '종목수익률(%)', align: 'right' as const, mono: true, format: (v: unknown) => typeof v === 'number' ? fmtPct(v / 100) : '-', colorFn: (v: unknown) => typeof v === 'number' ? valueColor(v / 100) : 'text-muted' },
-                        { key: '기여도(%)', label: '기여도(%)', align: 'right' as const, mono: true, format: (v: unknown) => typeof v === 'number' ? v.toFixed(3) : '-', colorFn: (v: unknown) => typeof v === 'number' ? valueColor(v) : 'text-muted' },
-                      ]}
-                      data={sorted as unknown as Record<string, unknown>[]}
-                      maxHeight="500px"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </>
       )}
     </div>
