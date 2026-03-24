@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution, getFirstEntryDates } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
-import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/KpiCard';
 import DataTable from '@/components/DataTable';
 import PlotlyChart from '@/components/PlotlyChart';
@@ -94,6 +93,7 @@ export default function PortfolioPage() {
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [portfolioTab, setPortfolioTab] = useState<'holdings' | 'sector' | 'chars' | 'turnover' | 'attr'>('holdings');
   const [attrMap, setAttrMap] = useState<Record<string, Record<string, number>>>({});
   const [firstEntryMap, setFirstEntryMap] = useState<Record<string, Record<string, string>>>({});
 
@@ -476,58 +476,55 @@ export default function PortfolioPage() {
   if (loading || !config) return <LoadingState />;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <SectionHeader title="포트폴리오" subtitle="보유 종목 및 섹터 구성">
-        <select
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          {availableDates.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-      </SectionHeader>
-
-      <FilterBar
-        universe={universe}
-        onUniverseChange={setUniverse}
-        rebalType={rebalType}
-        onRebalTypeChange={setRebalType}
-      />
-
-      {/* Strategy multi-selector */}
-      <div className="space-y-2">
-        <label className="text-xs text-muted font-medium">전략 선택</label>
-        <div className="flex flex-wrap gap-2">
-          {allStrategyKeys.map((key) => {
-            const selected = selectedStrategies.includes(key);
-            const label = config?.strategy_labels?.[key] || key;
-            const color = config?.strategy_colors?.[key] || '#6366f1';
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  if (selected) {
-                    setSelectedStrategies((prev) => prev.filter((k) => k !== key));
-                  } else {
-                    setSelectedStrategies((prev) => [...prev, key]);
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
-                style={{
-                  backgroundColor: selected ? color + '20' : 'transparent',
-                  borderColor: selected ? color : 'var(--color-border)',
-                  color: selected ? color : 'var(--color-muted)',
-                }}
-              >
-                {label}
-                {selected && <span className="ml-1 opacity-60">&times;</span>}
-              </button>
-            );
-          })}
+    <div className="animate-fade-in -mt-2">
+      {/* ─── Filter bar: universe + rebal + strategy toggles + date selector ─── */}
+      <div className="glass-card p-3 mb-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <FilterBar
+            universe={universe}
+            onUniverseChange={setUniverse}
+            rebalType={rebalType}
+            onRebalTypeChange={setRebalType}
+          />
+          <div className="flex flex-wrap gap-2">
+            {allStrategyKeys.map((key) => {
+              const selected = selectedStrategies.includes(key);
+              const label = config?.strategy_labels?.[key] || key;
+              const color = config?.strategy_colors?.[key] || '#6366f1';
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    if (selected) {
+                      setSelectedStrategies((prev) => prev.filter((k) => k !== key));
+                    } else {
+                      setSelectedStrategies((prev) => [...prev, key]);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border"
+                  style={{
+                    backgroundColor: selected ? color + '20' : 'transparent',
+                    borderColor: selected ? color : 'var(--color-border)',
+                    color: selected ? color : 'var(--color-muted)',
+                  }}
+                >
+                  {label}
+                  {selected && <span className="ml-1 opacity-60">&times;</span>}
+                </button>
+              );
+            })}
+          </div>
+          <select
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            {availableDates.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -535,194 +532,59 @@ export default function PortfolioPage() {
         <LoadingState message="포트폴리오 데이터를 불러오는 중..." />
       ) : (
         <>
-
-          {/* Portfolio Characteristics */}
-          <section>
-            <h3 className="text-sm font-medium text-muted mb-3">포트폴리오 특성</h3>
-            <DataTable
-              columns={charsColumns}
-              data={charsTableData}
-              maxHeight="300px"
-            />
-          </section>
-
-          {/* Concentration Analysis */}
-          <section>
-            <h3 className="text-sm font-medium text-muted mb-3">비중 집중도 분석</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {strategyKeys.map((key) => {
-                const holdings = holdingsMap[key] || [];
-                if (holdings.length === 0) return null;
-                const hhi = computeHHI(holdings);
-                const top5 = computeTop5Weight(holdings);
-                return (
-                  <KpiCard
-                    key={key}
-                    label={labels[key] || key}
-                    value={`HHI ${fmtNum(hhi, 0)}`}
-                    borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
-                    subItems={[
-                      { label: 'Top 5 비중', value: `${top5.toFixed(1)}%` },
-                      { label: '종목 수', value: `${holdings.length}` },
-                    ]}
-                  />
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Top Holdings Comparison */}
-          {topHoldingsChartData.length > 0 && topHoldingsChartData[0]?.y?.length > 0 && (
-            <section>
-              <h3 className="text-sm font-medium text-muted mb-3">주요 보유 종목 비중 비교</h3>
-              <PlotlyChart
-                data={topHoldingsChartData}
-                layout={{
-                  xaxis: { title: { text: '비중 (%)' }, ticksuffix: '%' },
-                  yaxis: { automargin: true },
-                  margin: { l: 100, r: 20, t: 10, b: 50 },
-                  legend: { orientation: 'h', y: -0.3 },
-                }}
-                height={Math.max(250, (topHoldingsChartData[0]?.y?.length || 5) * 40)}
-              />
-            </section>
-          )}
-
-          {/* Sector Comparison Chart */}
-          <section>
-            <h3 className="text-sm font-medium text-muted mb-3">섹터 비중 비교</h3>
-            <PlotlyChart
-              data={sectorChartData}
-              layout={{
-                barmode: 'group',
-                xaxis: { title: { text: '비중(%)' }, ticksuffix: '%' },
-                yaxis: { automargin: true, dtick: 1 },
-                margin: { l: 120, r: 20, t: 10, b: 50 },
-                legend: { orientation: 'h', y: -0.2 },
-              }}
-              height={Math.max(350, (sectorChartData[0]?.y?.length || 10) * 28)}
-            />
-          </section>
-
-          {/* Market Cap Distribution */}
-          <section>
-            <h3 className="text-sm font-medium text-muted mb-3">시가총액 분포</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              {strategyKeys.map((key) => {
-                const holdings = holdingsMap[key] || [];
-                if (holdings.length === 0) return null;
-                const avgCap = computeWeightedAvgMarketCap(holdings);
-                return (
-                  <KpiCard
-                    key={key}
-                    label={labels[key] || key}
-                    value={`가중평균 시총 ${formatMarketCap(avgCap)}`}
-                    borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
-                    subItems={[
-                      { label: '종목수', value: `${holdings.length}` },
-                    ]}
-                  />
-                );
-              })}
-            </div>
-            <PlotlyChart
-              data={capChartData}
-              layout={{
-                barmode: 'group',
-                xaxis: { title: { text: '비중(%)' }, ticksuffix: '%' },
-                yaxis: { automargin: true, categoryorder: 'array', categoryarray: ['소형', '중형', '대형', '초대형'] },
-                margin: { l: 80, r: 20, t: 10, b: 50 },
-                legend: { orientation: 'h', y: -0.3 },
-              }}
-              height={250}
-            />
-            {capTableData.length > 0 && (
-              <div className="mt-4">
-                <DataTable
-                  columns={capTableColumns}
-                  data={capTableData}
-                  maxHeight="300px"
+          {/* ─── KPI Cards ─── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {strategyKeys.map((key) => {
+              const holdings = holdingsMap[key] || [];
+              if (holdings.length === 0) return null;
+              const hhi = computeHHI(holdings);
+              const top5 = computeTop5Weight(holdings);
+              return (
+                <KpiCard
+                  key={key}
+                  label={labels[key] || key}
+                  value={`HHI ${fmtNum(hhi, 0)}`}
+                  borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
+                  subItems={[
+                    { label: 'Top 5 비중', value: `${top5.toFixed(1)}%` },
+                    { label: '종목 수', value: `${holdings.length}` },
+                  ]}
                 />
-              </div>
-            )}
-            <p className="text-xs text-muted mt-2">
-              초대형: 시총 10조+ | 대형: 1조~10조 | 중형: 3000억~1조 | 소형: 3000억 미만
-            </p>
-          </section>
+              );
+            })}
+          </div>
 
-          {/* Rebalancing Turnover */}
-          {prevDate && Object.keys(turnoverMap).length > 0 && (
-            <section>
-              <h3 className="text-sm font-medium text-muted mb-1">리밸런싱 변화</h3>
-              <p className="text-xs text-muted mb-4">비교: {prevDate} → {selectedDate}</p>
-              <div className="space-y-6">
-                {strategyKeys.map((key) => {
-                  const t = turnoverMap[key];
-                  if (!t) return null;
-                  return (
-                    <div key={key} className="space-y-3">
-                      <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <span
-                          className="inline-block w-3 h-3 rounded-full"
-                          style={{ backgroundColor: colors[key] || '#6366f1' }}
-                        />
-                        {labels[key] || key}
-                      </h4>
-                      <div className="grid grid-cols-4 gap-4">
-                        <div className="text-center">
-                          <p className="text-xs text-muted">신규 편입</p>
-                          <p className="text-2xl font-bold text-foreground">{t.added_count}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-muted">편출</p>
-                          <p className="text-2xl font-bold text-foreground">{t.removed_count}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-muted">유지</p>
-                          <p className="text-2xl font-bold text-foreground">{t.retained_count}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-muted">회전율</p>
-                          <p className="text-2xl font-bold text-foreground">{(t.turnover_rate * 100).toFixed(0)}%</p>
-                        </div>
-                      </div>
-                      {t.added.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-accent-green mb-1">신규 편입</p>
-                          <DataTable
-                            columns={addedColumns}
-                            data={t.added.map((row) => ({
-                              ...row,
-                              최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
-                            }))}
-                            maxHeight="250px"
-                          />
-                        </div>
-                      )}
-                      {t.removed.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-accent-red mb-1">편출</p>
-                          <DataTable
-                            columns={addedColumns}
-                            data={t.removed.map((row) => ({
-                              ...row,
-                              최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
-                            }))}
-                            maxHeight="250px"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          {/* ─── Tab bar ─── */}
+          <div className="glass-card p-1 mb-4 flex gap-0 rounded-lg">
+            {(['holdings', 'sector', 'chars', 'turnover', 'attr'] as const).map((tab) => {
+              const tabLabels = { holdings: '보유 종목', sector: '섹터/시총', chars: '포트폴리오 특성', turnover: '리밸런싱 변화', attr: '종목 수익 기여' };
+              return (
+                <button key={tab} onClick={() => setPortfolioTab(tab)}
+                  className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                    portfolioTab === tab ? 'bg-primary text-white shadow-sm' : 'text-muted hover:text-foreground hover:bg-surface'
+                  }`}>
+                  {tabLabels[tab]}
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Holdings Detail Tables */}
-          <section>
-            <h3 className="text-sm font-medium text-muted mb-3">종목 상세</h3>
+          {/* ─── Tab content ─── */}
+
+          {portfolioTab === 'holdings' && (
             <div className="space-y-6">
+              {topHoldingsChartData.length > 0 && topHoldingsChartData[0]?.y?.length > 0 && (
+                <PlotlyChart
+                  data={topHoldingsChartData}
+                  layout={{
+                    xaxis: { title: { text: '비중 (%)' }, ticksuffix: '%' },
+                    yaxis: { automargin: true },
+                    margin: { l: 100, r: 20, t: 10, b: 50 },
+                    legend: { orientation: 'h', y: -0.3 },
+                  }}
+                  height={Math.max(250, (topHoldingsChartData[0]?.y?.length || 5) * 40)}
+                />
+              )}
               {strategyKeys.map((key) => {
                 const holdings = holdingsMap[key] || [];
                 if (holdings.length === 0) return null;
@@ -754,7 +616,176 @@ export default function PortfolioPage() {
                 );
               })}
             </div>
-          </section>
+          )}
+
+          {portfolioTab === 'sector' && (
+            <div className="space-y-6">
+              <PlotlyChart
+                data={sectorChartData}
+                layout={{
+                  barmode: 'group',
+                  xaxis: { title: { text: '비중(%)' }, ticksuffix: '%' },
+                  yaxis: { automargin: true, dtick: 1 },
+                  margin: { l: 120, r: 20, t: 10, b: 50 },
+                  legend: { orientation: 'h', y: -0.2 },
+                }}
+                height={Math.max(350, (sectorChartData[0]?.y?.length || 10) * 28)}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                {strategyKeys.map((key) => {
+                  const holdings = holdingsMap[key] || [];
+                  if (holdings.length === 0) return null;
+                  const avgCap = computeWeightedAvgMarketCap(holdings);
+                  return (
+                    <KpiCard
+                      key={key}
+                      label={labels[key] || key}
+                      value={`가중평균 시총 ${formatMarketCap(avgCap)}`}
+                      borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
+                      subItems={[
+                        { label: '종목수', value: `${holdings.length}` },
+                      ]}
+                    />
+                  );
+                })}
+              </div>
+              <PlotlyChart
+                data={capChartData}
+                layout={{
+                  barmode: 'group',
+                  xaxis: { title: { text: '비중(%)' }, ticksuffix: '%' },
+                  yaxis: { automargin: true, categoryorder: 'array', categoryarray: ['소형', '중형', '대형', '초대형'] },
+                  margin: { l: 80, r: 20, t: 10, b: 50 },
+                  legend: { orientation: 'h', y: -0.3 },
+                }}
+                height={250}
+              />
+              {capTableData.length > 0 && (
+                <DataTable
+                  columns={capTableColumns}
+                  data={capTableData}
+                  maxHeight="300px"
+                />
+              )}
+              <p className="text-xs text-muted mt-2">
+                초대형: 시총 10조+ | 대형: 1조~10조 | 중형: 3000억~1조 | 소형: 3000억 미만
+              </p>
+            </div>
+          )}
+
+          {portfolioTab === 'chars' && (
+            <DataTable
+              columns={charsColumns}
+              data={charsTableData}
+              maxHeight="300px"
+            />
+          )}
+
+          {portfolioTab === 'turnover' && prevDate && Object.keys(turnoverMap).length > 0 && (
+            <div className="space-y-6">
+              <p className="text-xs text-muted mb-4">비교: {prevDate} → {selectedDate}</p>
+              {strategyKeys.map((key) => {
+                const t = turnoverMap[key];
+                if (!t) return null;
+                return (
+                  <div key={key} className="space-y-3">
+                    <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <span
+                        className="inline-block w-3 h-3 rounded-full"
+                        style={{ backgroundColor: colors[key] || '#6366f1' }}
+                      />
+                      {labels[key] || key}
+                    </h4>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <p className="text-xs text-muted">신규 편입</p>
+                        <p className="text-2xl font-bold text-foreground">{t.added_count}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted">편출</p>
+                        <p className="text-2xl font-bold text-foreground">{t.removed_count}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted">유지</p>
+                        <p className="text-2xl font-bold text-foreground">{t.retained_count}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted">회전율</p>
+                        <p className="text-2xl font-bold text-foreground">{(t.turnover_rate * 100).toFixed(0)}%</p>
+                      </div>
+                    </div>
+                    {t.added.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-accent-green mb-1">신규 편입</p>
+                        <DataTable
+                          columns={addedColumns}
+                          data={t.added.map((row) => ({
+                            ...row,
+                            최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
+                          }))}
+                          maxHeight="250px"
+                        />
+                      </div>
+                    )}
+                    {t.removed.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-accent-red mb-1">편출</p>
+                        <DataTable
+                          columns={addedColumns}
+                          data={t.removed.map((row) => ({
+                            ...row,
+                            최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
+                          }))}
+                          maxHeight="250px"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {portfolioTab === 'attr' && (
+            <div className="space-y-6">
+              {strategyKeys.map((key) => {
+                const holdings = holdingsMap[key] || [];
+                if (holdings.length === 0) return null;
+                const returnMap = attrMap[key] || {};
+                const sorted = [...holdings]
+                  .map((h) => ({
+                    종목명: h.종목명,
+                    섹터: h.섹터,
+                    '비중(%)': h['비중(%)'],
+                    '종목수익률(%)': returnMap[h.종목명] ?? null,
+                    '기여도(%)': returnMap[h.종목명] != null ? (h['비중(%)'] / 100) * returnMap[h.종목명] : null,
+                  }))
+                  .sort((a, b) => (b['기여도(%)'] ?? -Infinity) - (a['기여도(%)'] ?? -Infinity));
+                return (
+                  <div key={key}>
+                    <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                      <span
+                        className="inline-block w-3 h-3 rounded-full"
+                        style={{ backgroundColor: colors[key] || '#6366f1' }}
+                      />
+                      {labels[key] || key}
+                    </h4>
+                    <DataTable
+                      columns={[
+                        { key: '종목명', label: '종목명', align: 'left' as const },
+                        { key: '섹터', label: '섹터', align: 'left' as const },
+                        { key: '비중(%)', label: '비중(%)', align: 'right' as const, mono: true, format: (v: unknown) => typeof v === 'number' ? v.toFixed(2) : '-' },
+                        { key: '종목수익률(%)', label: '종목수익률(%)', align: 'right' as const, mono: true, format: (v: unknown) => typeof v === 'number' ? fmtPct(v / 100) : '-', colorFn: (v: unknown) => typeof v === 'number' ? valueColor(v / 100) : 'text-muted' },
+                        { key: '기여도(%)', label: '기여도(%)', align: 'right' as const, mono: true, format: (v: unknown) => typeof v === 'number' ? v.toFixed(3) : '-', colorFn: (v: unknown) => typeof v === 'number' ? valueColor(v) : 'text-muted' },
+                      ]}
+                      data={sorted as unknown as Record<string, unknown>[]}
+                      maxHeight="500px"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
     </div>
