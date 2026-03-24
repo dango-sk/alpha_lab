@@ -504,28 +504,6 @@ export default function PortfolioPage() {
         <LoadingState message="포트폴리오 데이터를 불러오는 중..." />
       ) : (
         <>
-          {/* ─── KPI Cards ─── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {strategyKeys.map((key) => {
-              const holdings = holdingsMap[key] || [];
-              if (holdings.length === 0) return null;
-              const top5 = computeTop5Weight(holdings);
-              const avgCap = computeWeightedAvgMarketCap(holdings);
-              return (
-                <KpiCard
-                  key={key}
-                  label={labels[key] || key}
-                  value={`가중평균 시총 ${formatMarketCap(avgCap)}`}
-                  borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
-                  subItems={[
-                    { label: 'Top 5 비중', value: `${top5.toFixed(1)}%` },
-                    { label: '종목 수', value: `${holdings.length}` },
-                  ]}
-                />
-              );
-            })}
-          </div>
-
           {/* ─── Tab bar ─── */}
           <div className="glass-card p-1 mb-4 flex gap-0 rounded-lg">
             {(['holdings', 'sector', 'chars', 'turnover', 'attr'] as const).map((tab) => {
@@ -603,24 +581,6 @@ export default function PortfolioPage() {
                 }}
                 height={Math.max(350, (sectorChartData[0]?.y?.length || 10) * 28)}
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                {strategyKeys.map((key) => {
-                  const holdings = holdingsMap[key] || [];
-                  if (holdings.length === 0) return null;
-                  const avgCap = computeWeightedAvgMarketCap(holdings);
-                  return (
-                    <KpiCard
-                      key={key}
-                      label={labels[key] || key}
-                      value={`가중평균 시총 ${formatMarketCap(avgCap)}`}
-                      borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
-                      subItems={[
-                        { label: '종목수', value: `${holdings.length}` },
-                      ]}
-                    />
-                  );
-                })}
-              </div>
               <PlotlyChart
                 data={capChartData}
                 layout={{
