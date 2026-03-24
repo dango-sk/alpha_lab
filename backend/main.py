@@ -605,6 +605,9 @@ class BacktestRequest(BaseModel):
     rebal_type: Optional[str] = None
     weight_cap_pct: Optional[int] = None
     tx_cost_bp: Optional[int] = None
+    stop_loss_enabled: Optional[bool] = None
+    stop_loss_pct: Optional[int] = None
+    stop_loss_mode: Optional[str] = None
 
 # In-memory job store
 _backtest_jobs: dict[str, dict] = {}
@@ -619,6 +622,9 @@ def _run_backtest_job(job_id: str, req: BacktestRequest):
             rebal_type=req.rebal_type,
             weight_cap_pct_override=req.weight_cap_pct,
             tx_cost_bp_override=req.tx_cost_bp,
+            stop_loss_enabled=req.stop_loss_enabled,
+            stop_loss_pct=req.stop_loss_pct,
+            stop_loss_mode=req.stop_loss_mode,
         )
         if result is None:
             _backtest_jobs[job_id] = {"status": "error", "detail": "Backtest returned no results"}

@@ -1111,6 +1111,9 @@ PARAMS = {
     "top_n": 30,
     "tx_cost_bp": 30,
     "weight_cap_pct": 10,
+    "stop_loss_enabled": False,
+    "stop_loss_pct": 15,
+    "stop_loss_mode": "sell",
 }
 
 # ─── 퀄리티 필터 ───
@@ -1152,7 +1155,7 @@ SCORING_RULES = {
     "evic_roic_attractiveness": "rule2",
 }
 
-PARAMS = {"top_n": 30, "tx_cost_bp": 30, "weight_cap_pct": 15}
+PARAMS = {"top_n": 30, "tx_cost_bp": 30, "weight_cap_pct": 15, "stop_loss_enabled": False, "stop_loss_pct": 15, "stop_loss_mode": "sell"}
 
 QUALITY_FILTER = {
     "exclude_spac_etf_reit": True,

@@ -1245,7 +1245,9 @@ def delete_strategy(name: str):
 
 def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: str = None,
                           weight_cap_pct_override: int = None, tx_cost_bp_override: int = None,
-                          rebal_type: str = None) -> dict | None:
+                          rebal_type: str = None,
+                          stop_loss_enabled: bool = None, stop_loss_pct: int = None,
+                          stop_loss_mode: str = None) -> dict | None:
     """
     커스텀 전략 코드로 백테스트를 실행한다.
 
@@ -1277,6 +1279,14 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
     if weight_cap_pct_override is not None:
         weight_cap_pct = weight_cap_pct_override
 
+    # stop loss 파라미터
+    _sl_enabled = params.get("stop_loss_enabled", False)
+    _sl_pct = params.get("stop_loss_pct", 15)
+    _sl_mode = params.get("stop_loss_mode", "sell")
+    if stop_loss_enabled is not None: _sl_enabled = stop_loss_enabled
+    if stop_loss_pct is not None: _sl_pct = stop_loss_pct
+    if stop_loss_mode is not None: _sl_mode = stop_loss_mode
+
     # stock_selector 콜백 생성 (universe 테이블 기반)
     from step7_backtest import get_universe_stocks
 
@@ -1296,12 +1306,18 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 15),
         "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
         "rebal_type": BACKTEST_CONFIG.get("rebal_type", "monthly"),
+        "stop_loss_enabled": BACKTEST_CONFIG.get("stop_loss_enabled", False),
+        "stop_loss_pct": BACKTEST_CONFIG.get("stop_loss_pct", 15),
+        "stop_loss_mode": BACKTEST_CONFIG.get("stop_loss_mode", "sell"),
     }
     try:
         BACKTEST_CONFIG["top_n_stocks"] = top_n
         BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
         BACKTEST_CONFIG["weight_cap_pct"] = weight_cap_pct
         BACKTEST_CONFIG["rebal_type"] = _rebal
+        BACKTEST_CONFIG["stop_loss_enabled"] = _sl_enabled
+        BACKTEST_CONFIG["stop_loss_pct"] = _sl_pct
+        BACKTEST_CONFIG["stop_loss_mode"] = _sl_mode
         if universe:
             BACKTEST_CONFIG["universe"] = universe
 
@@ -1402,6 +1418,9 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]
         BACKTEST_CONFIG["universe"] = orig["universe"]
         BACKTEST_CONFIG["rebal_type"] = orig["rebal_type"]
+        BACKTEST_CONFIG["stop_loss_enabled"] = orig["stop_loss_enabled"]
+        BACKTEST_CONFIG["stop_loss_pct"] = orig["stop_loss_pct"]
+        BACKTEST_CONFIG["stop_loss_mode"] = orig["stop_loss_mode"]
 
 
 def run_regime_combo_backtest(
@@ -1450,6 +1469,12 @@ def run_regime_combo_backtest(
     tx_cost_bp = int((bull_params.get("tx_cost_bp", 30) + bear_params.get("tx_cost_bp", 30)) / 2)
     bull_cap_pct = bull_params.get("weight_cap_pct", 15)
     bear_cap_pct = bear_params.get("weight_cap_pct", 10)
+    bull_sl = bull_params.get("stop_loss_enabled", False)
+    bear_sl = bear_params.get("stop_loss_enabled", False)
+    bull_sl_pct = bull_params.get("stop_loss_pct", 15)
+    bear_sl_pct = bear_params.get("stop_loss_pct", 15)
+    bull_sl_mode = bull_params.get("stop_loss_mode", "sell")
+    bear_sl_mode = bear_params.get("stop_loss_mode", "sell")
     _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
     _universe = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
 
@@ -1479,8 +1504,16 @@ def run_regime_combo_backtest(
     def regime_stock_selector(conn, calc_date, _top_n):
         regime = _get_regime(calc_date)
         module = bull_module if regime == "Bull" else bear_module
-        # 레짐별 cap 동적 적용
+        # 레짐별 cap 및 stop loss 동적 적용
         BACKTEST_CONFIG["weight_cap_pct"] = bull_cap_pct if regime == "Bull" else bear_cap_pct
+        if regime == "Bull":
+            BACKTEST_CONFIG["stop_loss_enabled"] = bull_sl
+            BACKTEST_CONFIG["stop_loss_pct"] = bull_sl_pct
+            BACKTEST_CONFIG["stop_loss_mode"] = bull_sl_mode
+        else:
+            BACKTEST_CONFIG["stop_loss_enabled"] = bear_sl
+            BACKTEST_CONFIG["stop_loss_pct"] = bear_sl_pct
+            BACKTEST_CONFIG["stop_loss_mode"] = bear_sl_mode
         universe_set = get_universe_stocks(conn, calc_date)
         candidates = score_stocks_from_strategy(conn, calc_date, module)
         return [(c, s) for c, s in candidates if c in universe_set][:_top_n]
@@ -1491,11 +1524,17 @@ def run_regime_combo_backtest(
         "weight_cap_pct": BACKTEST_CONFIG.get("weight_cap_pct", 15),
         "universe": BACKTEST_CONFIG.get("universe", "KOSPI"),
         "rebal_type": BACKTEST_CONFIG.get("rebal_type", "monthly"),
+        "stop_loss_enabled": BACKTEST_CONFIG.get("stop_loss_enabled", False),
+        "stop_loss_pct": BACKTEST_CONFIG.get("stop_loss_pct", 15),
+        "stop_loss_mode": BACKTEST_CONFIG.get("stop_loss_mode", "sell"),
     }
     try:
         BACKTEST_CONFIG["top_n_stocks"] = top_n
         BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
         BACKTEST_CONFIG["weight_cap_pct"] = bull_cap_pct  # 초기값은 bull (첫 기간용)
+        BACKTEST_CONFIG["stop_loss_enabled"] = bull_sl  # 초기값은 bull
+        BACKTEST_CONFIG["stop_loss_pct"] = bull_sl_pct
+        BACKTEST_CONFIG["stop_loss_mode"] = bull_sl_mode
         BACKTEST_CONFIG["rebal_type"] = _rebal
         BACKTEST_CONFIG["universe"] = _universe
 
@@ -1541,6 +1580,9 @@ def run_regime_combo_backtest(
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]
         BACKTEST_CONFIG["universe"] = orig["universe"]
         BACKTEST_CONFIG["rebal_type"] = orig["rebal_type"]
+        BACKTEST_CONFIG["stop_loss_enabled"] = orig["stop_loss_enabled"]
+        BACKTEST_CONFIG["stop_loss_pct"] = orig["stop_loss_pct"]
+        BACKTEST_CONFIG["stop_loss_mode"] = orig["stop_loss_mode"]
 
 
 def compute_regime_analysis(

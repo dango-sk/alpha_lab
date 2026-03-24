@@ -73,6 +73,9 @@ function parseStrategyParams(code: string): {
   txCostBp?: number;
   universe?: 'KOSPI' | 'KOSPI+KOSDAQ';
   rebalType?: 'monthly' | 'biweekly';
+  stopLossEnabled?: boolean;
+  stopLossPct?: number;
+  stopLossMode?: string;
 } {
   const result: ReturnType<typeof parseStrategyParams> = {};
   const cap = code.match(/weight_cap_pct["']?\s*[=:]\s*(\d+)/);
@@ -85,6 +88,12 @@ function parseStrategyParams(code: string): {
   else if (/KOSPI/i.test(code)) result.universe = 'KOSPI';
   if (/biweekly|격주/i.test(code)) result.rebalType = 'biweekly';
   else if (/monthly|월간/i.test(code)) result.rebalType = 'monthly';
+  const slEnabled = code.match(/stop_loss_enabled["']?\s*[=:]\s*(True|False|true|false)/);
+  if (slEnabled) result.stopLossEnabled = slEnabled[1].toLowerCase() === 'true';
+  const slPct = code.match(/stop_loss_pct["']?\s*[=:]\s*(\d+)/);
+  if (slPct) result.stopLossPct = parseInt(slPct[1]);
+  const slMode = code.match(/stop_loss_mode["']?\s*[=:]\s*["'](\w+)["']/);
+  if (slMode) result.stopLossMode = slMode[1];
   return result;
 }
 
@@ -127,6 +136,11 @@ export default function LabPage() {
   const [topN, setTopN] = useState(30);
   const [txCostBp, setTxCostBp] = useState(30);
   const [rebalType, setRebalType] = useState<'monthly' | 'biweekly'>('monthly');
+
+  // ─── Stop Loss ───
+  const [stopLossEnabled, setStopLossEnabled] = useState(false);
+  const [stopLossPct, setStopLossPct] = useState(15);
+  const [stopLossMode, setStopLossMode] = useState<'sell' | 'reduce'>('sell');
 
   // ─── Code ───
   const [code, setCode] = useState('');
@@ -229,6 +243,9 @@ export default function LabPage() {
         if (capVal !== undefined) setWeightCapPct(capVal);
         if (topVal !== undefined) setTopN(topVal);
         if (txVal !== undefined) setTxCostBp(txVal);
+        if (parsed.stopLossEnabled !== undefined) setStopLossEnabled(parsed.stopLossEnabled);
+        if (parsed.stopLossPct !== undefined) setStopLossPct(parsed.stopLossPct);
+        if (parsed.stopLossMode !== undefined) setStopLossMode(parsed.stopLossMode as 'sell' | 'reduce');
         if (parsed.universe) setUniverse(parsed.universe);
         if (parsed.rebalType) setRebalType(parsed.rebalType);
         // 유니버스/리밸런싱은 전략 이름에서도 파싱
@@ -292,6 +309,9 @@ export default function LabPage() {
         weight_cap_pct: weightCapPct,
         top_n_stocks: topN,
         tx_cost_bp: txCostBp,
+        stop_loss_enabled: stopLossEnabled,
+        stop_loss_pct: stopLossPct,
+        stop_loss_mode: stopLossMode,
       });
       setProgress(100);
       setProgressMsg('완료!');
@@ -303,7 +323,7 @@ export default function LabPage() {
       if (progressRef.current) clearInterval(progressRef.current);
       setTimeout(() => setRunning(false), 500);
     }
-  }, [code, universe, rebalType, weightCapPct, topN, txCostBp]);
+  }, [code, universe, rebalType, weightCapPct, topN, txCostBp, stopLossEnabled, stopLossPct, stopLossMode]);
 
   // ─── Inject actual params into code before saving ───
   const codeWithParams = useMemo(() => {
@@ -311,8 +331,11 @@ export default function LabPage() {
     c = c.replace(/(["']?top_n["']?\s*:\s*)\d+/, `$1${topN}`);
     c = c.replace(/(["']?tx_cost_bp["']?\s*:\s*)\d+/, `$1${txCostBp}`);
     c = c.replace(/(["']?weight_cap_pct["']?\s*:\s*)\d+/, `$1${weightCapPct}`);
+    c = c.replace(/(["']?stop_loss_enabled["']?\s*[=:]\s*)(True|False|true|false)/, `$1${stopLossEnabled ? 'True' : 'False'}`);
+    c = c.replace(/(["']?stop_loss_pct["']?\s*[=:]\s*)\d+/, `$1${stopLossPct}`);
+    c = c.replace(/(["']?stop_loss_mode["']?\s*[=:]\s*["'])\w+(["'])/, `$1${stopLossMode}$2`);
     return c;
-  }, [code, topN, txCostBp, weightCapPct]);
+  }, [code, topN, txCostBp, weightCapPct, stopLossEnabled, stopLossPct, stopLossMode]);
 
   // ─── Save strategy ───
   const handleSave = useCallback(async () => {
@@ -573,6 +596,48 @@ export default function LabPage() {
               <option value="monthly">월간</option>
               <option value="biweekly">격주</option>
             </select>
+          </div>
+        </div>
+
+        {/* ─── Stop Loss ─── */}
+        <div className="mt-3 flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={stopLossEnabled}
+              onChange={(e) => setStopLossEnabled(e.target.checked)}
+              className="accent-primary"
+            />
+            손절 (Stop Loss)
+          </label>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted">하락률 %</label>
+            <input
+              type="number"
+              className="w-16 bg-surface border border-border rounded-lg px-2 py-1 text-sm text-foreground font-num focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+              value={stopLossPct}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setStopLossPct(parseInt(e.target.value) || 0)}
+              min={1}
+              max={50}
+              disabled={!stopLossEnabled}
+            />
+          </div>
+          <div className="flex gap-1">
+            <button
+              className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'sell' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
+              onClick={() => setStopLossMode('sell')}
+              disabled={!stopLossEnabled}
+            >
+              전량 매도
+            </button>
+            <button
+              className={`px-2 py-1 text-xs rounded-md border ${stopLossMode === 'reduce' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
+              onClick={() => setStopLossMode('reduce')}
+              disabled={!stopLossEnabled}
+            >
+              비중 50% 축소
+            </button>
           </div>
         </div>
       </div>
