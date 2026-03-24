@@ -8,6 +8,7 @@ import DataTable from '@/components/DataTable';
 import PlotlyChart from '@/components/PlotlyChart';
 import FilterBar from '@/components/FilterBar';
 import StrategySelector from '@/components/StrategySelector';
+import DatePicker from '@/components/DatePicker';
 import LoadingState from '@/components/LoadingState';
 
 interface Holding {
@@ -491,17 +492,11 @@ export default function PortfolioPage() {
             colors={colors}
             onChange={setSelectedStrategies}
           />
-          <select
+          <DatePicker
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            {availableDates.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+            options={availableDates}
+            onChange={setSelectedDate}
+          />
         </div>
       </div>
 
