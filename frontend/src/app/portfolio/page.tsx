@@ -570,6 +570,22 @@ export default function PortfolioPage() {
 
           {portfolioTab === 'sector' && (
             <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {strategyKeys.map((key) => {
+                  const holdings = holdingsMap[key] || [];
+                  if (holdings.length === 0) return null;
+                  const avgCap = computeWeightedAvgMarketCap(holdings);
+                  return (
+                    <KpiCard
+                      key={key}
+                      label={labels[key] || key}
+                      value={`가중평균 시총 ${formatMarketCap(avgCap)}`}
+                      borderColor={`border-t-[${colors[key] || '#6366f1'}]`}
+                      subItems={[{ label: '종목수', value: `${holdings.length}` }]}
+                    />
+                  );
+                })}
+              </div>
               <PlotlyChart
                 data={sectorChartData}
                 layout={{
