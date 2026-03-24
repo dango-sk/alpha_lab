@@ -501,11 +501,10 @@ export default function LabPage() {
 
 
   return (
-    <div className="animate-fade-in">
-      <SectionHeader title="전략 실험실" subtitle="커스텀 백테스트 및 전략 실험" />
+    <div className="animate-fade-in -mt-2">
 
       {/* ─── Saved Strategy Selector ─── */}
-      <div className="glass-card p-4 mb-3">
+      <div className="glass-card p-3 mb-3">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs text-muted font-medium">저장된 전략</label>
           <select
