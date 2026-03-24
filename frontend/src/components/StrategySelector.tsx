@@ -12,15 +12,31 @@ interface StrategySelectorProps {
 
 export default function StrategySelector({ allKeys, selected, labels, colors, onChange }: StrategySelectorProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+      ) setOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  function handleOpen() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen((v) => !v);
+  }
 
   function toggle(key: string) {
     if (selected.includes(key)) {
@@ -33,9 +49,10 @@ export default function StrategySelector({ allKeys, selected, labels, colors, on
   const selectedCount = selected.length;
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={handleOpen}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-foreground hover:border-primary transition-all"
       >
         <span>전략 선택</span>
@@ -50,19 +67,16 @@ export default function StrategySelector({ allKeys, selected, labels, colors, on
       </button>
 
       {open && (
-        <div className="absolute top-full mt-1 right-0 z-50 bg-surface border border-border rounded-lg shadow-lg min-w-[220px] py-1">
-          {/* 전체 선택/해제 */}
+        <div
+          ref={dropdownRef}
+          className="fixed z-[9999] bg-surface border border-border rounded-lg shadow-xl min-w-[220px] py-1"
+          style={{ top: dropdownStyle.top, right: dropdownStyle.right }}
+        >
           <div className="px-3 py-1.5 border-b border-border flex items-center justify-between">
             <span className="text-[10px] text-muted font-medium uppercase tracking-wide">전략</span>
             <div className="flex gap-2">
-              <button
-                onClick={() => onChange(allKeys)}
-                className="text-[10px] text-primary hover:underline"
-              >전체</button>
-              <button
-                onClick={() => onChange([])}
-                className="text-[10px] text-muted hover:text-foreground hover:underline"
-              >해제</button>
+              <button onClick={() => onChange(allKeys)} className="text-[10px] text-primary hover:underline">전체</button>
+              <button onClick={() => onChange([])} className="text-[10px] text-muted hover:text-foreground hover:underline">해제</button>
             </div>
           </div>
           {allKeys.map((key) => {
@@ -82,10 +96,7 @@ export default function StrategySelector({ allKeys, selected, labels, colors, on
                     borderColor: isSelected ? color : 'var(--color-border)',
                   }}
                 />
-                <span
-                  className="flex-1 truncate"
-                  style={{ color: isSelected ? color : 'var(--color-muted)' }}
-                >
+                <span className="flex-1 truncate" style={{ color: isSelected ? color : 'var(--color-muted)' }}>
                   {label}
                 </span>
                 {isSelected && (
@@ -96,6 +107,6 @@ export default function StrategySelector({ allKeys, selected, labels, colors, on
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }
