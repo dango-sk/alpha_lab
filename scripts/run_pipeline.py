@@ -95,7 +95,7 @@ def _get_consensus_conn_and_range():
     to_date = datetime.now().strftime("%Y%m%d")
     cur.execute("""
         SELECT DISTINCT trade_date FROM alpha_lab.daily_price
-        ORDER BY trade_date DESC LIMIT 2
+        ORDER BY trade_date DESC LIMIT 3
     """)
     recent_dates = [r[0] for r in cur.fetchall()]
     from_date = min(recent_dates).replace("-", "") if recent_dates else to_date

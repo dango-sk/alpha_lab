@@ -120,12 +120,14 @@ export async function getRegimeCombo(
   bear_key: string,
   universe?: string,
   rebal_type?: string,
-  ma_window?: number
+  ma_window?: number,
+  regime_mode?: string
 ) {
   const params: Record<string, string> = { bull_key, bear_key };
   if (universe) params.universe = universe;
   if (rebal_type) params.rebal_type = rebal_type;
   if (ma_window) params.ma_window = String(ma_window);
+  if (regime_mode) params.regime_mode = regime_mode;
   const qs = new URLSearchParams(params).toString();
 
   // Start async job (real backtest, not splice)

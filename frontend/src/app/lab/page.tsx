@@ -171,6 +171,7 @@ export default function LabPage() {
   const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
   const [regimeMaWindow, setRegimeMaWindow] = useState(50);
   const [regimeMaWindowInput, setRegimeMaWindowInput] = useState('50');
+  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle'>('ma');
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
@@ -967,7 +968,7 @@ export default function LabPage() {
             setRegimeResult(null);
             setRegimeSaveMsg('');
             try {
-              const res = await getRegimeCombo(regimeBullKey, regimeBearKey, universe, rebalType, regimeMaWindow);
+              const res = await getRegimeCombo(regimeBullKey, regimeBearKey, universe, rebalType, regimeMaWindow, regimeMode);
               setRegimeResult(res);
             } catch (e) {
               console.error(e);
@@ -1003,32 +1004,54 @@ export default function LabPage() {
 
           return (
             <>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-xs text-muted font-medium">MA 기간 (KOSPI 200 기준)</span>
-                <input
-                  type="number"
-                  min={5}
-                  max={500}
-                  value={regimeMaWindowInput}
-                  onChange={(e) => setRegimeMaWindowInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const v = parseInt(regimeMaWindowInput);
-                      if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
-                    }
-                  }}
-                  onBlur={() => {
-                    const v = parseInt(regimeMaWindowInput);
-                    if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
-                    else setRegimeMaWindowInput(String(regimeMaWindow));
-                  }}
-                  className="w-20 px-2 py-1 rounded border border-border bg-background text-center text-sm"
-                />
-                <span className="text-xs text-muted">일</span>
+              <div className="flex items-center gap-4 text-sm flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted font-medium">레짐 기준</span>
+                  <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+                    <button
+                      onClick={() => setRegimeMode('ma')}
+                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'ma' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
+                    >MA 기준</button>
+                    <button
+                      onClick={() => setRegimeMode('cycle')}
+                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'cycle' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
+                    >사이클 기준</button>
+                  </div>
+                </div>
+                {regimeMode === 'ma' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted font-medium">MA 기간 (KOSPI 200 기준)</span>
+                    <input
+                      type="number"
+                      min={5}
+                      max={500}
+                      value={regimeMaWindowInput}
+                      onChange={(e) => setRegimeMaWindowInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const v = parseInt(regimeMaWindowInput);
+                          if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
+                        }
+                      }}
+                      onBlur={() => {
+                        const v = parseInt(regimeMaWindowInput);
+                        if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
+                        else setRegimeMaWindowInput(String(regimeMaWindow));
+                      }}
+                      className="w-20 px-2 py-1 rounded border border-border bg-background text-center text-sm"
+                    />
+                    <span className="text-xs text-muted">일</span>
+                  </div>
+                )}
+                {regimeMode === 'cycle' && (
+                  <span className="text-xs text-muted">고점 대비 -20% 하락 사이클 기준 (2018년 이후)</span>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs text-muted font-medium">강세장 전략 (Bull: KOSPI 200 ≥ {regimeMaWindow}일 MA)</label>
+                  <label className="text-xs text-muted font-medium">
+                    {regimeMode === 'ma' ? `강세장 전략 (Bull: KOSPI 200 ≥ ${regimeMaWindow}일 MA)` : '강세장 전략 (Bull)'}
+                  </label>
                   <select
                     value={regimeBullKey}
                     onChange={(e) => setRegimeBullKey(e.target.value)}
@@ -1041,7 +1064,9 @@ export default function LabPage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted font-medium">약세장 전략 (Bear: KOSPI 200 &lt; {regimeMaWindow}일 MA)</label>
+                  <label className="text-xs text-muted font-medium">
+                    {regimeMode === 'ma' ? `약세장 전략 (Bear: KOSPI 200 < ${regimeMaWindow}일 MA)` : '약세장 전략 (Bear)'}
+                  </label>
                   <select
                     value={regimeBearKey}
                     onChange={(e) => setRegimeBearKey(e.target.value)}

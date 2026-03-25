@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전략 실험실 UI 목업</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fb; color: #1a1a2e; padding: 32px; }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+
+  .card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #374151; }
+
+  .row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field input, .field select {
+    padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;
+    background: #fff; min-width: 100px; outline: none; transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus { border-color: #6366f1; }
+  .field input:disabled, .field select:disabled { background: #f3f4f6; color: #9ca3af; }
+
+  /* Toggle switch */
+  .toggle-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider { position: absolute; inset: 0; background: #d1d5db; border-radius: 12px; transition: 0.3s; }
+  .toggle .slider:before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  .toggle input:checked + .slider { background: #6366f1; }
+  .toggle input:checked + .slider:before { transform: translateX(20px); }
+  .toggle-label { font-size: 14px; font-weight: 500; }
+  .toggle-desc { font-size: 12px; color: #9ca3af; }
+
+  /* Regime box */
+  .regime-box {
+    background: #f8f9fb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 16px; margin-top: 8px; transition: all 0.3s;
+  }
+  .regime-box.disabled { opacity: 0.4; pointer-events: none; }
+  .regime-row { display: flex; align-items: center; gap: 16px; padding: 8px 0; }
+  .regime-label {
+    font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+    min-width: 56px; text-align: center;
+  }
+  .regime-label.bull { background: #dcfce7; color: #166534; }
+  .regime-label.bear { background: #fee2e2; color: #991b1b; }
+  .regime-divider { height: 1px; background: #e5e7eb; margin: 4px 0; }
+
+  /* MA field inline */
+  .ma-field { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .ma-field input { width: 60px; text-align: center; }
+  .ma-field span { font-size: 12px; color: #6b7280; }
+
+  /* Stop loss */
+  .sl-row { display: flex; align-items: center; gap: 12px; }
+  .sl-row input[type=number] { width: 60px; text-align: center; }
+  .sl-row .unit { font-size: 13px; color: #6b7280; }
+  .sl-mode { display: flex; gap: 8px; margin-left: 16px; }
+  .sl-mode button {
+    padding: 4px 12px; border-radius: 6px; border: 1px solid #d1d5db;
+    font-size: 12px; cursor: pointer; background: #fff; transition: all 0.2s;
+  }
+  .sl-mode button.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+  .sl-mode.disabled button { opacity: 0.4; pointer-events: none; }
+
+  /* Factor weights */
+  .factor-bar { display: flex; height: 32px; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+  .factor-bar > div { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; }
+  .factor-bar .value { background: #6366f1; }
+  .factor-bar .regression { background: #ec4899; }
+  .factor-bar .growth { background: #22c55e; }
+  .factor-bar .momentum { background: #f59e0b; }
+
+  .factor-group { margin-bottom: 12px; }
+  .factor-group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-left: 4px; }
+  .factor-group-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .factor-group-title .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .factor-group-pct { font-size: 13px; font-weight: 700; }
+  .factor-item { display: flex; align-items: center; gap: 12px; padding: 4px 4px 4px 22px; }
+  .factor-item label { font-size: 13px; color: #374151; min-width: 160px; }
+  .factor-item .bar-bg { flex: 1; height: 8px; background: #f3f4f6; border-radius: 4px; overflow: hidden; }
+  .factor-item .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .factor-item input { width: 48px; text-align: center; border: 1px solid #d1d5db; border-radius: 6px; padding: 3px; font-size: 13px; }
+  .factor-item .unit { font-size: 12px; color: #9ca3af; }
+
+  /* Buttons */
+  .btn-primary {
+    padding: 10px 24px; background: #6366f1; color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-primary:hover { background: #4f46e5; }
+  .btn-row { display: flex; gap: 12px; margin-top: 24px; }
+
+  .total-sum { text-align: right; font-size: 13px; color: #6b7280; margin-bottom: 12px; }
+  .total-sum strong { color: #1a1a2e; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>전략 실험실</h1>
+  <p class="subtitle">팩터 가중치와 운용 파라미터를 조정하여 백테스트</p>
+
+  <!-- 전략 설정 -->
+  <div class="card">
+    <div class="card-title">전략 설정</div>
+    <div class="row">
+      <div class="field">
+        <label>유니버스</label>
+        <select><option>KOSPI</option><option>KOSPI+KOSDAQ</option></select>
+      </div>
+      <div class="field" id="global-cap-field">
+        <label>Weight Cap %</label>
+        <input type="number" value="10" id="global-cap">
+      </div>
+      <div class="field">
+        <label>Top N 종목</label>
+        <input type="number" value="30">
+      </div>
+      <div class="field">
+        <label>거래비용 (bp)</label>
+        <input type="number" value="30">
+      </div>
+      <div class="field">
+        <label>리밸런싱</label>
+        <select><option>월간</option><option>격주</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 손절율 -->
+  <div class="card">
+    <div class="toggle-row">
+      <label class="toggle">
+        <input type="checkbox" id="sl-toggle">
+        <span class="slider"></span>
+      </label>
+      <div>
+        <div class="toggle-label">손절율</div>
+        <div class="toggle-desc">매입가 대비 하락 시 자동 매도</div>
+      </div>
+    </div>
+    <div class="sl-row" id="sl-options" style="opacity: 0.4; pointer-events: none;">
+      <div class="field">
+        <label>손절 기준</label>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="unit">-</span>
+          <input type="number" value="15" style="width:60px;text-align:center;">
+          <span class="unit">%</span>
+        </div>
+      </div>
+      <div class="field" style="margin-left: 24px;">
+        <label>손절 방식</label>
+        <div class="sl-mode">
+          <button class="active">전량 매도</button>
+          <button>비중 50% 축소</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 레짐 분리 -->
+  <div class="card">
+    <div class="toggle-row">
+      <label class="toggle">
+        <input type="checkbox" id="regime-toggle">
+        <span class="slider"></span>
+      </label>
+      <div>
+        <div class="toggle-label">레짐 분리</div>
+        <div class="toggle-desc">강세장/약세장에 따라 다른 파라미터 적용</div>
+      </div>
+      <div class="ma-field" id="ma-field" style="opacity:0.4;">
+        <span>MA 기간</span>
+        <input type="number" value="200">
+        <span>일</span>
+      </div>
+    </div>
+    <div class="regime-box disabled" id="regime-box">
+      <div class="regime-row">
+        <span class="regime-label bull">강세장</span>
+        <div class="field">
+          <label>Weight Cap %</label>
+          <input type="number" value="30">
+        </div>
+        <div class="field">
+          <label>Top N</label>
+          <input type="number" value="30">
+        </div>
+      </div>
+      <div class="regime-divider"></div>
+      <div class="regime-row">
+        <span class="regime-label bear">약세장</span>
+        <div class="field">
+          <label>Weight Cap %</label>
+          <input type="number" value="10">
+        </div>
+        <div class="field">
+          <label>Top N</label>
+          <input type="number" value="30">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 팩터 가중치 -->
+  <div class="card">
+    <div class="card-title">팩터 가중치</div>
+
+    <div class="factor-bar">
+      <div class="value" style="width:35%">밸류에이션 35%</div>
+      <div class="regression" style="width:30%">회귀 매력도 30%</div>
+      <div class="growth" style="width:20%">성장성 20%</div>
+      <div class="momentum" style="width:15%">차별화 15%</div>
+    </div>
+
+    <div class="total-sum">전체 합계: <strong>100%</strong></div>
+
+    <div class="factor-group">
+      <div class="factor-group-header">
+        <div class="factor-group-title"><span class="dot" style="background:#6366f1"></span> 밸류에이션</div>
+        <div class="factor-group-pct" style="color:#6366f1">35%</div>
+      </div>
+      <div class="factor-item"><label>Trailing PER</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#6366f1"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>Forward PER</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#6366f1"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>Trailing EV/EBITDA</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#6366f1"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>Forward EV/EBITDA</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#6366f1"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>Trailing PBR</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#6366f1"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>Forward PBR</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#6366f1"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>Trailing PCF</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#6366f1"></div></div><input value="5"><span class="unit">%</span></div>
+    </div>
+
+    <div class="factor-group">
+      <div class="factor-group-header">
+        <div class="factor-group-title"><span class="dot" style="background:#ec4899"></span> 회귀 매력도</div>
+        <div class="factor-group-pct" style="color:#ec4899">30%</div>
+      </div>
+      <div class="factor-item"><label>ATT PBR</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#ec4899"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>ATT EV/IC</label><div class="bar-bg"><div class="bar-fill" style="width:33%;background:#ec4899"></div></div><input value="5"><span class="unit">%</span></div>
+      <div class="factor-item"><label>ATT PER</label><div class="bar-bg"><div class="bar-fill" style="width:66%;background:#ec4899"></div></div><input value="10"><span class="unit">%</span></div>
+      <div class="factor-item"><label>ATT EV/EBIT</label><div class="bar-bg"><div class="bar-fill" style="width:66%;background:#ec4899"></div></div><input value="10"><span class="unit">%</span></div>
+    </div>
+
+    <div class="factor-group">
+      <div class="factor-group-header">
+        <div class="factor-group-title"><span class="dot" style="background:#22c55e"></span> 성장성</div>
+        <div class="factor-group-pct" style="color:#22c55e">20%</div>
+      </div>
+      <div class="factor-item"><label>Trailing 매출성장</label><div class="bar-bg"><div class="bar-fill" style="width:66%;background:#22c55e"></div></div><input value="10"><span class="unit">%</span></div>
+      <div class="factor-item"><label>Forward 매출성장</label><div class="bar-bg"><div class="bar-fill" style="width:66%;background:#22c55e"></div></div><input value="10"><span class="unit">%</span></div>
+    </div>
+
+    <div class="factor-group">
+      <div class="factor-group-header">
+        <div class="factor-group-title"><span class="dot" style="background:#f59e0b"></span> 차별화</div>
+        <div class="factor-group-pct" style="color:#f59e0b">15%</div>
+      </div>
+      <div class="factor-item"><label>EPS 모멘텀</label><div class="bar-bg"><div class="bar-fill" style="width:100%;background:#f59e0b"></div></div><input value="15"><span class="unit">%</span></div>
+    </div>
+  </div>
+
+  <!-- 실행 버튼 -->
+  <div class="btn-row">
+    <button class="btn-primary">백테스트 실행</button>
+  </div>
+</div>
+
+<script>
+  // 손절 토글
+  document.getElementById('sl-toggle').addEventListener('change', function() {
+    document.getElementById('sl-options').style.opacity = this.checked ? '1' : '0.4';
+    document.getElementById('sl-options').style.pointerEvents = this.checked ? 'auto' : 'none';
+  });
+
+  // 손절 방식 토글
+  document.querySelectorAll('.sl-mode button').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // 레짐 분리 토글
+  document.getElementById('regime-toggle').addEventListener('change', function() {
+    const box = document.getElementById('regime-box');
+    const ma = document.getElementById('ma-field');
+    const globalCap = document.getElementById('global-cap-field');
+
+    if (this.checked) {
+      box.classList.remove('disabled');
+      ma.style.opacity = '1';
+      globalCap.style.opacity = '0.4';
+      document.getElementById('global-cap').disabled = true;
+    } else {
+      box.classList.add('disabled');
+      ma.style.opacity = '0.4';
+      globalCap.style.opacity = '1';
+      document.getElementById('global-cap').disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>

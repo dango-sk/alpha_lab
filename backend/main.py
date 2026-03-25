@@ -1012,10 +1012,10 @@ def api_first_entry_dates(
 # ══════════════════════════════════════════════
 # 18. POST /api/regime-combo  (async job)
 # ══════════════════════════════════════════════
-def _run_regime_combo_job(job_id: str, bull_key: str, bear_key: str, universe: str, rebal_type: str, ma_window: int = 50):
+def _run_regime_combo_job(job_id: str, bull_key: str, bear_key: str, universe: str, rebal_type: str, ma_window: int = 50, regime_mode: str = "ma"):
     import traceback as _tb
     try:
-        result = run_regime_combo_backtest(bull_key, bear_key, universe=universe, rebal_type=rebal_type, ma_window=ma_window)
+        result = run_regime_combo_backtest(bull_key, bear_key, universe=universe, rebal_type=rebal_type, ma_window=ma_window, regime_mode=regime_mode)
         if result is None:
             _backtest_jobs[job_id] = {"status": "error", "detail": "결과 없음"}
         elif "error" in result:
@@ -1034,12 +1034,13 @@ def api_regime_combo_start(
     universe: Optional[str] = "KOSPI",
     rebal_type: Optional[str] = "monthly",
     ma_window: Optional[int] = 50,
+    regime_mode: Optional[str] = "ma",
 ):
     job_id = str(_uuid.uuid4())[:8]
     _backtest_jobs[job_id] = {"status": "running"}
     t = threading.Thread(
         target=_run_regime_combo_job,
-        args=(job_id, bull_key, bear_key, universe, rebal_type, ma_window),
+        args=(job_id, bull_key, bear_key, universe, rebal_type, ma_window, regime_mode),
         daemon=True,
     )
     t.start()

@@ -50,14 +50,16 @@ STRATEGY_COLORS = {
 # 삭제된 전략 — 캐시에 남아있을 수 있으므로 로딩 시 필터링
 _REMOVED_STRATEGIES = {"A", "A+M", "VM", "ATT2"}
 
-# 커스텀 전략용 팔레트
+# 커스텀 전략용 팔레트 (색상 대비 최대화)
 _CUSTOM_PALETTE = [
-    "#F0B27A",  # 오렌지
-    "#4ECDC4",  # 민트
-    "#BB8FCE",  # 퍼플
-    "#F7DC6F",  # 옐로
-    "#7FB3D8",  # 스카이블루
-    "#85C1E9",  # 스카이블루
+    "#FF6B35",  # 진한 오렌지
+    "#2ECC71",  # 초록
+    "#9B59B6",  # 퍼플
+    "#F1C40F",  # 노랑
+    "#E74C3C",  # 빨강
+    "#1ABC9C",  # 청록
+    "#E67E22",  # 다크 오렌지
+    "#3498DB",  # 파랑
 ]
 
 
@@ -1423,12 +1425,30 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
         BACKTEST_CONFIG["stop_loss_mode"] = orig["stop_loss_mode"]
 
 
+# 사이클 기준 약세장 기간 (2018년 이후, 데이터 시작 기준)
+_CYCLE_BEAR_PERIODS = [
+    ("2018-01-01", "2019-01-01"),  # 미중 무역전쟁
+    ("2020-01-01", "2020-03-31"),  # 코로나 쇼크
+    ("2021-06-01", "2022-10-31"),  # 글로벌 금리 인상
+    ("2024-07-01", "2024-10-31"),  # AI 랠리 단기 조정
+]
+
+
+def _get_regime_by_cycle(calc_date: str) -> str:
+    """사이클 기준 레짐 판정 (하드코딩된 약세장 기간)"""
+    for start, end in _CYCLE_BEAR_PERIODS:
+        if start <= calc_date <= end:
+            return "Bear"
+    return "Bull"
+
+
 def run_regime_combo_backtest(
     bull_key: str,
     bear_key: str,
     universe: str = None,
     rebal_type: str = None,
     ma_window: int = 50,
+    regime_mode: str = "ma",  # "ma" or "cycle"
 ) -> dict | None:
     """
     레짐 조합 백테스트: 장세마다 다른 전략을 실제로 적용해 완전 재실행.
@@ -1485,18 +1505,21 @@ def run_regime_combo_backtest(
     def _get_regime(calc_date: str) -> str:
         if calc_date in regime_cache:
             return regime_cache[calc_date]
-        rows = _conn_regime.execute(
-            "SELECT close FROM daily_price WHERE stock_code = '069500' "
-            f"AND trade_date <= ? ORDER BY trade_date DESC LIMIT {ma_window + 1}",
-            (calc_date,)
-        ).fetchall()
-        prices = [r[0] for r in rows if r[0]]
-        if len(prices) < ma_window + 1:
-            result_regime = "Bull"
+        if regime_mode == "cycle":
+            result_regime = _get_regime_by_cycle(calc_date)
         else:
-            current = prices[0]
-            ma50 = float(np.mean(prices[1:ma_window + 1]))
-            result_regime = "Bull" if current >= ma50 else "Bear"
+            rows = _conn_regime.execute(
+                "SELECT close FROM daily_price WHERE stock_code = '069500' "
+                f"AND trade_date <= ? ORDER BY trade_date DESC LIMIT {ma_window + 1}",
+                (calc_date,)
+            ).fetchall()
+            prices = [r[0] for r in rows if r[0]]
+            if len(prices) < ma_window + 1:
+                result_regime = "Bull"
+            else:
+                current = prices[0]
+                ma50 = float(np.mean(prices[1:ma_window + 1]))
+                result_regime = "Bull" if current >= ma50 else "Bear"
         regime_cache[calc_date] = result_regime
         return result_regime
 
