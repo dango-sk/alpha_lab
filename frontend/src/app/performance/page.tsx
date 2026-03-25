@@ -669,18 +669,21 @@ export default function PerformancePage() {
   };
 
   // ─── Drawdown chart ───
-  const ddTraces: Plotly.Data[] = strategyKeys.map((key) => {
+  const ddTraces: Plotly.Data[] = strategyKeys.map((key, idx) => {
     const r = results[key];
     const dd = calcDrawdown(r.portfolio_values);
+    const isSingle = strategyKeys.length === 1;
     return {
       x: r.rebalance_dates,
       y: dd,
       name: labels[key] || key,
       type: 'scatter' as const,
       mode: 'lines' as const,
-      fill: 'tozeroy' as const,
-      line: { color: colors[key] || '#42A5F5', width: 1 },
-      fillcolor: (colors[key] || '#42A5F5') + '33',
+      ...(isSingle ? {
+        fill: 'tozeroy' as const,
+        fillcolor: (colors[key] || '#42A5F5') + '33',
+      } : {}),
+      line: { color: colors[key] || '#42A5F5', width: idx === 0 ? 1.5 : 2 },
       hovertemplate: '%{y:.1f}%<extra></extra>',
     };
   });
