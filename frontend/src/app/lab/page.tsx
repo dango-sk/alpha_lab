@@ -219,7 +219,7 @@ export default function LabPage() {
     if (initialLoading) return;
     Promise.all([
       getResults({ universe, rebal_type: rebalType }),
-      getStrategies(universe, rebalType),
+      getStrategies(universe),
     ])
       .then(([results, strats]) => {
         setBaseResults(results);
