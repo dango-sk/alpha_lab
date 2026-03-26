@@ -477,38 +477,37 @@ def api_cumulative_returns(
     # 현재 보유 종목
     current_codes = {row["종목코드"] for row in strat_cache[date]}
 
-    # 직전 리밸런싱 보유 종목 (신규 편입 판별용)
-    prev_codes = set()
-    if date_idx > 0:
-        prev_codes = {row["종목코드"] for row in strat_cache[sorted_dates[date_idx - 1]]}
-
-    # 연속 보유 시작 인덱스 찾기 (역추적)
-    streak_start_idx = date_idx
-    held_codes = set(current_codes)
-    for i in range(date_idx - 1, -1, -1):
-        period_codes = {row["종목코드"] for row in strat_cache[sorted_dates[i]]}
-        still_held = held_codes & period_codes
-        if not still_held:
-            break
-        held_codes = still_held
-        streak_start_idx = i
+    # 종목별 연속 보유 시작 인덱스 찾기 (역추적)
+    code_streak_start: dict[str, int] = {}
+    for code in current_codes:
+        start = date_idx
+        for i in range(date_idx - 1, -1, -1):
+            period_codes = {row["종목코드"] for row in strat_cache[sorted_dates[i]]}
+            if code in period_codes:
+                start = i
+            else:
+                break
+        code_streak_start[code] = start
 
     # 각 기간별 수익률 계산 (DB에서 가격 조회)
     from lib.db import get_conn
     conn = get_conn()
 
-    # 연속 보유 기간의 모든 구간에 대해 수익률 계산
+    # 기간별로 필요한 종목만 쿼리
     # period_returns[code] = [ret1, ret2, ...] (각 기간 수익률)
     period_returns: dict[str, list[float]] = {code: [] for code in current_codes}
 
-    for i in range(streak_start_idx, date_idx + 1):
+    global_start = min(code_streak_start.values()) if code_streak_start else date_idx
+    for i in range(global_start, date_idx + 1):
         period_start = sorted_dates[i]
         period_end = sorted_dates[i + 1] if i + 1 < len(sorted_dates) else None
         if period_end is None:
-            break  # 마지막 날짜면 아직 기간 수익률 없음
+            break
 
+        # 이 기간에 연속 보유 중인 종목만 쿼리
+        codes_to_query = [c for c in current_codes if code_streak_start[c] <= i]
         period_codes_set = {row["종목코드"] for row in strat_cache[period_start]}
-        codes_to_query = list(current_codes & period_codes_set)
+        codes_to_query = [c for c in codes_to_query if c in period_codes_set]
         if not codes_to_query:
             continue
 
