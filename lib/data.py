@@ -926,21 +926,24 @@ def _resolve_stock_names(codes: list[str]) -> dict[str, str]:
 
 
 def _convert_raw_holdings_bulk(hbd: dict) -> dict:
-    """holdings_by_date 전체를 일괄 변환. 종목명/섹터 한 번만 조회."""
+    """holdings_by_date 전체를 일괄 변환. 종목명/섹터/밸류에이션 한 번만 조회."""
     # 전체 종목코드 수집
     all_codes = set()
     for items in hbd.values():
         for r in items:
             all_codes.add(r[0])
     codes_list = list(all_codes)
+    if not codes_list:
+        return {}
 
     names = _resolve_stock_names(codes_list)
-    # 섹터 조회
+    a_codes = [f"A{c}" if not c.startswith("A") else c for c in codes_list]
+    ph = ",".join(["%s"] * len(a_codes))
+
+    # 섹터 조회 (PG fnspace_master)
     sector_map: dict[str, str] = {}
     conn = _get_conn_raw()
     try:
-        a_codes = [f"A{c}" if not c.startswith("A") else c for c in codes_list]
-        ph = ",".join(["%s"] * len(a_codes))
         sec_rows = conn.execute(
             f"SELECT DISTINCT ON (stock_code) stock_code, COALESCE(sec_cd_nm, '기타') "
             f"FROM fnspace_master WHERE stock_code IN ({ph}) ORDER BY stock_code",
@@ -950,11 +953,47 @@ def _convert_raw_holdings_bulk(hbd: dict) -> dict:
     finally:
         conn.close()
 
+    # 날짜별 밸류에이션 조회 (PG fnspace_finance Annual, look-ahead bias 방지)
+    from datetime import datetime as _dt
+    val_by_date: dict[str, dict[str, dict]] = {}
+    for dt in hbd:
+        val_map: dict[str, dict] = {}
+        conn2 = _get_conn_raw()
+        try:
+            _d = _dt.strptime(dt[:10], "%Y-%m-%d")
+            _max_fy = _d.year - 1 if _d.month >= 4 else _d.year - 2
+            val_rows = conn2.execute(
+                f"SELECT ff.stock_code, ff.per, ff.pbr, ff.ev_ebitda "
+                f"FROM fnspace_finance ff "
+                f"INNER JOIN ("
+                f"  SELECT stock_code, MAX(fiscal_year) as my FROM fnspace_finance "
+                f"  WHERE fiscal_quarter='Annual' AND fiscal_year <= %s AND stock_code IN ({ph}) "
+                f"  GROUP BY stock_code"
+                f") t ON ff.stock_code = t.stock_code AND ff.fiscal_year = t.my "
+                f"AND ff.fiscal_quarter = 'Annual'",
+                (_max_fy, *tuple(a_codes)),
+            ).fetchall()
+            for vr in val_rows:
+                val_map[vr[0].lstrip("A")] = {
+                    "PER": round(vr[1], 1) if vr[1] else None,
+                    "PBR": round(vr[2], 2) if vr[2] else None,
+                    "EV/EBITDA": round(vr[3], 1) if vr[3] else None,
+                }
+        except Exception:
+            pass
+        finally:
+            conn2.close()
+        val_by_date[dt] = val_map
+
     converted = {}
     for dt, items in hbd.items():
+        vm = val_by_date.get(dt, {})
         converted[dt] = [
             {"종목코드": r[0], "종목명": names.get(r[0], r[0]), "섹터": sector_map.get(r[0], ""),
-             "점수": r[1], "비중(%)": round(r[2] * 100, 2), "시가총액": r[3]}
+             "점수": r[1], "비중(%)": round(r[2] * 100, 2), "시가총액": r[3],
+             "PER": vm.get(r[0], {}).get("PER"),
+             "PBR": vm.get(r[0], {}).get("PBR"),
+             "EV/EBITDA": vm.get(r[0], {}).get("EV/EBITDA")}
             for r in items
         ]
     return converted
