@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution, getFirstEntryDates } from '@/lib/api';
+import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution, getFirstEntryDates, getCumulativeReturns } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct } from '@/lib/hooks';
 import KpiCard from '@/components/KpiCard';
 import DataTable from '@/components/DataTable';
@@ -92,9 +92,10 @@ export default function PortfolioPage() {
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [portfolioTab, setPortfolioTab] = useState<'holdings' | 'sector' | 'chars' | 'turnover'>('holdings');
+  const [portfolioTab, setPortfolioTab] = useState<'holdings' | 'sector' | 'chars'>('holdings');
   const [attrMap, setAttrMap] = useState<Record<string, Record<string, number>>>({});
   const [firstEntryMap, setFirstEntryMap] = useState<Record<string, Record<string, string>>>({});
+  const [cumRetMap, setCumRetMap] = useState<Record<string, Record<string, { '누적수익률(%)': number | null; is_new: boolean }>>>({});
 
   // Load config and results
   useEffect(() => {
@@ -202,14 +203,21 @@ export default function PortfolioPage() {
         .catch(() => ({ key, data: {} as Record<string, string> }))
     );
 
+    const cumRetPromises = strategyKeys.map((key) =>
+      getCumulativeReturns(key, selectedDate, universe, rebalType)
+        .then((data) => ({ key, data: data as Record<string, { '누적수익률(%)': number | null; is_new: boolean }> }))
+        .catch(() => ({ key, data: {} as Record<string, { '누적수익률(%)': number | null; is_new: boolean }> }))
+    );
+
     Promise.all([
       Promise.all(holdingsPromises),
       Promise.all(charsPromises),
       Promise.all(turnoverPromises),
       Promise.all(attrPromises),
       Promise.all(firstEntryPromises),
+      Promise.all(cumRetPromises),
     ])
-      .then(([holdingsResults, charsResults, turnoverResults, attrResults, firstEntryResults]) => {
+      .then(([holdingsResults, charsResults, turnoverResults, attrResults, firstEntryResults, cumRetResults]) => {
         const hMap: Record<string, Holding[]> = {};
         holdingsResults.forEach(({ key, data }) => { hMap[key] = data; });
         setHoldingsMap(hMap);
@@ -234,6 +242,10 @@ export default function PortfolioPage() {
         const feMap: Record<string, Record<string, string>> = {};
         firstEntryResults.forEach(({ key, data }) => { feMap[key] = data; });
         setFirstEntryMap(feMap);
+
+        const crMap: Record<string, Record<string, { '누적수익률(%)': number | null; is_new: boolean }>> = {};
+        cumRetResults.forEach(({ key, data }) => { crMap[key] = data; });
+        setCumRetMap(crMap);
       })
       .catch(console.error)
       .finally(() => setDetailLoading(false));
@@ -389,6 +401,14 @@ export default function PortfolioPage() {
   const holdingsColumns = [
     { key: '종목코드', label: '종목코드', align: 'left' as const, width: '90px' },
     { key: '종목명', label: '종목명', align: 'left' as const },
+    {
+      key: '편입상태',
+      label: '상태',
+      align: 'center' as const,
+      width: '60px',
+      format: (v: unknown) => v === '신규' ? '🆕 신규' : '🔄 유지',
+      colorFn: (v: unknown) => v === '신규' ? 'text-accent-green' : 'text-muted',
+    },
     { key: '섹터', label: '섹터', align: 'left' as const },
     { key: '최초편입일', label: '최초편입일', align: 'left' as const, width: '110px' },
     {
@@ -437,6 +457,14 @@ export default function PortfolioPage() {
     {
       key: '월수익률(%)',
       label: '월수익률(%)',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => typeof v === 'number' ? fmtPct(v / 100) : '-',
+      colorFn: (v: unknown) => typeof v === 'number' ? valueColor(v / 100) : 'text-muted',
+    },
+    {
+      key: '누적수익률(%)',
+      label: '누적수익률(%)',
       align: 'right' as const,
       mono: true,
       format: (v: unknown) => typeof v === 'number' ? fmtPct(v / 100) : '-',
@@ -506,8 +534,8 @@ export default function PortfolioPage() {
         <>
           {/* ─── Tab bar ─── */}
           <div className="glass-card p-1 mb-4 flex gap-0 rounded-lg">
-            {(['holdings', 'sector', 'chars', 'turnover'] as const).map((tab) => {
-              const tabLabels = { holdings: '보유 종목', sector: '섹터/시총', chars: '포트폴리오 특성', turnover: '리밸런싱 변화' };
+            {(['holdings', 'sector', 'chars'] as const).map((tab) => {
+              const tabLabels = { holdings: '보유 종목', sector: '섹터/시총', chars: '포트폴리오 특성' };
               return (
                 <button key={tab} onClick={() => setPortfolioTab(tab)}
                   className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all ${
@@ -540,10 +568,23 @@ export default function PortfolioPage() {
                 if (holdings.length === 0) return null;
                 const returnMap = attrMap[key] || {};
                 const entryMap = firstEntryMap[key] || {};
+                const cumMap = cumRetMap[key] || {};
+                const prevHoldings = turnoverMap[key]
+                  ? new Set([
+                      ...(turnoverMap[key].removed || []).map((r) => r['종목코드'] as string),
+                      ...(holdingsMap[key] || [])
+                        .filter((h) => !(turnoverMap[key].added || []).some((a) => a['종목코드'] === h.종목코드))
+                        .map((h) => h.종목코드),
+                    ])
+                  : null;
                 const sorted = [...holdings]
                   .map((h) => ({
                     ...h,
+                    '편입상태': prevHoldings
+                      ? (turnoverMap[key]?.added || []).some((a) => a['종목코드'] === h.종목코드) ? '신규' : '유지'
+                      : '유지',
                     '월수익률(%)': returnMap[h.종목명] ?? null,
+                    '누적수익률(%)': cumMap[h.종목코드]?.['누적수익률(%)'] ?? null,
                     '최초편입일': entryMap[h.종목코드] ?? '-',
                   }))
                   .sort((a, b) => b['비중(%)'] - a['비중(%)']);
@@ -562,6 +603,59 @@ export default function PortfolioPage() {
                       data={sorted as unknown as Record<string, unknown>[]}
                       maxHeight="500px"
                     />
+                    {/* 리밸런싱 변화 (이전 탭에서 통합) */}
+                    {prevDate && turnoverMap[key] && (() => {
+                      const t = turnoverMap[key];
+                      return (
+                        <div className="mt-4 space-y-3">
+                          <p className="text-xs text-muted">리밸런싱 변화: {prevDate} → {selectedDate}</p>
+                          <div className="grid grid-cols-4 gap-4">
+                            <div className="text-center">
+                              <p className="text-xs text-muted">신규 편입</p>
+                              <p className="text-2xl font-bold text-foreground">{t.added_count}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-muted">편출</p>
+                              <p className="text-2xl font-bold text-foreground">{t.removed_count}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-muted">유지</p>
+                              <p className="text-2xl font-bold text-foreground">{t.retained_count}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-muted">회전율</p>
+                              <p className="text-2xl font-bold text-foreground">{(t.turnover_rate * 100).toFixed(0)}%</p>
+                            </div>
+                          </div>
+                          {t.added.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-accent-green mb-1">신규 편입</p>
+                              <DataTable
+                                columns={addedColumns}
+                                data={t.added.map((row) => ({
+                                  ...row,
+                                  최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
+                                }))}
+                                maxHeight="250px"
+                              />
+                            </div>
+                          )}
+                          {t.removed.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-accent-red mb-1">편출</p>
+                              <DataTable
+                                columns={addedColumns}
+                                data={t.removed.map((row) => ({
+                                  ...row,
+                                  최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
+                                }))}
+                                maxHeight="250px"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -629,70 +723,6 @@ export default function PortfolioPage() {
             />
           )}
 
-          {portfolioTab === 'turnover' && prevDate && Object.keys(turnoverMap).length > 0 && (
-            <div className="space-y-6">
-              <p className="text-xs text-muted mb-4">비교: {prevDate} → {selectedDate}</p>
-              {strategyKeys.map((key) => {
-                const t = turnoverMap[key];
-                if (!t) return null;
-                return (
-                  <div key={key} className="space-y-3">
-                    <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <span
-                        className="inline-block w-3 h-3 rounded-full"
-                        style={{ backgroundColor: colors[key] || '#6366f1' }}
-                      />
-                      {labels[key] || key}
-                    </h4>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <p className="text-xs text-muted">신규 편입</p>
-                        <p className="text-2xl font-bold text-foreground">{t.added_count}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted">편출</p>
-                        <p className="text-2xl font-bold text-foreground">{t.removed_count}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted">유지</p>
-                        <p className="text-2xl font-bold text-foreground">{t.retained_count}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted">회전율</p>
-                        <p className="text-2xl font-bold text-foreground">{(t.turnover_rate * 100).toFixed(0)}%</p>
-                      </div>
-                    </div>
-                    {t.added.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-accent-green mb-1">신규 편입</p>
-                        <DataTable
-                          columns={addedColumns}
-                          data={t.added.map((row) => ({
-                            ...row,
-                            최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
-                          }))}
-                          maxHeight="250px"
-                        />
-                      </div>
-                    )}
-                    {t.removed.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-accent-red mb-1">편출</p>
-                        <DataTable
-                          columns={addedColumns}
-                          data={t.removed.map((row) => ({
-                            ...row,
-                            최초편입일: firstEntryMap[key]?.[row['종목코드'] as string] ?? '-',
-                          }))}
-                          maxHeight="250px"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
         </>
       )}

@@ -88,6 +88,19 @@ export async function getRegimeAnalysis(params: Record<string, string>, maWindow
   return fetchApi(`/api/regime?${qs}`);
 }
 
+export async function getCumulativeReturns(
+  strategy: string,
+  date: string,
+  universe?: string,
+  rebal_type?: string
+) {
+  const params: Record<string, string> = { strategy, date };
+  if (universe) params.universe = universe;
+  if (rebal_type) params.rebal_type = rebal_type;
+  const qs = new URLSearchParams(params).toString();
+  return fetchApi(`/api/cumulative-returns?${qs}`);
+}
+
 export async function getFirstEntryDates(
   strategy: string,
   universe?: string,

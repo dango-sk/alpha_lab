@@ -447,6 +447,111 @@ def api_attribution(
 
 
 # ══════════════════════════════════════════════
+# 5-1. GET /api/cumulative-returns
+# ══════════════════════════════════════════════
+@app.get("/api/cumulative-returns")
+def api_cumulative_returns(
+    strategy: str,
+    date: str,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    """선택 날짜 기준 각 종목의 연속 보유 누적 수익률 + 신규 편입 여부 반환.
+
+    연속 보유: 현재 날짜부터 역순으로 직전 리밸런싱에도 보유 중이면 연속.
+    누적 수익률: 연속 보유 기간 동안의 각 기간 수익률을 복리 계산.
+    신규 편입: 직전 리밸런싱에 없던 종목 → is_new=True, 월수익률/누적수익률 null.
+    """
+    from lib.data import _load_holdings_cache
+    cache = _load_holdings_cache(universe, rebal_type)
+    strat_cache = cache.get(strategy, {})
+    if not strat_cache:
+        return {}
+
+    sorted_dates = sorted(strat_cache.keys())
+    if date not in sorted_dates:
+        return {}
+
+    date_idx = sorted_dates.index(date)
+
+    # 현재 보유 종목
+    current_codes = {row["종목코드"] for row in strat_cache[date]}
+
+    # 직전 리밸런싱 보유 종목 (신규 편입 판별용)
+    prev_codes = set()
+    if date_idx > 0:
+        prev_codes = {row["종목코드"] for row in strat_cache[sorted_dates[date_idx - 1]]}
+
+    # 연속 보유 시작 인덱스 찾기 (역추적)
+    streak_start_idx = date_idx
+    held_codes = set(current_codes)
+    for i in range(date_idx - 1, -1, -1):
+        period_codes = {row["종목코드"] for row in strat_cache[sorted_dates[i]]}
+        still_held = held_codes & period_codes
+        if not still_held:
+            break
+        held_codes = still_held
+        streak_start_idx = i
+
+    # 각 기간별 수익률 계산 (DB에서 가격 조회)
+    from lib.db import get_conn
+    conn = get_conn()
+
+    # 연속 보유 기간의 모든 구간에 대해 수익률 계산
+    # period_returns[code] = [ret1, ret2, ...] (각 기간 수익률)
+    period_returns: dict[str, list[float]] = {code: [] for code in current_codes}
+
+    for i in range(streak_start_idx, date_idx + 1):
+        period_start = sorted_dates[i]
+        period_end = sorted_dates[i + 1] if i + 1 < len(sorted_dates) else None
+        if period_end is None:
+            break  # 마지막 날짜면 아직 기간 수익률 없음
+
+        period_codes_set = {row["종목코드"] for row in strat_cache[period_start]}
+        codes_to_query = list(current_codes & period_codes_set)
+        if not codes_to_query:
+            continue
+
+        placeholders = ",".join(["%s"] * len(codes_to_query))
+        cur = conn.execute(f"""
+            SELECT stock_code,
+                   MIN(CASE WHEN rn_start = 1 THEN adj_close END) as start_price,
+                   MIN(CASE WHEN rn_end = 1 THEN adj_close END) as end_price
+            FROM (
+                SELECT stock_code, adj_close,
+                       ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date ASC) as rn_start,
+                       ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date DESC) as rn_end
+                FROM daily_price
+                WHERE stock_code IN ({placeholders})
+                  AND trade_date >= %s AND trade_date <= %s
+                  AND adj_close > 0
+            ) sub
+            WHERE rn_start = 1 OR rn_end = 1
+            GROUP BY stock_code
+        """, (*codes_to_query, period_start, period_end))
+        for row in cur.fetchall():
+            code, sp, ep = row[0], row[1], row[2]
+            if sp and sp > 0 and ep and ep > 0:
+                period_returns[code].append((ep - sp) / sp)
+
+    conn.close()
+
+    # 누적 수익률 계산 (복리) — 신규 편입도 해당 기간 수익률 포함
+    result = {}
+    for code in current_codes:
+        rets = period_returns.get(code, [])
+        if not rets:
+            result[code] = {"누적수익률(%)": None}
+        else:
+            cum = 1.0
+            for r in rets:
+                cum *= (1 + r)
+            result[code] = {"누적수익률(%)": round((cum - 1) * 100, 1)}
+
+    return _convert_for_json(result)
+
+
+# ══════════════════════════════════════════════
 # 6. GET /api/characteristics
 # ══════════════════════════════════════════════
 @app.get("/api/characteristics")
