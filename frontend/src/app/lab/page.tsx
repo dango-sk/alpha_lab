@@ -175,10 +175,14 @@ export default function LabPage() {
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
-    const uni = universe === 'KOSPI' ? '코스피' : '코스피+코스닥';
     const rebal = rebalType === 'monthly' ? '월간' : '격주';
-    return `수정전략_${uni}_cap${weightCapPct}%_top${topN}_tx${txCostBp}bp_${rebal}`;
-  }, [universe, weightCapPct, topN, txCostBp, rebalType]);
+    const parts: string[] = [];
+    if (stopLossEnabled) parts.push(`손절${stopLossPct}%`);
+    if (topN !== 30) parts.push(`top${topN}`);
+    if (weightCapPct !== 5) parts.push(`cap${weightCapPct}%`);
+    const detail = parts.length > 0 ? `_${parts.join('_')}` : '';
+    return `전략_${rebal}${detail}`;
+  }, [rebalType, weightCapPct, topN, stopLossEnabled, stopLossPct]);
 
   // ─── Init ───
   useEffect(() => {
@@ -234,6 +238,7 @@ export default function LabPage() {
       const data = await getStrategy(name, universe, rebalType);
       if (data?.code) {
         setCode(data.code);
+        setSaveName(name);
         // 코드에서 파싱
         const parsed = parseStrategyParams(data.code);
         // 전략 이름에서 파싱 (코드보다 더 신뢰성 높음 - 실제 저장 시점의 값)
@@ -363,7 +368,6 @@ export default function LabPage() {
         headers: { 'Content-Type': 'application/json' },
       });
       setSaveMsg('저장 완료');
-      setSaveName('');
       setSaveDesc('');
       const strats = await getStrategies();
       setSavedStrategies(strats || []);
