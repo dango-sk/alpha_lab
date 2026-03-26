@@ -908,11 +908,32 @@ def get_holdings(strategy: str, calc_date: str, top_n: int = 30,
     rows = cache.get(strategy, {}).get(calc_date, [])
     if rows:
         return pd.DataFrame(rows)
-    # 저장 전략: meta.json의 holdings에서
+    # 저장 전략: holdings_json (DB별도 컬럼) 또는 results 내 holdings
     data = load_strategy(strategy)
     if data:
-        rows = data.get("results", {}).get("holdings", {}).get(calc_date, [])
+        holdings_src = data.get("results", {}).get("holdings", {})
+        # holdings_by_date fallback (레짐 조합 등)
+        if not holdings_src:
+            holdings_src = data.get("results", {}).get("holdings_by_date", {})
+        rows = holdings_src.get(calc_date, [])
         if rows:
+            # 튜플/리스트 형식 → dict 형식 변환 (레짐 조합: [code, score, weight, mcap])
+            if rows and isinstance(rows[0], (list, tuple)) and len(rows[0]) >= 4:
+                from lib.db import get_conn as _gc
+                _c = _gc()
+                codes = [r[0] for r in rows]
+                _ph = ",".join(["?"] * len(codes))
+                _name_rows = _c.execute(
+                    f"SELECT stock_code, stock_name FROM stock_info WHERE stock_code IN ({_ph})",
+                    codes,
+                ).fetchall()
+                _c.close()
+                _names = {r[0]: r[1] for r in _name_rows}
+                rows = [
+                    {"종목코드": r[0], "종목명": _names.get(r[0], r[0]), "점수": r[1],
+                     "비중(%)": round(r[2] * 100, 2), "시가총액": r[3]}
+                    for r in rows
+                ]
             return pd.DataFrame(rows)
     return pd.DataFrame()
 
@@ -1134,6 +1155,9 @@ def save_strategy(
             results_json = custom
         else:
             holdings_json = clean.pop("holdings", None)
+            # 레짐 조합은 holdings_by_date 키를 사용
+            if not holdings_json and "holdings_by_date" in clean:
+                holdings_json = clean.pop("holdings_by_date", None)
             results_json = clean
 
     try:
