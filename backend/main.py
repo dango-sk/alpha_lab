@@ -706,7 +706,7 @@ class RenameRequest(BaseModel):
 
 @app.patch("/api/strategies/rename")
 def api_rename_strategy(req: RenameRequest):
-    from lib.db import _get_conn_raw
+    from lib.db import get_conn as _get_conn_raw
     try:
         conn = _get_conn_raw()
         conn.execute(
