@@ -986,7 +986,7 @@ export default function LabPage() {
             const allRes = regimeResult as Record<string, unknown>;
             const combo = allRes['REGIME_COMBO'] as Record<string, unknown> | undefined;
             if (!combo) return;
-            const name = `레짐조합_${(labels[regimeBullKey] || regimeBullKey).slice(0, 8)}↑_${(labels[regimeBearKey] || regimeBearKey).slice(0, 8)}↓`;
+            const name = `레짐조합_${labels[regimeBullKey] || regimeBullKey}↑_${labels[regimeBearKey] || regimeBearKey}↓`;
             try {
               await fetchApi('/api/strategies', {
                 method: 'POST',
