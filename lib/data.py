@@ -900,40 +900,56 @@ def _load_attribution_cache(universe: str = None, rebal_type: str = None) -> dic
 
 
 @st.cache_data(ttl=3600)
+def _resolve_stock_names(codes: list[str]) -> dict[str, str]:
+    """PG fnspace_master에서 종목코드 → 종목명 매핑 (A 접두사 자동 처리)."""
+    if not codes:
+        return {}
+    conn = _get_conn_raw()
+    try:
+        a_codes = [f"A{c}" if not c.startswith("A") else c for c in codes]
+        ph = ",".join(["%s"] * len(a_codes))
+        rows = conn.execute(
+            f"SELECT DISTINCT ON (stock_code) stock_code, stock_name "
+            f"FROM fnspace_master WHERE stock_code IN ({ph}) ORDER BY stock_code",
+            tuple(a_codes),
+        ).fetchall()
+        # A 접두사 제거해서 반환
+        return {r[0].lstrip("A"): r[1] for r in rows}
+    finally:
+        conn.close()
+
+
+def _convert_raw_holdings(rows: list, calc_date: str = None) -> list[dict]:
+    """[code, score, weight, mcap] 튜플 리스트 → dict 리스트 변환."""
+    codes = [r[0] for r in rows]
+    names = _resolve_stock_names(codes)
+    return [
+        {"종목코드": r[0], "종목명": names.get(r[0], r[0]), "점수": r[1],
+         "비중(%)": round(r[2] * 100, 2), "시가총액": r[3]}
+        for r in rows
+    ]
+
+
 def get_holdings(strategy: str, calc_date: str, top_n: int = 30,
                  universe: str = None, rebal_type: str = None) -> pd.DataFrame:
-    """캐시에서 보유종목 데이터를 읽음. 저장 전략은 meta.json에서 로드."""
+    """캐시에서 보유종목 데이터를 읽음. 저장 전략은 PG에서 로드."""
     # 기본 전략: holdings 캐시에서
     cache = _load_holdings_cache(universe, rebal_type)
     rows = cache.get(strategy, {}).get(calc_date, [])
     if rows:
+        if isinstance(rows[0], (list, tuple)) and len(rows[0]) >= 4:
+            rows = _convert_raw_holdings(rows, calc_date)
         return pd.DataFrame(rows)
     # 저장 전략: holdings_json (DB별도 컬럼) 또는 results 내 holdings
     data = load_strategy(strategy)
     if data:
         holdings_src = data.get("results", {}).get("holdings", {})
-        # holdings_by_date fallback (레짐 조합 등)
         if not holdings_src:
             holdings_src = data.get("results", {}).get("holdings_by_date", {})
         rows = holdings_src.get(calc_date, [])
         if rows:
-            # 튜플/리스트 형식 → dict 형식 변환 (레짐 조합: [code, score, weight, mcap])
-            if rows and isinstance(rows[0], (list, tuple)) and len(rows[0]) >= 4:
-                from lib.db import get_conn as _gc
-                _c = _gc()
-                codes = [r[0] for r in rows]
-                _ph = ",".join(["?"] * len(codes))
-                _name_rows = _c.execute(
-                    f"SELECT stock_code, stock_name FROM stock_info WHERE stock_code IN ({_ph})",
-                    codes,
-                ).fetchall()
-                _c.close()
-                _names = {r[0]: r[1] for r in _name_rows}
-                rows = [
-                    {"종목코드": r[0], "종목명": _names.get(r[0], r[0]), "점수": r[1],
-                     "비중(%)": round(r[2] * 100, 2), "시가총액": r[3]}
-                    for r in rows
-                ]
+            if isinstance(rows[0], (list, tuple)) and len(rows[0]) >= 4:
+                rows = _convert_raw_holdings(rows, calc_date)
             return pd.DataFrame(rows)
     return pd.DataFrame()
 
