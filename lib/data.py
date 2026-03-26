@@ -852,13 +852,9 @@ def _load_holdings_cache(universe: str = None, rebal_type: str = None) -> dict:
                 if isinstance(hj, dict) and "holdings" in hj:
                     result[name] = hj["holdings"]
                 elif isinstance(hj, dict):
-                    # 튜플 형식 → dict 형식 일괄 변환 (레짐 조합 등)
-                    first_val = next(iter(hj.values()), [])
-                    if first_val and isinstance(first_val[0], (list, tuple)):
-                        converted = _convert_raw_holdings_bulk(hj)
-                        result[name] = converted
-                    else:
-                        result[name] = hj
+                    # 튜플 형식이든 dict 형식이든 그대로 저장
+                    # (변환은 get_holdings에서 선택된 날짜만 수행)
+                    result[name] = hj
             if result:
                 return result
     except Exception:
@@ -1097,7 +1093,7 @@ def get_first_entry_dates(strategy: str, universe: str = None, rebal_type: str =
     first_dates = {}
     for date in sorted(strat_cache.keys()):
         for row in strat_cache[date]:
-            code = row.get("종목코드")
+            code = row[0] if isinstance(row, (list, tuple)) else row.get("종목코드")
             if code and code not in first_dates:
                 first_dates[code] = date
     return first_dates
