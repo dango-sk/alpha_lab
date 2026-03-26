@@ -48,7 +48,7 @@ export default function DatePicker({ value, options, onChange }: DatePickerProps
         right: window.innerWidth - rect.right,
         zIndex: 99999,
       }}
-      className="bg-surface border border-border rounded-lg shadow-xl py-1 min-w-[160px] max-h-72 overflow-y-auto"
+      className="bg-surface border border-border rounded-lg shadow-xl py-1 w-[160px] max-h-64 overflow-y-auto"
     >
       {[...options].reverse().map((d) => {
         const isSelected = d === value;
