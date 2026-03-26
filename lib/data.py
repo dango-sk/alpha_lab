@@ -852,7 +852,13 @@ def _load_holdings_cache(universe: str = None, rebal_type: str = None) -> dict:
                 if isinstance(hj, dict) and "holdings" in hj:
                     result[name] = hj["holdings"]
                 elif isinstance(hj, dict):
-                    result[name] = hj
+                    # 튜플 형식 → dict 형식 일괄 변환 (레짐 조합 등)
+                    first_val = next(iter(hj.values()), [])
+                    if first_val and isinstance(first_val[0], (list, tuple)):
+                        converted = _convert_raw_holdings_bulk(hj)
+                        result[name] = converted
+                    else:
+                        result[name] = hj
             if result:
                 return result
     except Exception:
@@ -917,6 +923,41 @@ def _resolve_stock_names(codes: list[str]) -> dict[str, str]:
         return {r[0].lstrip("A"): r[1] for r in rows}
     finally:
         conn.close()
+
+
+def _convert_raw_holdings_bulk(hbd: dict) -> dict:
+    """holdings_by_date 전체를 일괄 변환. 종목명/섹터 한 번만 조회."""
+    # 전체 종목코드 수집
+    all_codes = set()
+    for items in hbd.values():
+        for r in items:
+            all_codes.add(r[0])
+    codes_list = list(all_codes)
+
+    names = _resolve_stock_names(codes_list)
+    # 섹터 조회
+    sector_map: dict[str, str] = {}
+    conn = _get_conn_raw()
+    try:
+        a_codes = [f"A{c}" if not c.startswith("A") else c for c in codes_list]
+        ph = ",".join(["%s"] * len(a_codes))
+        sec_rows = conn.execute(
+            f"SELECT DISTINCT ON (stock_code) stock_code, COALESCE(sec_cd_nm, '기타') "
+            f"FROM fnspace_master WHERE stock_code IN ({ph}) ORDER BY stock_code",
+            tuple(a_codes),
+        ).fetchall()
+        sector_map = {r[0].lstrip("A"): r[1] for r in sec_rows}
+    finally:
+        conn.close()
+
+    converted = {}
+    for dt, items in hbd.items():
+        converted[dt] = [
+            {"종목코드": r[0], "종목명": names.get(r[0], r[0]), "섹터": sector_map.get(r[0], ""),
+             "점수": r[1], "비중(%)": round(r[2] * 100, 2), "시가총액": r[3]}
+            for r in items
+        ]
+    return converted
 
 
 def _convert_raw_holdings(rows: list, calc_date: str = None) -> list[dict]:
