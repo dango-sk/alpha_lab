@@ -1115,6 +1115,7 @@ export default function LabPage() {
                 // 원전략 결과: 새 백테스트 결과 우선, 없으면 캐시
                 const bullRes = (allRes[regimeBullKey] as Record<string, unknown>) || baseResults?.[regimeBullKey];
                 const bearRes = (allRes[regimeBearKey] as Record<string, unknown>) || baseResults?.[regimeBearKey];
+                const bmRes = (allRes['KOSPI'] as Record<string, unknown>) || baseResults?.['KOSPI'];
 
                 const statsRow = (res: Record<string, unknown> | undefined, name: string) => ({
                   전략: name,
@@ -1128,6 +1129,7 @@ export default function LabPage() {
                   statsRow(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey),
                   statsRow(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey),
                   statsRow(combo, '레짐 조합 (실제 재백테스트)'),
+                  statsRow(bmRes as Record<string, unknown>, 'BM (KOSPI)'),
                 ];
 
                 const makeTrace = (res: Record<string, unknown> | undefined, name: string, color: string, dash?: string) => {
@@ -1144,6 +1146,7 @@ export default function LabPage() {
                   makeTrace(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey, '#6366f1', 'dot'),
                   ...(regimeBearKey !== regimeBullKey ? [makeTrace(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey, '#E91E63', 'dot')] : []),
                   makeTrace(combo, '레짐 조합', '#43A047'),
+                  makeTrace(bmRes as Record<string, unknown>, 'BM (KOSPI)', '#9E9E9E', 'dot'),
                 ].filter((x): x is NonNullable<typeof x> => x !== null);
 
                 // 레짐 전환 선 + 구간별 겹침율 계산
