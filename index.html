@@ -2,315 +2,387 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alpha Lab</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KOSPI Trading Agent Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Noto Sans KR', 'Inter', sans-serif;
-    color: #334155;
-    background: #fff;
-    line-height: 1.8;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 60px 32px 80px;
-  }
+:root {
+  --sidebar-w: 260px;
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #94a3b8;
+  --sidebar-active: #3b82f6;
+  --bg: #fafafa;
+  --card-bg: #ffffff;
+  --border: #e5e7eb;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --bull: #16a34a;
+  --bull-bg: #f0fdf4;
+  --bull-border: #bbf7d0;
+  --bear: #dc2626;
+  --bear-bg: #fef2f2;
+  --bear-border: #fecaca;
+  --amber: #d97706;
+  --blue: #2563eb;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
 
-  /* Header */
-  header {
-    margin-bottom: 48px;
-    padding-bottom: 24px;
-    border-bottom: 2px solid #e2e8f0;
-  }
-  header h1 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 4px;
-  }
-  header p {
-    font-size: 14px;
-    color: #94a3b8;
-  }
+/* 사이드바 */
+.sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--sidebar-bg); height: 100vh;
+  position: fixed; top: 0; left: 0; overflow-y: auto;
+  display: flex; flex-direction: column;
+  z-index: 100;
+}
+.sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid #334155; }
+.sidebar-title { color: #f1f5f9; font-size: 1em; font-weight: 700; }
+.sidebar-sub { color: var(--sidebar-text); font-size: 0.75em; margin-top: 4px; }
+.sidebar-stats { padding: 12px 20px; border-bottom: 1px solid #334155; display: flex; flex-direction: column; gap: 6px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 0.78em; }
+.stat-label { color: var(--sidebar-text); }
+.stat-val { color: #f1f5f9; font-weight: 600; }
+.stat-val.good { color: #4ade80; }
+.stat-val.warn { color: #fbbf24; }
+.nav-links { padding: 8px 0; flex: 1; }
+.nav-link {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px; color: var(--sidebar-text);
+  font-size: 0.82em; text-decoration: none; transition: all 0.15s;
+  border-left: 3px solid transparent;
+}
+.nav-link:hover { background: #334155; color: #f1f5f9; }
+.nav-link.active { background: #1d4ed8; color: #fff; border-left-color: var(--sidebar-active); }
+.nav-match { font-size: 0.85em; opacity: 0.7; }
 
-  /* Section */
-  .section {
-    margin-bottom: 40px;
-  }
-  .section-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .section-title .route {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    font-weight: 500;
-    color: #6366f1;
-  }
-  .section-desc {
-    font-size: 13px;
-    color: #94a3b8;
-    margin-bottom: 12px;
-  }
+/* 메인 */
+.main { margin-left: var(--sidebar-w); flex: 1; padding: 40px 48px; max-width: 1100px; }
 
-  /* Feature list */
-  .features {
-    list-style: none;
-  }
-  .features li {
-    font-size: 14px;
-    padding: 6px 0;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    gap: 12px;
-  }
-  .features li:last-child { border-bottom: none; }
-  .feat-name {
-    font-weight: 600;
-    color: #1e293b;
-    min-width: 160px;
-    flex-shrink: 0;
-  }
-  .feat-desc {
-    color: #64748b;
-  }
+/* 헤더 */
+.page-header { margin-bottom: 40px; }
+.page-header h1 { font-size: 1.8em; font-weight: 700; color: var(--text); }
+.page-header .subtitle { color: var(--muted); margin-top: 6px; font-size: 0.9em; }
 
-  /* Divider */
-  hr {
-    border: none;
-    border-top: 1px solid #e2e8f0;
-    margin: 40px 0;
-  }
+/* KPI 카드 */
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 40px; }
+.kpi-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.kpi-val { font-size: 1.9em; font-weight: 800; }
+.kpi-val.bull-text { color: var(--bull); }
+.kpi-val.bear-text { color: var(--bear); }
+.kpi-val.blue { color: var(--blue); }
+.kpi-val.amber { color: var(--amber); }
+.kpi-label { color: var(--muted); font-size: 0.78em; margin-top: 6px; line-height: 1.4; }
 
-  /* Sub section */
-  .sub-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 12px;
-  }
+/* 월별 섹션 */
+.month-section { margin-bottom: 56px; scroll-margin-top: 24px; }
+.month-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--border); }
+.month-title { font-size: 1.4em; font-weight: 700; }
+.month-badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-  /* Stack row */
-  .stack-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .stack-chip {
-    font-size: 13px;
-    padding: 4px 12px;
-    background: #f1f5f9;
-    border-radius: 6px;
-    color: #475569;
-  }
-  .stack-chip .label {
-    font-weight: 600;
-    color: #1e293b;
-  }
+/* 배지 */
+.badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: 700; }
+.badge.bull { background: var(--bull-bg); color: var(--bull); border: 1px solid var(--bull-border); }
+.badge.bear { background: var(--bear-bg); color: var(--bear); border: 1px solid var(--bear-border); }
+.badge.neutral { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.badge.pos-badge { background: var(--bull-bg); color: var(--bull); border: 1px solid var(--bull-border); }
+.badge.neg-badge { background: var(--bear-bg); color: var(--bear); border: 1px solid var(--bear-border); }
+.badge.cycle-match { background: #eff6ff; color: var(--blue); border: 1px solid #bfdbfe; }
+.badge.cycle-mismatch { background: #fffbeb; color: var(--amber); border: 1px solid #fde68a; }
 
-  /* Flow */
-  .flow {
-    font-size: 14px;
-    color: #64748b;
-    padding: 16px 0;
-  }
-  .flow-step {
-    display: inline;
-  }
-  .flow-arrow {
-    color: #cbd5e1;
-    margin: 0 8px;
-  }
+/* 섹션 블록 */
+.section-block { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+.block-title { font-size: 0.85em; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
 
-  /* Factor */
-  .factor-group {
-    margin-bottom: 12px;
-  }
-  .factor-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
-    display: inline;
-  }
-  .factor-meaning {
-    font-size: 13px;
-    color: #94a3b8;
-  }
-  .factor-tags {
-    margin-top: 4px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: #4f46e5;
-    background: #eef2ff;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-  .note {
-    font-size: 13px;
-    color: #64748b;
-    margin-top: 16px;
-    padding: 12px 14px;
-    background: #f8fafc;
-    border-left: 3px solid #e2e8f0;
-    border-radius: 0 6px 6px 0;
-  }
+/* 분석가 그리드 */
+.analyst-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.analyst-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.analyst-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid var(--border); }
+.analyst-icon { font-size: 1.1em; }
+.analyst-name { font-weight: 600; font-size: 0.88em; flex: 1; }
+.analyst-body { padding: 14px 16px; font-size: 0.82em; line-height: 1.7; color: #374151; white-space: pre-wrap; font-family: monospace; max-height: 320px; overflow-y: auto; }
 
-  @media print {
-    body { padding: 24px; }
-  }
+/* 토론 */
+.debate-thread { display: flex; flex-direction: column; gap: 12px; }
+.round-label { font-size: 0.78em; font-weight: 700; color: var(--amber); text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; margin-top: 4px; }
+.no-data { color: var(--muted); font-size: 0.85em; padding: 12px 0; }
+.debate-msg { border-radius: 10px; padding: 16px 20px; border-left: 4px solid; }
+.bull-msg { background: var(--bull-bg); border-color: var(--bull); }
+.bear-msg { background: var(--bear-bg); border-color: var(--bear); }
+.debate-role { font-size: 0.8em; font-weight: 700; margin-bottom: 8px; }
+.bull-msg .debate-role { color: var(--bull); }
+.bear-msg .debate-role { color: var(--bear); }
+.debate-content { font-size: 0.83em; line-height: 1.7; color: #374151; white-space: pre-wrap; font-family: monospace; }
+
+/* 최종 판정 */
+.final-judgment-box { border-radius: 12px; padding: 24px 28px; display: flex; gap: 28px; align-items: flex-start; }
+.bull-final { background: var(--bull-bg); border: 1px solid var(--bull-border); }
+.bear-final { background: var(--bear-bg); border: 1px solid var(--bear-border); }
+.final-left { min-width: 110px; text-align: center; }
+.final-verdict-label { font-size: 0.75em; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+.final-verdict { font-size: 2em; font-weight: 800; }
+.bull-text { color: var(--bull); }
+.bear-text { color: var(--bear); }
+.final-conf { font-size: 0.82em; font-weight: 600; margin-top: 4px; }
+.final-right { flex: 1; }
+.final-summary-text { font-size: 0.88em; line-height: 1.75; color: #374151; margin-bottom: 14px; }
+.final-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82em; color: var(--muted); align-items: center; }
+.pos { color: var(--bull); font-weight: 700; }
+.neg { color: var(--bear); font-weight: 700; }
+
+/* 입력 데이터 / 프롬프트 */
+.input-grid, .prompt-grid { display: flex; flex-direction: column; gap: 8px; }
+.input-detail { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.input-detail summary {
+  padding: 10px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600;
+  background: #f8fafc; color: #374151; user-select: none;
+  list-style: none; display: flex; align-items: center; gap: 6px;
+}
+.input-detail summary::-webkit-details-marker { display: none; }
+.input-detail summary::before { content: '▶'; font-size: 0.7em; color: var(--muted); transition: transform 0.15s; }
+.input-detail[open] summary::before { transform: rotate(90deg); }
+.input-pre {
+  margin: 0; padding: 14px 16px; font-size: 0.78em; line-height: 1.65;
+  color: #374151; background: #fff; white-space: pre-wrap; font-family: monospace;
+  max-height: 400px; overflow-y: auto; border-top: 1px solid var(--border);
+}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Alpha Lab — 스크리닝 대시보드</h1>
-  <p>이현자산운용 · 2025.02.28</p>
-</header>
-
-<!-- 1 -->
-<div class="section">
-  <div class="section-title">퍼포먼스 <span class="route">/performance</span></div>
-  <div class="section-desc">전략별 성과 비교 — 메인 화면</div>
-  <ul class="features">
-    <li><span class="feat-name">필터 바</span><span class="feat-desc">유니버스(KOSPI / KOSPI+KOSDAQ), 리밸런싱 주기(월간 / 격주), 날짜 범위</span></li>
-    <li><span class="feat-name">KPI 카드</span><span class="feat-desc">전략별 누적 수익률, MDD, Sharpe</span></li>
-    <li><span class="feat-name">성과 요약 테이블</span><span class="feat-desc">CAGR, MDD, Sharpe, 평균 턴오버, 평균 종목 수</span></li>
-    <li><span class="feat-name">누적 수익률 차트</span><span class="feat-desc">포트폴리오 가치 성장 곡선, IS/OOS 구간 표시</span></li>
-    <li><span class="feat-name">드로다운 차트</span><span class="feat-desc">최대 낙폭 추이</span></li>
-    <li><span class="feat-name">연도별 월간 수익률</span><span class="feat-desc">캘린더 히트맵 (연도 × 12개월 + YTD) + 연간 통계</span></li>
-    <li><span class="feat-name">IS/OOS 비교</span><span class="feat-desc">인샘플 vs 아웃오브샘플 수익률, Sharpe</span></li>
-    <li><span class="feat-name">롤링 초과수익률</span><span class="feat-desc">벤치마크 대비 12개월 롤링 초과수익</span></li>
-    <li><span class="feat-name">레짐 분석</span><span class="feat-desc">상승/횡보/하락장 구간 분류 + 구간별 성과 + 평균 월간 수익률</span></li>
-  </ul>
-</div>
-
-<!-- 2 -->
-<div class="section">
-  <div class="section-title">포트폴리오 <span class="route">/portfolio</span></div>
-  <div class="section-desc">특정 리밸런싱 시점의 보유 종목, 섹터, 시총 분석</div>
-  <ul class="features">
-    <li><span class="feat-name">날짜 / 전략 선택</span><span class="feat-desc">리밸런싱 날짜 드롭다운 + 복수 전략 체크 비교</span></li>
-    <li><span class="feat-name">포트폴리오 특성</span><span class="feat-desc">가중평균 PER, PBR, EV/EBITDA</span></li>
-    <li><span class="feat-name">집중도 분석</span><span class="feat-desc">HHI, Top 5 비중, 종목 수</span></li>
-    <li><span class="feat-name">Top 5 보유 비교</span><span class="feat-desc">전략 간 상위 5개 종목 스캐터</span></li>
-    <li><span class="feat-name">섹터 배분</span><span class="feat-desc">가로 바 차트 — 전략별 섹터 비중</span></li>
-    <li><span class="feat-name">시총 분포</span><span class="feat-desc">초대형/대형/중형/소형 분류 + 요약 테이블</span></li>
-    <li><span class="feat-name">리밸런싱 턴오버</span><span class="feat-desc">신규 편입/제외/유지 종목 수, 턴오버율, 상세 테이블</span></li>
-    <li><span class="feat-name">보유 종목 상세</span><span class="feat-desc">전 종목 리스트 — 점수, PER, PBR, EV/EBITDA, 월간 수익률</span></li>
-  </ul>
-</div>
-
-<!-- 3 -->
-<div class="section">
-  <div class="section-title">통계 검증 <span class="route">/statistics</span></div>
-  <div class="section-desc">전략 성과의 통계적 유의성 검증</div>
-  <ul class="features">
-    <li><span class="feat-name">IS vs OOS</span><span class="feat-desc">인샘플/아웃오브샘플 Sharpe 비교 + 상세 테이블</span></li>
-    <li><span class="feat-name">부트스트랩 유의성</span><span class="feat-desc">t-통계량 (±1.96 기준선), p-value, 95% CI, 승률</span></li>
-    <li><span class="feat-name">롤링 24개월 윈도우</span><span class="feat-desc">24개월 롤링 초과수익 + 양의 구간 비율 (win rate)</span></li>
-  </ul>
-</div>
-
-<!-- 4 -->
-<div class="section">
-  <div class="section-title">실험실 <span class="route">/lab</span></div>
-  <div class="section-desc">커스텀 전략 생성, 편집, 백테스트</div>
-  <ul class="features">
-    <li><span class="feat-name">전략 관리</span><span class="feat-desc">저장된 전략 불러오기 / 삭제</span></li>
-    <li><span class="feat-name">전략 설정</span><span class="feat-desc">유니버스, 비중 상한(%), Top N, 거래비용(bp), 리밸런싱 주기</span></li>
-    <li><span class="feat-name">팩터 가중치 에디터</span><span class="feat-desc">카테고리별 슬라이더 — 밸류에이션, 회귀매력도, 성장성, 차별화</span></li>
-    <li><span class="feat-name">백테스트 실행</span><span class="feat-desc">기존 vs 수정 vs 벤치마크 비교 테이블 + 누적 수익률 차트</span></li>
-  </ul>
-</div>
-
-<!-- 5 -->
-<div class="section">
-  <div class="section-title">AI 챗 <span class="route">/chat</span></div>
-  <div class="section-desc">자연어로 전략 분석, 데이터 조회, 전략 추천</div>
-  <ul class="features">
-    <li><span class="feat-name">대화 관리</span><span class="feat-desc">세션 이력 — 신규 생성, 목록, 삭제</span></li>
-    <li><span class="feat-name">SQL 실행</span><span class="feat-desc">AI가 SQL 쿼리 생성 → 결과를 인라인 테이블로 표시</span></li>
-    <li><span class="feat-name">전략 추천</span><span class="feat-desc">Python 전략 코드 제안 → "실험실에서 열기" 버튼</span></li>
-  </ul>
-</div>
-
-<hr>
-
-<!-- Tech Stack -->
-<div class="section">
-  <div class="sub-title">기술 스택</div>
-  <div class="stack-row">
-    <span class="stack-chip"><span class="label">Frontend</span> Next.js · React · TypeScript · Tailwind</span>
-    <span class="stack-chip"><span class="label">Chart</span> Plotly.js</span>
-    <span class="stack-chip"><span class="label">Backend</span> FastAPI</span>
-    <span class="stack-chip"><span class="label">DB</span> PostgreSQL</span>
-    <span class="stack-chip"><span class="label">AI</span> Claude API</span>
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">Trading Agent Report</div>
+    <div class="sidebar-sub">KOSPI 레짐 판정 · 2023-11 ~ 2026-02</div>
   </div>
-</div>
-
-<!-- Data Flow -->
-<div class="section">
-  <div class="sub-title">데이터 흐름</div>
-  <div class="flow">
-    <span class="flow-step"><strong>PostgreSQL</strong> (시세·재무·컨센서스)</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step"><strong>FastAPI</strong> (/api/results, /api/holdings, ...)</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step"><strong>Next.js</strong> (차트 + 테이블)</span>
+  <div class="sidebar-stats">
+    <div class="stat-row"><span class="stat-label">실제 수익률 정확도</span><span class="stat-val warn">0.0%</span></div>
+    <div class="stat-row"><span class="stat-label">사이클 일치율</span><span class="stat-val warn">0.0%</span></div>
+    <div class="stat-row"><span class="stat-label">사이클 하드코딩 정확도</span><span class="stat-val good">71.4%</span></div>
+    <div class="stat-row"><span class="stat-label">분석 개월</span><span class="stat-val">1</span></div>
+    <div class="stat-row"><span class="stat-label">Bull / Bear</span><span class="stat-val">1 / 0</span></div>
   </div>
-</div>
+  <nav class="nav-links">
+    <a href="#prompts" class="nav-link" data-section="prompts">🛠️ Agent 프롬프트</a>
+<a href="#2024-07" class="nav-link" data-section="2024-07">🟢 2024-07 <span class="nav-match">✗</span></a>
 
-<!-- Factors -->
-<div class="section">
-  <div class="sub-title">전략 팩터 구조</div>
+  </nav>
+</aside>
 
-  <div class="factor-group">
-    <span class="factor-label">밸류에이션</span>
-    <span class="factor-meaning">— 트레일링(T) / 포워드(F) 밸류에이션 매력도</span>
-    <div class="factor-tags">
-      <span class="tag">T_PER</span><span class="tag">F_PER</span><span class="tag">T_PBR</span><span class="tag">F_PBR</span><span class="tag">T_EVEBITDA</span><span class="tag">F_EVEBITDA</span><span class="tag">T_PCF</span>
+<main class="main">
+  <div class="page-header">
+    <h1>KOSPI Trading Agent Report</h1>
+    <div class="subtitle">claude-opus-4-6 · Technical + Fundamental + 2라운드 토론 · Lookahead bias 제거</div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-val amber">0.0%</div><div class="kpi-label">실제 수익률 기준<br>판정 정확도</div></div>
+    <div class="kpi-card"><div class="kpi-val amber">0.0%</div><div class="kpi-label">사이클 하드코딩과<br>일치율</div></div>
+    <div class="kpi-card"><div class="kpi-val blue">71.4%</div><div class="kpi-label">사이클 하드코딩<br>정확도 (기준선)</div></div>
+    <div class="kpi-card"><div class="kpi-val bull-text">1</div><div class="kpi-label">Bull 판정</div></div>
+    <div class="kpi-card"><div class="kpi-val bear-text">0</div><div class="kpi-label">Bear 판정</div></div>
+  </div>
+
+  <section id="prompts" class="month-section" style="scroll-margin-top:24px">
+    <div class="month-header">
+      <h2 class="month-title">🛠️ Agent 프롬프트</h2>
     </div>
-  </div>
-
-  <div class="factor-group">
-    <span class="factor-label">회귀 매력도</span>
-    <span class="factor-meaning">— 회귀선 대비 괴리율 (양수 = 저평가)</span>
-    <div class="factor-tags">
-      <span class="tag">ATT_PBR</span><span class="tag">ATT_EVIC</span><span class="tag">ATT_PER</span><span class="tag">ATT_EVEBIT</span>
+    <div class="section-block">
+      <div class="block-title">사용된 시스템 프롬프트</div>
+      <div class="prompt-grid">
+        <details class="input-detail"><summary>📈 Technical Agent</summary><pre class="input-pre">당신은 기술적 분석 전문가입니다. 주어진 기술적 지표를 바탕으로 향후 1~3개월 KOSPI 방향을 판단하세요. 반드시 Bull 또는 Bear로 결론을 내리고, 핵심 근거 3가지를 제시하세요. 반드시 제공된 데이터만 사용하고, 외부 지식이나 학습 데이터는 사용하지 마세요. 각 근거는 핵심 수치를 포함해 2~3문장으로 완결되게 작성하세요. 문장이 잘리지 않도록 반드시 완성된 문장으로 끝내세요. 형식: [판정: Bull/Bear] 근거1: ... 근거2: ... 근거3: ...</pre></details>
+        <details class="input-detail"><summary>📊 Fundamental Agent</summary><pre class="input-pre">당신은 거시경제 분석 전문가입니다. 주어진 경제지표를 바탕으로 향후 1~3개월 KOSPI 방향을 판단하세요. 반드시 Bull 또는 Bear로 결론을 내리고, 핵심 근거 3가지를 제시하세요. 반드시 제공된 데이터만 사용하고, 외부 지식이나 학습 데이터는 사용하지 마세요. 각 근거는 핵심 수치를 포함해 2~3문장으로 완결되게 작성하세요. 문장이 잘리지 않도록 반드시 완성된 문장으로 끝내세요. 형식: [판정: Bull/Bear] 근거1: ... 근거2: ... 근거3: ...</pre></details>
+        <details class="input-detail"><summary>🐂 Bull Advocate (1라운드)</summary><pre class="input-pre">당신은 강세론자(Bull Advocate)입니다. 기술적·펀더멘털 분석을 바탕으로 강세 논거 3가지를 독립적으로 구성하세요. 반드시 제공된 데이터만 사용하고, 외부 지식이나 학습 데이터는 사용하지 마세요. 각 근거는 핵심 수치를 포함해 2~3문장으로 완결되게 작성하세요. 문장이 잘리지 않도록 반드시 완성된 문장으로 끝내세요.</pre></details>
+        <details class="input-detail"><summary>🐻 Bear Advocate (1라운드)</summary><pre class="input-pre">당신은 약세론자(Bear Advocate)입니다. 기술적·펀더멘털 분석을 바탕으로 약세 논거 3가지를 독립적으로 구성하세요. 반드시 제공된 데이터만 사용하고, 외부 지식이나 학습 데이터는 사용하지 마세요. 각 근거는 핵심 수치를 포함해 2~3문장으로 완결되게 작성하세요. 문장이 잘리지 않도록 반드시 완성된 문장으로 끝내세요.</pre></details>
+        <details class="input-detail"><summary>🐂 Bull Advocate (2라운드 재반박)</summary><pre class="input-pre">당신은 강세론자(Bull Advocate)입니다. 상대방(Bear)의 주장을 읽고 핵심 약점을 반박하세요. 새로운 강세 근거도 추가 가능합니다. 반드시 제공된 데이터만 사용하고, 외부 지식이나 학습 데이터는 사용하지 마세요. 각 근거는 핵심 수치를 포함해 2~3문장으로 완결되게 작성하세요. 문장이 잘리지 않도록 반드시 완성된 문장으로 끝내세요.</pre></details>
+        <details class="input-detail"><summary>🐻 Bear Advocate (2라운드 재반박)</summary><pre class="input-pre">당신은 약세론자(Bear Advocate)입니다. 상대방(Bull)의 주장을 읽고 핵심 약점을 반박하세요. 새로운 약세 근거도 추가 가능합니다. 반드시 제공된 데이터만 사용하고, 외부 지식이나 학습 데이터는 사용하지 마세요. 각 근거는 핵심 수치를 포함해 2~3문장으로 완결되게 작성하세요. 문장이 잘리지 않도록 반드시 완성된 문장으로 끝내세요.</pre></details>
+        <details class="input-detail"><summary>⚖️ Manager Agent</summary><pre class="input-pre">당신은 포트폴리오 매니저입니다. 반드시 아래 형식의 JSON만 출력하세요. 다른 텍스트는 절대 출력하지 마세요.
+{"judgment": "Bull", "confidence": 75, "summary": "요약"}
+judgment는 반드시 Bull 또는 Bear.
+confidence 기준: 토론이 한쪽으로 수렴=80+, 팽팽=55~65, 데이터 불명확=50 미만.</pre></details>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="factor-group">
-    <span class="factor-label">성장성</span>
-    <span class="factor-meaning">— 매출 성장률</span>
-    <div class="factor-tags">
-      <span class="tag">T_SPSG</span><span class="tag">F_SPSG</span>
+  
+  <section id="2024-07" class="month-section">
+    <div class="month-header">
+      <h2 class="month-title">2024-07</h2>
+      <div class="month-badges">
+        <span class="badge bull">판정: Bull</span>
+        <span class="badge neutral">신뢰도 78</span>
+        <span class="badge neg-badge">실제: -4.9%</span>
+        <span class="badge cycle-mismatch">사이클 불일치 ✗</span>
+      </div>
     </div>
-  </div>
 
-  <div class="factor-group">
-    <span class="factor-label">차별화</span>
-    <span class="factor-meaning">— 컨센서스 EPS 변화율 (모멘텀)</span>
-    <div class="factor-tags">
-      <span class="tag">F_EPS_M</span>
+    
+    <div class="section-block">
+      <div class="block-title">🗄️ 에이전트 입력 데이터</div>
+      <div class="input-grid">
+        <details class="input-detail">
+          <summary>📊 Technical 입력 데이터</summary>
+          <pre class="input-pre">[Technical 지표 - 2024-07-01 전일 기준]
+▶ KOSPI 월말 종가 추이(6개월): 2024-02:35,835  →  2024-03:37,950  →  2024-04:36,650  →  2024-05:36,010  →  2024-06:38,545  →  2024-06:38,545
+▶ MA50 월말 추이(6개월):       2024-02:34,883  →  2024-03:35,668  →  2024-04:36,713  →  2024-05:37,059  →  2024-06:37,092  →  2024-06:37,092
+▶ MA200 월말 추이(6개월):      2024-02:33,848  →  2024-03:34,191  →  2024-04:34,476  →  2024-05:34,741  →  2024-06:35,133  →  2024-06:35,133
+▶ RSI(14) 월말 추이(6개월):    2024-02:57.0  →  2024-03:66.2  →  2024-04:49.4  →  2024-05:39.0  →  2024-06:62.9  →  2024-06:62.9
+▶ MACD 월말 추이(6개월):       2024-02:382.0  →  2024-03:602.7  →  2024-04:-133.3  →  2024-05:-105.0  →  2024-06:389.0  →  2024-06:389.0
+▶ VIX 월평균 추이(3개월):      2024-04:16.14  →  2024-05:13.09  →  2024-06:12.68
+▶ 원/달러 월평균 추이(3개월):  2024-04:1367.83  →  2024-05:1365.39  →  2024-06:1380.13
+▶ 국고채 10y 월평균(3개월):    2024-04:3.57  →  2024-05:3.53  →  2024-06:3.34
+▶ 국고채 1y 월평균(3개월):     2024-04:3.44  →  2024-05:3.43  →  2024-06:3.34
+  장단기금리차(10y-1y) 최근: -0.06%p
+▶ 수급 월별 순매수 추이(억원)
+  외국인: 2024-04:+310억  →  2024-05:-133억  →  2024-06:+442억
+  기관  : 2024-04:-335억  →  2024-05:+123억  →  2024-06:-189억
+  개인  : 2024-04:+36억  →  2024-05:+61억  →  2024-06:-225억</pre>
+        </details>
+        <details class="input-detail">
+          <summary>📉 Fundamental 입력 데이터</summary>
+          <pre class="input-pre">[Fundamental 지표 - 2024-07-01 기준, lag 적용]
+선행종합지수(2개월 lag): 202312: 112.80, 202401: 113.20, 202402: 113.70, 202403: 113.90, 202404: 114.50, 202405: 114.80 ↑(+2.00)
+장단기금리차(2개월 lag): 202312: 0.20%p, 202401: -0.06%p, 202402: -0.21%p, 202403: -0.16%p, 202404: -0.11%p, 202405: -0.07%p ↓(-0.27)
+CPI(1개월 lag): 202401: 113.17, 202402: 113.78, 202403: 113.95, 202404: 114.01, 202405: 114.10, 202406: 113.84 ↑(+0.67)
+PPI(2개월 lag): 202312: 117.56, 202401: 118.19, 202402: 118.55, 202403: 118.82, 202404: 119.16, 202405: 119.25 ↑(+1.69)
+전산업BSI(2개월 lag): 202312: 70.00, 202401: 69.00, 202402: 68.00, 202403: 69.00, 202404: 71.00, 202405: 73.00 ↑(+3.00)
+경기전망CSI(1개월 lag): 202401: 81.00, 202402: 80.00, 202403: 80.00, 202404: 81.00, 202405: 79.00, 202406: 80.00 ↓(-1.00)
+WTI유가(1개월 lag): 202401: 74.00$, 202402: 77.36$, 202403: 81.41$, 202404: 85.35$, 202405: 79.96$, 202406: 79.91$ ↑(+5.91)</pre>
+        </details>
+      </div>
     </div>
-  </div>
 
-  <div class="note">각 팩터에 0~100% 가중치를 부여하여 종합 점수 산출 → 상위 N개 종목 선정 → 시총 비례 비중 배분 (개별 상한 10%)</div>
-</div>
+    <div class="section-block">
+      <div class="block-title">📋 분석 리포트</div>
+      <div class="analyst-grid">
+        
+    <div class="analyst-card">
+      <div class="analyst-header">
+        <span class="analyst-icon">📈</span>
+        <span class="analyst-name">Technical Agent</span>
+      </div>
+      <div class="analyst-body">판정: Bull
 
+근거1: KOSPI 종가(38,545)가 MA50(37,092)과 MA200(35,133)을 모두 상회하며, MACD가 -105→+389로 강한 양전환을 보여 상승 모멘텀이 재확립되었다.
+
+근거2: RSI가 62.9로 과매수(70) 미달 구간에서 상승 여력이 남아 있고, VIX가 12.68로 3개월 연속 하락하며 시장 위험선호 심리가 양호하다.
+
+근거3: 국고채 10년물 금리가 3.57→3.34%로 뚜렷한 하락 추세에 있어 금리 인하 기대가 주식시장에 우호적이며, 6월 외국인 순매수가 +442억으로 전환되어 수급 지지가 확인된다.</div>
+    </div>
+        
+    <div class="analyst-card">
+      <div class="analyst-header">
+        <span class="analyst-icon">📊</span>
+        <span class="analyst-name">Fundamental Agent</span>
+      </div>
+      <div class="analyst-body">판정: Bull
+
+근거1: 선행종합지수가 6개월 연속 상승하며 112.80→114.80으로 +2.00 개선되어, 향후 실물경기 회복 신호가 뚜렷하다.
+
+근거2: 장단기금리차가 -0.21%p(2월)→-0.07%p(5월)로 역전 폭이 빠르게 축소되고 있어, 금융시장의 경기침체 우려가 완화되고 있다.
+
+근거3: 전산업BSI가 68→73으로 3포인트 상승하며 기업 체감경기가 개선되고 있어, 실적 기대감이 주가를 지지할 수 있다.</div>
+    </div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <div class="block-title">💬 Bull vs Bear 토론</div>
+      <div class="debate-thread">
+        <div class="round-label">1라운드 — 독립 주장</div>
+    <div class="debate-msg bull-msg">
+      <div class="debate-role">🐂 Bull Advocate — 1라운드</div>
+      <div class="debate-content"># 강세론 (Bull Advocate)
+
+**근거 1: 강력한 기술적 상승 모멘텀 재확립**
+KOSPI 종가(38,545)가 MA50(37,092)·MA200(35,133)을 동시에 상회하고, MACD가 -105→+389로 강한 양전환을 기록해 중장기 상승 추세가 명확히 복원되었다. RSI 62.9로 과매수 미달 구간이어서 추가 상승 여력이 충분히 남아 있다.
+
+**근거 2: 금리 하락과 외국인 수급 전환이 동시 발생**
+국고채 10년물 금리가 3.57→3.34%로 뚜렷한 하락 추세를 형성하며 할인율 부담이 경감되고, 6월 외국인 순매수가 +442억으로 전환되어 금리·수급 양대 축이 동시에 주식시장을 지지하고 있다. VIX 12.68의 3개월 연속 하락도 글로벌 위험선호 심리가 견고함을 확인해준다.
+
+**근거 3: 선행지표·기업체감경기 동반 개선으로 펀더멘털 뒷받침 확보**
+선행종합지수가 6개월 연속 상승(112.80→114.80, +2.00)하여 실물경기 회복 신호가 뚜렷하고, 전산업BSI가 68→73으로 상승해 기업 체감경기가 함께 개선되고 있다. 장단기금리차 역전 폭도 -0.21%p→-0.07%p로 빠르게 축소되어 경기침체 우려가 후퇴하며 실적 기반 주가 상승의 조건이 갖춰지고 있다.</div>
+    </div>
+    <div class="debate-msg bear-msg">
+      <div class="debate-role">🐻 Bear Advocate — 1라운드</div>
+      <div class="debate-content">**약세 논거 (Bear Advocate)**
+
+**근거 1:** RSI 62.9는 중립 상단에 위치해 추가 상승 시 과매수(70) 진입이 임박하며, KOSPI 종가(38,545)가 MA200(35,133) 대비 +9.7% 괴리된 상태로 평균회귀 조정 압력이 누적되고 있다.
+
+**근거 2:** 장단기금리차가 5월 기준 여전히 -0.07%p로 역전 상태를 유지하고 있어 경기침체 신호가 해소되지 않았으며, 역전 폭 축소가 오히려 역사적으로 침체 직전 국면에서 나타나는 패턴과 일치한다.
+
+**근거 3:** 전산업BSI가 73으로 개선되었으나 여전히 기준선(100) 대비 27포인트 하회하여 기업 체감경기가 위축 국면에 머물러 있으며, 6월 외국인 순매수 +442억은 월간 규모로 미미해 본격적 수급 전환으로 보기 어렵다.</div>
+    </div><div class="round-label">2라운드 — 재반박</div>
+    <div class="debate-msg bull-msg">
+      <div class="debate-role">🐂 Bull Advocate — 2라운드</div>
+      <div class="debate-content"># 강세론 반박 (Bull Advocate - 2라운드)
+
+**반박 1: 과매수 임박·평균회귀 주장은 근거 부족**
+RSI 62.9는 과매수(70)까지 7포인트 이상 여유가 있어 "임박"이라 보기 어렵고, MA200 대비 +9.7% 괴리는 MACD가 -105→+389로 강한 양전환을 기록한 초기 추세 확립 국면에서 나타나는 정상적 이격이다. MA50(37,092)까지 동시 상회하는 이중 지지 구조에서 평균회귀 조정을 기대하는 것은 추세 전환 신호 없이 역추세 베팅에 해당한다.
+
+**반박 2: 금리차 역전 축소를 침체 직전 패턴으로 단정하는 것은 선택적 해석**
+-0.21%p→-0.07%p로 3개월간 0.14%p나 빠르게 축소되는 동시에, 선행종합지수가 6개월 연속 상승(112.80→114.80)하고 있어 실물경기가 실제로 회복 궤도에 진입했음을 보여준다. 금리차 축소가 침체 직전 패턴이 되려면 선행지표 하락이 동반되어야 하는데, 현재는 정반대 방향이다.
+
+**반박 3: BSI 기준선 100 미달과 외국인 순매수 규모 과소평가는 변화 방향을 무시한 논리**
+BSI는 절대 수준보다 변화 방향이 주가 선행지표로 더 유의미하며, 68→73의 5포인트 상승은 기업 심리가 바닥을 찍고 개선 추세에 진입했음을 시사한다. 외국인 순매수 +442억은 순매도에서 순매수로의 방향 전환 자체가 핵심이며, 국고채 금리 3.57→3.34% 하락과 VIX 12.68의 3개월 연속 하락이 이 전환의 지속 가능성을 뒷받침한다.
+
+**추가 근거: 금리·기술적·수급·선행지표 4대 축의 동시 정렬**
+기술적(MACD 양전환+이중 이평선 상회), 금리(10년물 23bp 하락), 수급(외국인 순매수 전환), 선행지표(6개월 연속 상승) 등 4개 축이 동시에 강세 방향으로 정렬된 국면은 단일 지표의 약점으로 부정하기 어렵다. Bear 측은 개별 지표의 절대 수준만 문제 삼고 있으나, 모든 지표가 같은 방향으로 개선되고 있다는 구조적 사실이 가장 강력한 강세 근거다.</div>
+    </div>
+    <div class="debate-msg bear-msg">
+      <div class="debate-role">🐻 Bear Advocate — 2라운드</div>
+      <div class="debate-content"># 약세론 반박 (Bear Advocate, 2라운드)
+
+**근거 1: 기술적 상승 모멘텀은 과열 임계점에 근접**
+Bull은 RSI 62.9를 "추가 상승 여력"으로 해석하나, 현재 종가(38,545)가 MA200(35,133) 대비 +9.7% 괴리된 상태에서 RSI가 70에 근접하면 과매수 전환과 평균회귀 조정이 동시에 발생할 수 있다. MACD 양전환(+389)은 단기 반등 모멘텀을 반영할 뿐, MA200 대비 괴리가 이 수준까지 확대된 국면에서는 되돌림 리스크가 상승 여력보다 크다.
+
+**근거 2: 외국인 +442억은 수급 전환의 근거로 불충분**
+6월 외국인 순매수 +442억은 일평균 약 20억 수준에 불과하며, 이를 "금리·수급 양대 축의 동시 지지"로 포장하는 것은 과대해석이다. 국고채 금리 하락(3.57→3.34%)은 경기 둔화 기대를 반영한 것이지 주식시장에 일방적으로 우호적인 신호가 아니며, VIX 12.68의 극단적 저변동성은 역사적으로 급락 직전 안일함(complacency)의 지표로도 해석된다.
+
+**근거 3: 펀더멘털 개선은 여전히 위축 국면 내의 소폭 반등에 불과**
+전산업BSI가 68→73으로 5포인트 올랐으나 기준선(100) 대비 여전히 27포인트 하회하여 기업들의 체감경기는 명백한 위축 영역에 머물러 있다. 장단기금리차 역전 폭 축소(-0.21→-0.07%p)를 "침체 우려 후퇴"로 해석하나, 역전이 해소가 아닌 축소 단계는 역사적으로 침체가 실현되기 직전 국면에서 나타나는 패턴이며, 여전히 마이너스(-0.07%p)라는 사실 자체가 경기침체 신호가 유효함을 의미한다.</div>
+    </div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      
+    <div class="final-judgment-box bull-final">
+      <div class="final-left">
+        <div class="final-verdict-label">최종 판정</div>
+        <div class="final-verdict bull-text">Bull</div>
+        <div class="final-conf" style="color:#16a34a">신뢰도 78</div>
+      </div>
+      <div class="final-right">
+        <div class="final-summary-text">기술적(MACD 양전환, 이중 이평선 상회), 금리(국고채 10년물 23bp 하락), 수급(외국인 순매수 전환), 선행지표(6개월 연속 상승) 등 4대 축이 동시에 강세 방향으로 정렬되어 있다. Bear 측의 MA200 괴리·BSI 절대수준·금리차 역전 잔존 등 반론은 유효하나, 모든 지표의 변화 방향이 일관되게 개선되고 있다는 점에서 개별 약점을 상쇄한다. 다만 외국인 순매수 규모가 미미하고 장단기금리차가 아직 마이너스인 점은 상승 강도에 대한 제약 요인으로 작용해 확신도를 80 미만으로 설정한다.</div>
+        <div class="final-meta">
+          <span>실제 다음달: <strong class="neg">-4.9%</strong></span>
+          <span>❌ 오답</span>
+          <span>사이클 레짐: <span class="badge bear">Bear</span> ❌ 불일치</span>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// 스크롤 스파이
+const sections = document.querySelectorAll('.month-section');
+const links = document.querySelectorAll('.nav-link');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`.nav-link[data-section="${e.target.id}"]`);
+      if (link) {
+        link.classList.add('active');
+        link.scrollIntoView({block: 'nearest'});
+      }
+    }
+  });
+}, {threshold: 0.3});
+sections.forEach(s => observer.observe(s));
+</script>
 </body>
 </html>
