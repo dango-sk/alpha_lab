@@ -698,6 +698,28 @@ def api_delete_strategy(name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# 11c. PATCH /api/strategies/{name}/rename
+# ══════════════════════════════════════════════
+class RenameRequest(BaseModel):
+    new_name: str
+
+@app.patch("/api/strategies/{name}/rename")
+def api_rename_strategy(name: str, req: RenameRequest):
+    from lib.db import _get_conn_raw
+    try:
+        conn = _get_conn_raw()
+        conn.execute(
+            "UPDATE backtest_cache SET name = %s WHERE name = %s",
+            (req.new_name, name),
+        )
+        conn.commit()
+        conn.close()
+        _invalidate_results_cache()
+        return {"status": "ok", "old": name, "new": req.new_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ══════════════════════════════════════════════
 # 12. POST /api/backtest  (async: start → poll)
 # ══════════════════════════════════════════════
