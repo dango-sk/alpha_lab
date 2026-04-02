@@ -4,6 +4,7 @@ alpha_lab 설정 파일
 import os
 import gzip
 import shutil
+from datetime import date, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -43,7 +44,7 @@ QUALITY_FILTER = {
 # ─── 백테스트 설정 ───
 BACKTEST_CONFIG = {
     "start": "2018-04-01",
-    "end": "2026-04-01",
+    "end": (date.today().replace(day=1) + timedelta(days=32)).replace(day=1).strftime("%Y-%m-%d"),
     "insample_end": "2024-06-30",
     "oos_start": "2024-07-01",
     "rebalance_freq": "monthly",
@@ -56,6 +57,7 @@ BACKTEST_CONFIG = {
     "stop_loss_enabled": False,
     "stop_loss_pct": 15,                 # 손절 기준 (매입가 대비 -N%)
     "stop_loss_mode": "sell",            # "sell": 전량 매도, "reduce": 비중 50% 축소
+    "stop_loss_basis": "entry",          # "entry": 매입가 대비, "peak": 고점 대비 (trailing stop)
     "regime_cap_enabled": False,
     "regime_bull_cap_pct": 30,           # 강세장 비중상한 (%)
     "regime_bear_cap_pct": 10,           # 약세장 비중상한 (%)

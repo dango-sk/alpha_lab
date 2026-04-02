@@ -735,6 +735,7 @@ class BacktestRequest(BaseModel):
     stop_loss_enabled: Optional[bool] = None
     stop_loss_pct: Optional[int] = None
     stop_loss_mode: Optional[str] = None
+    stop_loss_basis: Optional[str] = None
 
 # In-memory job store
 _backtest_jobs: dict[str, dict] = {}
@@ -752,6 +753,7 @@ def _run_backtest_job(job_id: str, req: BacktestRequest):
             stop_loss_enabled=req.stop_loss_enabled,
             stop_loss_pct=req.stop_loss_pct,
             stop_loss_mode=req.stop_loss_mode,
+            stop_loss_basis=req.stop_loss_basis,
         )
         if result is None:
             _backtest_jobs[job_id] = {"status": "error", "detail": "Backtest returned no results"}

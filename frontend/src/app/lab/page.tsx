@@ -76,6 +76,7 @@ function parseStrategyParams(code: string): {
   stopLossEnabled?: boolean;
   stopLossPct?: number;
   stopLossMode?: string;
+  stopLossBasis?: string;
 } {
   const result: ReturnType<typeof parseStrategyParams> = {};
   const cap = code.match(/weight_cap_pct["']?\s*[=:]\s*(\d+)/);
@@ -94,6 +95,8 @@ function parseStrategyParams(code: string): {
   if (slPct) result.stopLossPct = parseInt(slPct[1]);
   const slMode = code.match(/stop_loss_mode["']?\s*[=:]\s*["'](\w+)["']/);
   if (slMode) result.stopLossMode = slMode[1];
+  const slBasis = code.match(/stop_loss_basis["']?\s*[=:]\s*["'](\w+)["']/);
+  if (slBasis) result.stopLossBasis = slBasis[1];
   return result;
 }
 
@@ -141,6 +144,7 @@ export default function LabPage() {
   const [stopLossEnabled, setStopLossEnabled] = useState(false);
   const [stopLossPct, setStopLossPct] = useState(15);
   const [stopLossMode, setStopLossMode] = useState<'sell' | 'reduce' | 'redistribute'>('sell');
+  const [stopLossBasis, setStopLossBasis] = useState<'entry' | 'peak'>('entry');
 
   // ─── Code ───
   const [code, setCode] = useState('');
@@ -177,7 +181,7 @@ export default function LabPage() {
   const autoName = useMemo(() => {
     const rebal = rebalType === 'monthly' ? '월간' : '격주';
     const parts: string[] = [];
-    if (stopLossEnabled) parts.push(`손절${stopLossPct}%`);
+    if (stopLossEnabled) parts.push(`손절${stopLossPct}%${stopLossBasis === 'peak' ? '고점' : ''}`);
     if (topN !== 30) parts.push(`top${topN}`);
     if (weightCapPct !== 5) parts.push(`cap${weightCapPct}%`);
     const detail = parts.length > 0 ? `_${parts.join('_')}` : '';
@@ -255,6 +259,7 @@ export default function LabPage() {
         if (parsed.stopLossEnabled !== undefined) setStopLossEnabled(parsed.stopLossEnabled);
         if (parsed.stopLossPct !== undefined) setStopLossPct(parsed.stopLossPct);
         if (parsed.stopLossMode !== undefined) setStopLossMode(parsed.stopLossMode as 'sell' | 'reduce');
+        if (parsed.stopLossBasis !== undefined) setStopLossBasis(parsed.stopLossBasis as 'entry' | 'peak');
         if (parsed.universe) setUniverse(parsed.universe);
         if (parsed.rebalType) setRebalType(parsed.rebalType);
         // 유니버스/리밸런싱은 전략 이름에서도 파싱
@@ -321,6 +326,7 @@ export default function LabPage() {
         stop_loss_enabled: stopLossEnabled,
         stop_loss_pct: stopLossPct,
         stop_loss_mode: stopLossMode,
+        stop_loss_basis: stopLossBasis,
       });
       setProgress(100);
       setProgressMsg('완료!');
@@ -332,7 +338,7 @@ export default function LabPage() {
       if (progressRef.current) clearInterval(progressRef.current);
       setTimeout(() => setRunning(false), 500);
     }
-  }, [code, universe, rebalType, weightCapPct, topN, txCostBp, stopLossEnabled, stopLossPct, stopLossMode]);
+  }, [code, universe, rebalType, weightCapPct, topN, txCostBp, stopLossEnabled, stopLossPct, stopLossMode, stopLossBasis]);
 
   // ─── Inject actual params into code before saving ───
   const codeWithParams = useMemo(() => {
@@ -343,8 +349,9 @@ export default function LabPage() {
     c = c.replace(/(["']?stop_loss_enabled["']?\s*[=:]\s*)(True|False|true|false)/, `$1${stopLossEnabled ? 'True' : 'False'}`);
     c = c.replace(/(["']?stop_loss_pct["']?\s*[=:]\s*)\d+/, `$1${stopLossPct}`);
     c = c.replace(/(["']?stop_loss_mode["']?\s*[=:]\s*["'])\w+(["'])/, `$1${stopLossMode}$2`);
+    c = c.replace(/(["']?stop_loss_basis["']?\s*[=:]\s*["'])\w+(["'])/, `$1${stopLossBasis}$2`);
     return c;
-  }, [code, topN, txCostBp, weightCapPct, stopLossEnabled, stopLossPct, stopLossMode]);
+  }, [code, topN, txCostBp, weightCapPct, stopLossEnabled, stopLossPct, stopLossMode, stopLossBasis]);
 
   // ─── Save strategy ───
   const handleSave = useCallback(async () => {
@@ -660,6 +667,22 @@ export default function LabPage() {
                     disabled={!stopLossEnabled}
                   >
                     비중 50% 축소
+                  </button>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    className={`px-2 py-1 text-xs rounded-md border ${stopLossBasis === 'entry' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
+                    onClick={() => setStopLossBasis('entry')}
+                    disabled={!stopLossEnabled}
+                  >
+                    매입가 대비
+                  </button>
+                  <button
+                    className={`px-2 py-1 text-xs rounded-md border ${stopLossBasis === 'peak' ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'} disabled:opacity-40`}
+                    onClick={() => setStopLossBasis('peak')}
+                    disabled={!stopLossEnabled}
+                  >
+                    고점 대비
                   </button>
                 </div>
               </div>

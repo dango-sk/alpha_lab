@@ -248,6 +248,55 @@ def step_backtest():
             _BC["rebal_type"] = orig_r
 
 
+def step_custom_strategies():
+    """저장된 커스텀 전략들을 재계산하여 PG에 업데이트"""
+    os.environ["DATABASE_URL"] = PG_URL
+    import psycopg2
+    from lib.data import run_strategy_backtest, save_strategy
+
+    conn = psycopg2.connect(PG_URL)
+    conn.cursor().execute("SET search_path TO alpha_lab, public")
+    conn.commit()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT name, strategy_code, universe, rebal_type
+        FROM backtest_cache
+        WHERE strategy_code IS NOT NULL
+          AND name NOT IN ('A0', 'KOSPI', '__ROBUSTNESS__')
+    """)
+    rows = cur.fetchall()
+    conn.close()
+
+    if not rows:
+        print("  커스텀 전략 없음")
+        return
+
+    print(f"  커스텀 전략 {len(rows)}개 재계산 시작")
+    for name, code, universe, rebal_type in rows:
+        try:
+            print(f"    ▶ {name} ({universe}/{rebal_type})")
+            result = run_strategy_backtest(
+                strategy_code=code,
+                universe=universe,
+                rebal_type=rebal_type,
+            )
+            if result and "error" not in result:
+                save_strategy(
+                    name=name,
+                    code=code,
+                    results=result,
+                    universe=universe,
+                    rebal_type=rebal_type,
+                )
+                tr = result.get("CUSTOM", result).get("total_return", 0)
+                print(f"      ✓ 완료 (총수익률: {tr:+.1%})")
+            else:
+                err = result.get("error", "no result") if result else "no result"
+                print(f"      ✗ 실패: {err}")
+        except Exception as e:
+            print(f"      ✗ 에러: {e}")
+
+
 # ═══════════════════════════════════════════════════════════
 # 5. 강건성 검증
 # ═══════════════════════════════════════════════════════════
@@ -546,6 +595,7 @@ def main():
 
     if not args.skip_backtest:
         run("백테스트", step_backtest)
+        run("커스텀 전략 재계산", step_custom_strategies)
         run("강건성 검증", step_robustness)
 
     # ── 요약 ──

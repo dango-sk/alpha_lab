@@ -189,11 +189,15 @@ def calc_portfolio_return(conn, stocks, start_date, end_date):
 
 
 def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
-                                        stop_loss_pct=15, stop_loss_mode="sell"):
+                                        stop_loss_pct=15, stop_loss_mode="sell",
+                                        stop_loss_basis="entry"):
     """손절 로직 포함 포트폴리오 수익률 계산.
 
-    리밸런싱 기간 내 일별 가격을 확인하여, 매입가 대비 -stop_loss_pct% 이하로
-    하락한 종목에 대해 조치.
+    리밸런싱 기간 내 일별 가격을 확인하여 손절 기준 이하로 하락한 종목에 대해 조치.
+
+    stop_loss_basis:
+        "entry" — 매입가 대비 -stop_loss_pct% 하락 시 손절
+        "peak"  — 고점 대비 -stop_loss_pct% 하락 시 손절 (trailing stop)
 
     stop_loss_mode:
         "sell"         — 전량 매도, 나머지 기간 현금 보유
@@ -259,13 +263,25 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
         if entry_price <= 0:
             continue
         daily_prices = daily_map.get(code, [])
+        peak_price = entry_price  # 고점 추적용
         for dt, price in daily_prices:
             if dt <= start_date:
                 continue
-            ret_so_far = (price - entry_price) / entry_price
-            if ret_so_far <= threshold:
-                stopped_info[i] = (dt, ret_so_far)
-                break
+            if stop_loss_basis == "peak":
+                # 고점 대비 trailing stop
+                if price > peak_price:
+                    peak_price = price
+                drawdown = (price - peak_price) / peak_price
+                if drawdown <= threshold:
+                    ret_so_far = (price - entry_price) / entry_price
+                    stopped_info[i] = (dt, ret_so_far)
+                    break
+            else:
+                # 매입가 대비 (기존 로직)
+                ret_so_far = (price - entry_price) / entry_price
+                if ret_so_far <= threshold:
+                    stopped_info[i] = (dt, ret_so_far)
+                    break
 
     # ─── 2차: 모드별 수익률 계산 ───
     weighted_returns = []
@@ -538,12 +554,13 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         # 수익률 (거래비용 = 턴오버 x (수수료 + 슬리피지) x 양방향)
         sl_enabled = BACKTEST_CONFIG.get("stop_loss_enabled", False)
         sl_pct = BACKTEST_CONFIG.get("stop_loss_pct", 15)
-
         sl_mode = BACKTEST_CONFIG.get("stop_loss_mode", "sell")
+        sl_basis = BACKTEST_CONFIG.get("stop_loss_basis", "entry")
 
         if sl_enabled:
             raw_return, sl_events = calc_portfolio_return_with_stoploss(
-                conn, stocks, start, end, stop_loss_pct=sl_pct, stop_loss_mode=sl_mode
+                conn, stocks, start, end, stop_loss_pct=sl_pct, stop_loss_mode=sl_mode,
+                stop_loss_basis=sl_basis,
             )
         else:
             raw_return = calc_portfolio_return(conn, stocks, start, end)
