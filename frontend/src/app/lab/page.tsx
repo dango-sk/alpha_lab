@@ -175,7 +175,7 @@ export default function LabPage() {
   const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
   const [regimeMaWindow, setRegimeMaWindow] = useState(50);
   const [regimeMaWindowInput, setRegimeMaWindowInput] = useState('50');
-  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle'>('ma');
+  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai'>('ma');
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
@@ -1043,6 +1043,10 @@ export default function LabPage() {
                       onClick={() => setRegimeMode('cycle')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'cycle' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >사이클 기준</button>
+                    <button
+                      onClick={() => setRegimeMode('ai')}
+                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
+                    >AI 기준</button>
                   </div>
                 </div>
                 {regimeMode === 'ma' && (
@@ -1072,6 +1076,9 @@ export default function LabPage() {
                 )}
                 {regimeMode === 'cycle' && (
                   <span className="text-xs text-muted">고점 대비 -20% 하락 사이클 기준 (2018년 이후)</span>
+                )}
+                {regimeMode === 'ai' && (
+                  <span className="text-xs text-muted">GPT-4o 멀티에이전트 월간 방향 예측 (정확도 ~59%)</span>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">

@@ -1677,10 +1677,26 @@ def run_regime_combo_backtest(
     _conn_regime = _get_conn()
     regime_cache: dict[str, str] = {}
 
+    # AI 레짐 판정 로드 (regime_mode="ai"일 때)
+    _ai_regime_map = {}
+    if regime_mode == "ai":
+        import json as _json
+        from pathlib import Path as _Path
+        _ai_path = _Path(__file__).parent.parent / "analysis" / "regime_agent_results.json"
+        if _ai_path.exists():
+            with open(_ai_path) as _f:
+                for _r in _json.load(_f):
+                    _ym = _r.get("as_of", "")[:7]  # "2020-03"
+                    _er = _r.get("expected_return", 0)
+                    _ai_regime_map[_ym] = "Bull" if _er >= 0 else "Bear"
+
     def _get_regime(calc_date: str) -> str:
         if calc_date in regime_cache:
             return regime_cache[calc_date]
-        if regime_mode == "cycle":
+        if regime_mode == "ai":
+            ym = calc_date[:7]
+            result_regime = _ai_regime_map.get(ym, "Bull")  # 판정 없으면 Bull
+        elif regime_mode == "cycle":
             result_regime = _get_regime_by_cycle(calc_date)
         else:
             rows = _conn_regime.execute(
