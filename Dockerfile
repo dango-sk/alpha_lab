@@ -28,6 +28,7 @@ COPY backend/ ./backend/
 COPY cache/ ./cache/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
+COPY analysis/regime_agent_results.json ./analysis/
 
 # Next.js build
 COPY --from=frontend-build /app/frontend/.next ./.next
