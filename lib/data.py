@@ -1623,8 +1623,9 @@ def run_regime_combo_backtest(
     universe: str = None,
     rebal_type: str = None,
     ma_window: int = 50,
-    regime_mode: str = "ma",  # "ma" or "cycle"
+    regime_mode: str = "ma",  # "ma" or "cycle" or "ai"
 ) -> dict | None:
+    print(f"[REGIME COMBO BACKTEST] regime_mode={regime_mode}, bull={bull_key}, bear={bear_key}", flush=True)
     """
     레짐 조합 백테스트: 장세마다 다른 전략을 실제로 적용해 완전 재실행.
 
@@ -1715,8 +1716,10 @@ def run_regime_combo_backtest(
         return result_regime
 
     # 5. 레짐 기반 stock_selector (cap도 레짐별 동적 적용)
+    _regime_log = []
     def regime_stock_selector(conn, calc_date, _top_n):
         regime = _get_regime(calc_date)
+        _regime_log.append((calc_date, regime))
         module = bull_module if regime == "Bull" else bear_module
         # 레짐별 cap 및 stop loss 동적 적용
         BACKTEST_CONFIG["weight_cap_pct"] = bull_cap_pct if regime == "Bull" else bear_cap_pct
@@ -1762,11 +1765,20 @@ def run_regime_combo_backtest(
             rebal_type=_rebal,
         )
 
+        bull_cnt = sum(1 for _, r in _regime_log if r == "Bull")
+        bear_cnt = sum(1 for _, r in _regime_log if r == "Bear")
+        print(f"[REGIME LOG] Total={len(_regime_log)}, Bull={bull_cnt}, Bear={bear_cnt}", flush=True)
+        if _regime_log:
+            print(f"[REGIME LOG] First 10: {_regime_log[:10]}", flush=True)
+
         results = {}
         if result:
             result["strategy"] = "레짐 조합"
             result["bull_key"] = bull_key
             result["bear_key"] = bear_key
+            result["_debug_regime_mode"] = regime_mode
+            result["_debug_bull_count"] = bull_cnt
+            result["_debug_bear_count"] = bear_cnt
             results["REGIME_COMBO"] = result
 
         # 벤치마크 + 두 원전략 결과 포함

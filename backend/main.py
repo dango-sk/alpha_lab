@@ -1165,6 +1165,7 @@ def api_regime_combo_start(
     ma_window: Optional[int] = 50,
     regime_mode: Optional[str] = "ma",
 ):
+    print(f"[REGIME COMBO] bull={bull_key}, bear={bear_key}, regime_mode={regime_mode}, ma_window={ma_window}", flush=True)
     job_id = str(_uuid.uuid4())[:8]
     _backtest_jobs[job_id] = {"status": "running"}
     t = threading.Thread(

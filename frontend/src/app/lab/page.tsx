@@ -1158,7 +1158,7 @@ export default function LabPage() {
                 const tableData = [
                   statsRow(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey),
                   statsRow(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey),
-                  statsRow(combo, '레짐 조합 (실제 재백테스트)'),
+                  statsRow(combo, `레짐 조합 (${combo._debug_regime_mode || '?'}, Bull:${combo._debug_bull_count ?? '?'} Bear:${combo._debug_bear_count ?? '?'})`),
                   statsRow(bmRes as Record<string, unknown>, 'BM (KOSPI)'),
                 ];
 
