@@ -1684,12 +1684,17 @@ def run_regime_combo_backtest(
         import json as _json
         from pathlib import Path as _Path
         _ai_path = _Path(__file__).parent.parent / "analysis" / "regime_agent_results.json"
+        # Railway 등 배포 환경에서 경로가 다를 수 있음
+        if not _ai_path.exists():
+            _ai_path = ALPHA_LAB_DIR / "analysis" / "regime_agent_results.json"
+        print(f"[AI REGIME] path={_ai_path}, exists={_ai_path.exists()}", flush=True)
         if _ai_path.exists():
             with open(_ai_path) as _f:
                 for _r in _json.load(_f):
                     _ym = _r.get("as_of", "")[:7]  # "2020-03"
                     _er = _r.get("expected_return", 0)
                     _ai_regime_map[_ym] = "Bull" if _er >= 0 else "Bear"
+            print(f"[AI REGIME] loaded {len(_ai_regime_map)} months", flush=True)
 
     def _get_regime(calc_date: str) -> str:
         if calc_date in regime_cache:
