@@ -1078,7 +1078,7 @@ export default function LabPage() {
                   <span className="text-xs text-muted">고점 대비 -20% 하락 사이클 기준 (2018년 이후)</span>
                 )}
                 {regimeMode === 'ai' && (
-                  <span className="text-xs text-muted">GPT-4o 멀티에이전트 월간 방향 예측 (정확도 ~59%)</span>
+                  <span className="text-xs text-muted">GPT-4o 멀티에이전트 월간 방향 예측</span>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1158,7 +1158,7 @@ export default function LabPage() {
                 const tableData = [
                   statsRow(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey),
                   statsRow(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey),
-                  statsRow(combo, `레짐 조합 (${combo._debug_regime_mode || '?'}, Bull:${combo._debug_bull_count ?? '?'} Bear:${combo._debug_bear_count ?? '?'})`),
+                  statsRow(combo, '레짐 조합 (실제 재백테스트)'),
                   statsRow(bmRes as Record<string, unknown>, 'BM (KOSPI)'),
                 ];
 
