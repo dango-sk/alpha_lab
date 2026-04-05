@@ -7,6 +7,7 @@ __pycache__
 data/
 research/
 analysis/
+!analysis/regime_agent_results.json
 scripts/step0_*
 scripts/step1_collect*
 scripts/step2_collect*

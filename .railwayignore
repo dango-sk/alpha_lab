@@ -15,6 +15,7 @@ IMG_5449.JPG
 _pages_backup/
 03VRainmaker_Content_v5.html
 analysis/
+!analysis/regime_agent_results.json
 *.log
 data/*.db
 data/*.db-shm
