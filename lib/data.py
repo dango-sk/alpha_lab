@@ -1689,19 +1689,29 @@ def run_regime_combo_backtest(
             _ai_path = ALPHA_LAB_DIR / "analysis" / "regime_agent_results.json"
         print(f"[AI REGIME] path={_ai_path}, exists={_ai_path.exists()}", flush=True)
         if _ai_path.exists():
+            # 비대칭 threshold: Bear 진입 -2% 이하, Bull 복귀 +1% 이상
+            _ai_er_map = {}  # ym -> expected_return
             with open(_ai_path) as _f:
                 for _r in _json.load(_f):
-                    _ym = _r.get("as_of", "")[:7]  # "2020-03"
-                    _er = _r.get("expected_return", 0)
-                    _ai_regime_map[_ym] = "Bull" if _er >= 0 else "Bear"
-            print(f"[AI REGIME] loaded {len(_ai_regime_map)} months", flush=True)
+                    _ym = _r.get("as_of", "")[:7]
+                    _ai_er_map[_ym] = _r.get("expected_return", 0)
+            # 시간순으로 레짐 판정 (이전 레짐 유지 방식)
+            _prev_regime = "Bull"
+            for _ym in sorted(_ai_er_map.keys()):
+                _er = _ai_er_map[_ym]
+                if _prev_regime == "Bull":
+                    _ai_regime_map[_ym] = "Bear" if _er <= -2 else "Bull"
+                else:
+                    _ai_regime_map[_ym] = "Bull" if _er >= 1 else "Bear"
+                _prev_regime = _ai_regime_map[_ym]
+            print(f"[AI REGIME] loaded {len(_ai_regime_map)} months (threshold: Bear<=-2%, Bull>=+1%)", flush=True)
 
     def _get_regime(calc_date: str) -> str:
         if calc_date in regime_cache:
             return regime_cache[calc_date]
         if regime_mode == "ai":
             ym = calc_date[:7]
-            result_regime = _ai_regime_map.get(ym, "Bull")  # 판정 없으면 Bull
+            result_regime = _ai_regime_map.get(ym, "Bull")
         elif regime_mode == "cycle":
             result_regime = _get_regime_by_cycle(calc_date)
         else:
