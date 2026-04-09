@@ -45,7 +45,7 @@ const FACTOR_LABELS: Record<string, string> = {
   F_SPSG: 'Forward 매출성장',
   F_EPS_M: 'EPS 모멘텀',
   PRICE_M: '가격 모멘텀',
-  PRICE_MA_REV: 'MA 평균회귀',
+  PRICE_MA_REV: '가격 모멘텀',
   NDEBT_EBITDA: '순부채/EBITDA',
   CURRENT: '유동비율',
 };
