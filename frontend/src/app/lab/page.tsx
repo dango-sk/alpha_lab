@@ -706,10 +706,10 @@ export default function LabPage() {
             {Object.keys(weights).length > 0 && (() => {
               const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0);
               const categoryData = Object.entries(FACTOR_CATEGORIES).map(([cat, { factors, color }]) => {
-                const active = factors.filter((f) => weights[f] !== undefined);
+                const active = factors;
                 const catSum = active.reduce((s, f) => s + (weights[f] ?? 0), 0);
                 return { cat, color, active, catSum };
-              }).filter((d) => d.active.length > 0);
+              });
 
               return (
                 <div className="glass-card p-4">
