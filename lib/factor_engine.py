@@ -1127,6 +1127,7 @@ WEIGHTS_LARGE = {
     "ATT_PBR": .05, "ATT_EVIC": .05, "ATT_PER": .10, "ATT_EVEBIT": .10,
     "T_SPSG": .10, "F_SPSG": .10,
     "F_EPS_M": .15,
+    "PRICE_MA_REV": 0,
 }
 
 WEIGHTS_SMALL = {}
