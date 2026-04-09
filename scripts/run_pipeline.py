@@ -305,6 +305,71 @@ def step_custom_strategies():
             print(f"      ✗ 에러: {e}")
 
 
+def step_regime_combo_strategies():
+    """저장된 레짐조합 전략들을 재계산하여 PG에 업데이트"""
+    import re
+    import psycopg2
+    os.environ["DATABASE_URL"] = PG_URL
+    from lib.data import run_regime_combo_backtest, save_strategy
+
+    conn = psycopg2.connect(PG_URL)
+    conn.cursor().execute("SET search_path TO alpha_lab, public")
+    conn.commit()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT name, results_json, universe, rebal_type
+        FROM backtest_cache
+        WHERE name LIKE '레짐조합_%%'
+    """)
+    rows = cur.fetchall()
+    conn.close()
+
+    if not rows:
+        print("  레짐조합 전략 없음")
+        return
+
+    print(f"  레짐조합 전략 {len(rows)}개 재계산 시작")
+    for name, results_json, universe, rebal_type in rows:
+        try:
+            # 이름에서 bull/bear 키 파싱: 레짐조합_{bull}↑_{bear}↓
+            body = name.replace("레짐조합_", "")
+            m = re.match(r"(.+?)↑_(.+?)↓$", body)
+            if not m:
+                print(f"    ▶ {name} — 이름 파싱 실패, 스킵")
+                continue
+
+            bull_key, bear_key = m.group(1), m.group(2)
+            # 저장된 결과에서 regime_mode 추출 (없으면 cycle)
+            regime_mode = "cycle"
+            if isinstance(results_json, dict):
+                regime_mode = results_json.get("_debug_regime_mode", "cycle")
+
+            print(f"    ▶ {name} (bull={bull_key}, bear={bear_key}, mode={regime_mode})")
+            result = run_regime_combo_backtest(
+                bull_key=bull_key,
+                bear_key=bear_key,
+                universe=universe,
+                rebal_type=rebal_type,
+                regime_mode=regime_mode,
+            )
+            if result and "error" not in result:
+                combo = result.get("REGIME_COMBO", {})
+                save_strategy(
+                    name=name,
+                    code="",
+                    results=combo,
+                    universe=universe,
+                    rebal_type=rebal_type,
+                )
+                tr = combo.get("total_return", 0)
+                print(f"      ✓ 완료 (총수익률: {tr:+.1%})")
+            else:
+                err = result.get("error", "no result") if result else "no result"
+                print(f"      ✗ 실패: {err}")
+        except Exception as e:
+            print(f"      ✗ 에러: {e}")
+
+
 # ═══════════════════════════════════════════════════════════
 # 5. 강건성 검증
 # ═══════════════════════════════════════════════════════════
@@ -605,6 +670,7 @@ def main():
     if args.only_custom:
         # 커스텀 전략 재계산 + 강건성만
         run("커스텀 전략 재계산", step_custom_strategies)
+        run("레짐조합 전략 재계산", step_regime_combo_strategies)
         run("강건성 검증", step_robustness)
     elif args.only_backtest:
         # 유니버스 + 백테스트 + 커스텀만 (수집 스킵)
@@ -612,6 +678,7 @@ def main():
             run("유니버스 재구축", step_build_universe)
         run("백테스트", lambda: step_backtest(skip_combos=skip_combos))
         run("커스텀 전략 재계산", step_custom_strategies)
+        run("레짐조합 전략 재계산", step_regime_combo_strategies)
         run("강건성 검증", step_robustness)
     else:
         # ── 월초: 마스터 + 재무 + TTM ──
