@@ -700,24 +700,6 @@ export default function LabPage() {
                 </div>
               </div>
 
-              {/* ─── MA Reversion Window ─── */}
-              <div className="mt-3 flex items-center gap-3">
-                <label className="text-xs text-muted">MA 평균회귀 기간</label>
-                <div className="flex gap-1">
-                  <button
-                    className={`px-3 py-1 text-xs rounded-md border ${maRevWindow === 120 ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'}`}
-                    onClick={() => setMaRevWindow(120)}
-                  >
-                    120일
-                  </button>
-                  <button
-                    className={`px-3 py-1 text-xs rounded-md border ${maRevWindow === 250 ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'}`}
-                    onClick={() => setMaRevWindow(250)}
-                  >
-                    250일
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* ─── Factor Weights Editor ─── */}
@@ -776,34 +758,49 @@ export default function LabPage() {
                             const w = weights[factor] ?? 0;
                             const barPct = totalWeight > 0 ? (Math.abs(w) / totalWeight) * 100 : 0;
                             return (
-                              <div key={factor} className="flex items-center gap-3">
-                                <span className="text-xs text-muted w-44 flex-shrink-0 truncate">
-                                  {FACTOR_LABELS[factor] || factor}
-                                </span>
-                                <div className="flex-1 h-4 bg-background rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full transition-all"
-                                    style={{ backgroundColor: color, width: `${Math.min(barPct * 2, 100)}%`, opacity: 0.8 }}
-                                  />
+                              <div key={factor}>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs text-muted w-44 flex-shrink-0 truncate">
+                                    {FACTOR_LABELS[factor] || factor}
+                                  </span>
+                                  <div className="flex-1 h-4 bg-background rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full transition-all"
+                                      style={{ backgroundColor: color, width: `${Math.min(barPct * 2, 100)}%`, opacity: 0.8 }}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={Math.round(w * 100)}
+                                      onFocus={(e) => e.target.select()}
+                                      onChange={(e) => {
+                                        const raw = e.target.value.replace(/[^0-9-]/g, '');
+                                        if (raw === '' || raw === '-') return;
+                                        const v = parseInt(raw);
+                                        if (!isNaN(v)) {
+                                          setCode((prev) => updateWeightInCode(prev, factor, v / 100));
+                                        }
+                                      }}
+                                      className="w-12 text-xs font-num text-foreground text-right bg-surface border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                                    />
+                                    <span className="text-xs text-muted">%</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={Math.round(w * 100)}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => {
-                                      const raw = e.target.value.replace(/[^0-9-]/g, '');
-                                      if (raw === '' || raw === '-') return;
-                                      const v = parseInt(raw);
-                                      if (!isNaN(v)) {
-                                        setCode((prev) => updateWeightInCode(prev, factor, v / 100));
-                                      }
-                                    }}
-                                    className="w-12 text-xs font-num text-foreground text-right bg-surface border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-                                  />
-                                  <span className="text-xs text-muted">%</span>
-                                </div>
+                                {factor === 'PRICE_MA_REV' && w > 0 && (
+                                  <div className="flex items-center gap-2 ml-44 pl-3 mt-1">
+                                    <span className="text-[10px] text-muted">MA 기간</span>
+                                    <button
+                                      className={`px-2 py-0.5 text-[10px] rounded border ${maRevWindow === 120 ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'}`}
+                                      onClick={() => setMaRevWindow(120)}
+                                    >120일</button>
+                                    <button
+                                      className={`px-2 py-0.5 text-[10px] rounded border ${maRevWindow === 250 ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'}`}
+                                      onClick={() => setMaRevWindow(250)}
+                                    >250일</button>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
