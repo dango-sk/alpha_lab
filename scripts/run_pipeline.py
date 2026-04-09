@@ -214,13 +214,15 @@ def step_collect_consensus():
 # ═══════════════════════════════════════════════════════════
 
 
-def step_backtest():
+def step_backtest(skip_combos=None):
     """step7_backtest 실행 + 캐시 저장 (PG 직접, 4 콤보)"""
     os.environ["DATABASE_URL"] = PG_URL  # PG 직접 사용
     from step7_backtest import run_all_backtests, save_backtest_cache, \
         save_portfolio_cache, show_comparison
     from config.settings import BACKTEST_CONFIG as _BC
     from lib.factor_engine import clear_factor_cache
+
+    skip_set = set(skip_combos or [])
 
     combos = [
         ("KOSPI", "monthly"),
@@ -230,6 +232,10 @@ def step_backtest():
     ]
 
     for universe, rebal_type in combos:
+        combo_key = f"{universe}_{rebal_type}"
+        if combo_key in skip_set:
+            print(f"\n  ── {universe} / {rebal_type} ── 스킵")
+            continue
         print(f"\n  ── {universe} / {rebal_type} ──")
         orig_u, orig_r = _BC.get("universe"), _BC.get("rebal_type")
         _BC["universe"] = universe
@@ -271,6 +277,8 @@ def step_custom_strategies():
         print("  커스텀 전략 없음")
         return
 
+    # 레짐조합 전략은 코드가 빈 문자열이므로 제외
+    rows = [(n, c, u, r) for n, c, u, r in rows if c and c.strip() and not n.startswith("레짐조합_")]
     print(f"  커스텀 전략 {len(rows)}개 재계산 시작")
     for name, code, universe, rebal_type in rows:
         try:
@@ -300,6 +308,13 @@ def step_custom_strategies():
 # ═══════════════════════════════════════════════════════════
 # 5. 강건성 검증
 # ═══════════════════════════════════════════════════════════
+
+def step_collect_news():
+    """네이트 뉴스 매크로 수집 (DB 마지막 수집일 ~ 어제)"""
+    from collect_news_nate import run_daily
+    inserted = run_daily()
+    print(f"  뉴스 {inserted}건 수집")
+
 
 def step_robustness():
     """step8_robustness 실행 + 캐시 저장"""
@@ -557,6 +572,10 @@ def main():
     parser = argparse.ArgumentParser(description="Alpha Lab 파이프라인 (PG)")
     parser.add_argument("--monthly", action="store_true", help="월초 전체 실행")
     parser.add_argument("--skip-backtest", action="store_true", help="백테스트 스킵")
+    parser.add_argument("--only-backtest", action="store_true", help="유니버스+백테스트+커스텀만 실행 (수집 스킵)")
+    parser.add_argument("--skip-universe", action="store_true", help="유니버스 재구축 스킵")
+    parser.add_argument("--skip-combos", type=str, default="", help="스킵할 콤보 (예: KOSPI_monthly,KOSPI_biweekly)")
+    parser.add_argument("--only-custom", action="store_true", help="커스텀 전략 재계산+강건성만 실행")
     args = parser.parse_args()
 
     is_monthly = args.monthly or datetime.now().day <= 3
@@ -581,22 +600,37 @@ def main():
             failed.append((name, str(e)))
             print(f"  ✗ {name} 실패: {e}")
 
-    # ── 월초: 마스터 + 재무 + TTM ──
-    if is_monthly:
-        run("마스터 스냅샷 수집", step_collect_master)
-        run("재무 보충 수집", step_collect_finance)
-        run("TTM 계산", step_calc_ttm)
+    skip_combos = [s.strip() for s in args.skip_combos.split(",") if s.strip()] if args.skip_combos else []
 
-    # ── 유니버스 재구축 (매 실행 시) ──
-    run("유니버스 재구축", step_build_universe)
-
-    # ── 매일 (주가/시총은 LG 그램에서 PG로 별도 업로드) ──
-    run("Forward/Consensus 수집", step_collect_consensus)
-
-    if not args.skip_backtest:
-        run("백테스트", step_backtest)
+    if args.only_custom:
+        # 커스텀 전략 재계산 + 강건성만
         run("커스텀 전략 재계산", step_custom_strategies)
         run("강건성 검증", step_robustness)
+    elif args.only_backtest:
+        # 유니버스 + 백테스트 + 커스텀만 (수집 스킵)
+        if not args.skip_universe:
+            run("유니버스 재구축", step_build_universe)
+        run("백테스트", lambda: step_backtest(skip_combos=skip_combos))
+        run("커스텀 전략 재계산", step_custom_strategies)
+        run("강건성 검증", step_robustness)
+    else:
+        # ── 월초: 마스터 + 재무 + TTM ──
+        if is_monthly:
+            run("마스터 스냅샷 수집", step_collect_master)
+            run("재무 보충 수집", step_collect_finance)
+            run("TTM 계산", step_calc_ttm)
+
+        # ── 유니버스 재구축 (매 실행 시) ──
+        run("유니버스 재구축", step_build_universe)
+
+        # ── 매일 (주가/시총은 LG 그램에서 PG로 별도 업로드) ──
+        run("Forward/Consensus 수집", step_collect_consensus)
+        run("뉴스 수집", step_collect_news)
+
+        if not args.skip_backtest:
+            run("백테스트", step_backtest)
+            run("커스텀 전략 재계산", step_custom_strategies)
+            run("강건성 검증", step_robustness)
 
     # ── 요약 ──
     elapsed = time.time() - t0
