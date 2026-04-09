@@ -24,7 +24,7 @@ const FACTOR_CATEGORIES: Record<string, { factors: string[]; color: string }> = 
     color: '#4CAF50',
   },
   '차별화': {
-    factors: ['F_EPS_M', 'PRICE_M', 'NDEBT_EBITDA', 'CURRENT'],
+    factors: ['F_EPS_M', 'PRICE_M', 'PRICE_MA_REV', 'NDEBT_EBITDA', 'CURRENT'],
     color: '#f59e0b',
   },
 };
@@ -45,6 +45,7 @@ const FACTOR_LABELS: Record<string, string> = {
   F_SPSG: 'Forward 매출성장',
   F_EPS_M: 'EPS 모멘텀',
   PRICE_M: '가격 모멘텀',
+  PRICE_MA_REV: 'MA 평균회귀',
   NDEBT_EBITDA: '순부채/EBITDA',
   CURRENT: '유동비율',
 };
@@ -77,6 +78,7 @@ function parseStrategyParams(code: string): {
   stopLossPct?: number;
   stopLossMode?: string;
   stopLossBasis?: string;
+  maRevWindow?: number;
 } {
   const result: ReturnType<typeof parseStrategyParams> = {};
   const cap = code.match(/weight_cap_pct["']?\s*[=:]\s*(\d+)/);
@@ -97,6 +99,8 @@ function parseStrategyParams(code: string): {
   if (slMode) result.stopLossMode = slMode[1];
   const slBasis = code.match(/stop_loss_basis["']?\s*[=:]\s*["'](\w+)["']/);
   if (slBasis) result.stopLossBasis = slBasis[1];
+  const maRev = code.match(/ma_reversion_window["']?\s*[=:]\s*(\d+)/);
+  if (maRev) result.maRevWindow = parseInt(maRev[1]);
   return result;
 }
 
@@ -139,6 +143,9 @@ export default function LabPage() {
   const [topN, setTopN] = useState(30);
   const [txCostBp, setTxCostBp] = useState(30);
   const [rebalType, setRebalType] = useState<'monthly' | 'biweekly'>('monthly');
+
+  // ─── MA Reversion Window ───
+  const [maRevWindow, setMaRevWindow] = useState<120 | 250>(120);
 
   // ─── Stop Loss ───
   const [stopLossEnabled, setStopLossEnabled] = useState(false);
@@ -260,6 +267,7 @@ export default function LabPage() {
         if (parsed.stopLossPct !== undefined) setStopLossPct(parsed.stopLossPct);
         if (parsed.stopLossMode !== undefined) setStopLossMode(parsed.stopLossMode as 'sell' | 'reduce');
         if (parsed.stopLossBasis !== undefined) setStopLossBasis(parsed.stopLossBasis as 'entry' | 'peak');
+        if (parsed.maRevWindow !== undefined) setMaRevWindow(parsed.maRevWindow as 120 | 250);
         if (parsed.universe) setUniverse(parsed.universe);
         if (parsed.rebalType) setRebalType(parsed.rebalType);
         // 유니버스/리밸런싱은 전략 이름에서도 파싱
@@ -289,6 +297,24 @@ export default function LabPage() {
 
   // ─── Reset ───
 
+  // ─── Inject actual params into code ───
+  const codeWithParams = useMemo(() => {
+    let c = code;
+    c = c.replace(/(["']?top_n["']?\s*:\s*)\d+/, `$1${topN}`);
+    c = c.replace(/(["']?tx_cost_bp["']?\s*:\s*)\d+/, `$1${txCostBp}`);
+    c = c.replace(/(["']?weight_cap_pct["']?\s*:\s*)\d+/, `$1${weightCapPct}`);
+    c = c.replace(/(["']?stop_loss_enabled["']?\s*[=:]\s*)(True|False|true|false)/, `$1${stopLossEnabled ? 'True' : 'False'}`);
+    c = c.replace(/(["']?stop_loss_pct["']?\s*[=:]\s*)\d+/, `$1${stopLossPct}`);
+    c = c.replace(/(["']?stop_loss_mode["']?\s*[=:]\s*["'])\w+(["'])/, `$1${stopLossMode}$2`);
+    c = c.replace(/(["']?stop_loss_basis["']?\s*[=:]\s*["'])\w+(["'])/, `$1${stopLossBasis}$2`);
+    if (/ma_reversion_window/.test(c)) {
+      c = c.replace(/(["']?ma_reversion_window["']?\s*[=:]\s*)\d+/, `$1${maRevWindow}`);
+    } else {
+      c = c.replace(/(PARAMS\s*=\s*\{)/, `$1\n    "ma_reversion_window": ${maRevWindow},`);
+    }
+    return c;
+  }, [code, topN, txCostBp, weightCapPct, stopLossEnabled, stopLossPct, stopLossMode, stopLossBasis, maRevWindow]);
+
   // ─── Run backtest ───
   const PROGRESS_STEPS = [
     { at: 5, msg: '유니버스 로딩...' },
@@ -317,7 +343,7 @@ export default function LabPage() {
     }, 2500);
 
     try {
-      const result = await runBacktest(code, {
+      const result = await runBacktest(codeWithParams, {
         universe,
         rebal_type: rebalType,
         weight_cap_pct: weightCapPct,
@@ -338,20 +364,7 @@ export default function LabPage() {
       if (progressRef.current) clearInterval(progressRef.current);
       setTimeout(() => setRunning(false), 500);
     }
-  }, [code, universe, rebalType, weightCapPct, topN, txCostBp, stopLossEnabled, stopLossPct, stopLossMode, stopLossBasis]);
-
-  // ─── Inject actual params into code before saving ───
-  const codeWithParams = useMemo(() => {
-    let c = code;
-    c = c.replace(/(["']?top_n["']?\s*:\s*)\d+/, `$1${topN}`);
-    c = c.replace(/(["']?tx_cost_bp["']?\s*:\s*)\d+/, `$1${txCostBp}`);
-    c = c.replace(/(["']?weight_cap_pct["']?\s*:\s*)\d+/, `$1${weightCapPct}`);
-    c = c.replace(/(["']?stop_loss_enabled["']?\s*[=:]\s*)(True|False|true|false)/, `$1${stopLossEnabled ? 'True' : 'False'}`);
-    c = c.replace(/(["']?stop_loss_pct["']?\s*[=:]\s*)\d+/, `$1${stopLossPct}`);
-    c = c.replace(/(["']?stop_loss_mode["']?\s*[=:]\s*["'])\w+(["'])/, `$1${stopLossMode}$2`);
-    c = c.replace(/(["']?stop_loss_basis["']?\s*[=:]\s*["'])\w+(["'])/, `$1${stopLossBasis}$2`);
-    return c;
-  }, [code, topN, txCostBp, weightCapPct, stopLossEnabled, stopLossPct, stopLossMode, stopLossBasis]);
+  }, [codeWithParams, universe, rebalType, weightCapPct, topN, txCostBp, stopLossEnabled, stopLossPct, stopLossMode, stopLossBasis]);
 
   // ─── Save strategy ───
   const handleSave = useCallback(async () => {
@@ -683,6 +696,25 @@ export default function LabPage() {
                     disabled={!stopLossEnabled}
                   >
                     고점 대비
+                  </button>
+                </div>
+              </div>
+
+              {/* ─── MA Reversion Window ─── */}
+              <div className="mt-3 flex items-center gap-3">
+                <label className="text-xs text-muted">MA 평균회귀 기간</label>
+                <div className="flex gap-1">
+                  <button
+                    className={`px-3 py-1 text-xs rounded-md border ${maRevWindow === 120 ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'}`}
+                    onClick={() => setMaRevWindow(120)}
+                  >
+                    120일
+                  </button>
+                  <button
+                    className={`px-3 py-1 text-xs rounded-md border ${maRevWindow === 250 ? 'bg-primary text-white border-primary' : 'bg-surface border-border text-muted'}`}
+                    onClick={() => setMaRevWindow(250)}
+                  >
+                    250일
                   </button>
                 </div>
               </div>

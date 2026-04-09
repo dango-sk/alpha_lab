@@ -62,4 +62,5 @@ BACKTEST_CONFIG = {
     "regime_bull_cap_pct": 30,           # 강세장 비중상한 (%)
     "regime_bear_cap_pct": 10,           # 약세장 비중상한 (%)
     "regime_ma_window": 200,             # 레짐 판정 MA 기간
+    "ma_reversion_window": 120,          # 평균회귀 팩터 MA 기간 (120일 or 250일)
 }

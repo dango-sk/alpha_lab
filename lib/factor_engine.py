@@ -287,6 +287,51 @@ def _get_price_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     return price_df, price_3m_df
 
 
+def _calc_ma_reversion(price_all: pd.DataFrame, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
+    """N일 MA 대비 최대 하향 이탈도 계산 (최근 250영업일).
+
+    Args:
+        ma_window: 이동평균 기간 (기본 120일, 250일 등으로 변경 가능)
+
+    Returns: DataFrame with [stock_code, price_ma_rev, below_ma]
+      - price_ma_rev: 250영업일 내 (close - MA) / MA * 100 의 최솟값 (최대 하락 이탈 %)
+      - below_ma: 현재가 <= N일 MA 여부 (1/0)
+    """
+    # calc_date 이전 데이터만 사용 (250 + ma_window + 여유)
+    lookback_days = int((250 + ma_window) * 1.5) + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = price_all[(price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)].copy()
+    if recent.empty:
+        return pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
+
+    recent = recent.sort_values(["stock_code", "trade_date"])
+    recent["ma"] = recent.groupby("stock_code")["close"].transform(
+        lambda x: x.rolling(ma_window, min_periods=ma_window).mean()
+    )
+    valid = recent[recent["ma"].notna()].copy()
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
+
+    # 이탈도 = (close - MA) / MA * 100
+    valid["deviation"] = (valid["close"] - valid["ma"]) / valid["ma"] * 100
+
+    # 종목별 최근 250영업일만 사용 → 최대 하향 이탈도(최솟값)
+    last250 = valid.groupby("stock_code").tail(250)
+    result = last250.groupby("stock_code").agg(
+        price_ma_rev=("deviation", "min"),
+    ).reset_index()
+    # 절대값 변환: -18% → 18 (이탈 크기, 양수). rule2(높을수록 좋음)에서 사용
+    result["price_ma_rev"] = result["price_ma_rev"].abs()
+
+    # 현재가 <= N일선 여부 (가장 최근 행 기준)
+    latest = valid.groupby("stock_code").last()[["deviation"]].reset_index()
+    latest["below_ma"] = (latest["deviation"] <= 0).astype(int)
+    result = result.merge(latest[["stock_code", "below_ma"]], on="stock_code", how="left")
+    result["below_ma"] = result["below_ma"].fillna(0).astype(int)
+
+    return result
+
+
 def _get_master_for_date(calc_date: str) -> pd.DataFrame:
     """프리페치 캐시에서 마스터 데이터 추출."""
     master_all = _prefetch_cache["master"]
@@ -297,15 +342,16 @@ def _get_master_for_date(calc_date: str) -> pd.DataFrame:
     return master_all[master_all["snapshot_date"] == snap][["stock_code", "stock_name", "market", "sec_cd_nm", "finacc_typ"]]
 
 
-def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
+def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = None) -> pd.DataFrame | None:
     """
     DB에서 재무/주가/포워드 데이터를 로딩하고 모든 파생 지표를 계산한다.
-    유니버스 설정에 따라 필터링이 달라지므로 (날짜, 유니버스) 조합으로 캐시.
+    유니버스 설정에 따라 필터링이 달라지므로 (날짜, 유니버스, ma_window) 조합으로 캐시.
     프리페치 캐시가 있으면 DB 쿼리 대신 메모리에서 처리.
     """
     from config.settings import BACKTEST_CONFIG as _BC
     _universe = _BC.get("universe", "KOSPI")
-    _cache_key = (calc_date, _universe)
+    _ma_window = ma_reversion_window or _BC.get("ma_reversion_window", 120)
+    _cache_key = (calc_date, _universe, _ma_window)
     if _cache_key in _factor_data_cache:
         return _factor_data_cache[_cache_key].copy()
 
@@ -320,6 +366,8 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         fwd_df, fwd_3m_df = _get_fwd_for_date(calc_date)
         price_df, price_3m_df = _get_price_for_date(calc_date)
         master_df = _get_master_for_date(calc_date)
+        # _ma_window already set above
+        ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
     else:
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
@@ -434,6 +482,18 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
                 conn, params=(price_date_3m,),
             )
 
+        # ─── MA reversion ───
+        # _ma_window already set above
+        _ma_lookback = int((250 + _ma_window) * 1.5) + 30
+        _ma_cutoff = (dt - timedelta(days=_ma_lookback)).strftime("%Y-%m-%d")
+        _ma_price_all = read_sql("""
+            SELECT 'A' || stock_code as stock_code, trade_date, close
+            FROM daily_price
+            WHERE trade_date >= %s AND trade_date < %s
+            ORDER BY stock_code, trade_date
+        """, conn, params=(_ma_cutoff, calc_date))
+        ma_rev_df = _calc_ma_reversion(_ma_price_all, calc_date, ma_window=_ma_window) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
+
         # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
         _snap_month = calc_date[:7]
         _snap_date = conn.execute(
@@ -449,7 +509,7 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
     # ─── 병합 ───
     merged = fin_df.merge(price_df, on="stock_code", how="inner")
     merged = merged.merge(master_df, on="stock_code", how="inner")
-    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df]:
+    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df]:
         if not df_extra.empty:
             merged = merged.merge(df_extra, on="stock_code", how="left")
     merged = merged[(merged["market_cap"] > 0) & (merged["close"] > 0)].copy()
@@ -584,6 +644,17 @@ def load_factor_data(conn, calc_date: str) -> pd.DataFrame | None:
         )
     else:
         merged["price_m"] = np.nan
+
+    # PRICE_MA_REV (N일선 대비 최대 하향 이탈도, 절대값)
+    # price_ma_rev: 양수 (이탈 크기). rule2(높을수록 좋음) → 많이 빠질수록 높은 점수
+    # below_ma 가점: 현재가 <= N일선이면 1.2배 강화
+    if "price_ma_rev" not in merged.columns:
+        merged["price_ma_rev"] = np.nan
+    if "below_ma" not in merged.columns:
+        merged["below_ma"] = 0
+    # 가점 적용: 현재가 <= MA선인 종목은 이탈도 20% 강화
+    m_below = merged["below_ma"] == 1
+    merged.loc[m_below, "price_ma_rev"] = merged.loc[m_below, "price_ma_rev"] * 1.2
 
     # NDEBT_EBITDA
     ebitda_col = "ebitda" if ("ebitda" in merged.columns and merged["ebitda"].notna().sum() > 10) else "ebit"
@@ -856,10 +927,6 @@ def score_stocks_from_strategy(conn, calc_date, strategy) -> list[tuple[str, flo
 
     strategy: ModuleType 또는 dict-like (WEIGHTS_LARGE, WEIGHTS_SMALL, ...)
     """
-    df = load_factor_data(conn, calc_date)
-    if df is None or df.empty:
-        return []
-
     # 전략 설정 읽기
     weights_large = getattr(strategy, "WEIGHTS_LARGE", {})
     weights_small = getattr(strategy, "WEIGHTS_SMALL", {})
@@ -874,7 +941,13 @@ def score_stocks_from_strategy(conn, calc_date, strategy) -> list[tuple[str, flo
         "require_positive_roe": True,
         "min_avg_volume": 500_000_000,
     })
-    top_n = getattr(strategy, "PARAMS", {}).get("top_n", 30)
+    params = getattr(strategy, "PARAMS", {})
+    top_n = params.get("top_n", 30)
+    ma_rev_window = params.get("ma_reversion_window", None)
+
+    df = load_factor_data(conn, calc_date, ma_reversion_window=ma_rev_window)
+    if df is None or df.empty:
+        return []
 
     # 대형주 전용: WEIGHTS_SMALL이 비어있으면 대형주만
     if not weights_small:
@@ -1086,6 +1159,7 @@ SCORE_MAP = {
     "F_EPS_M": "f_eps_m_score",
     "PRICE_M": "price_m_score", "NDEBT_EBITDA": "ndebt_ebitda_score",
     "CURRENT": "current_ratio_score",
+    "PRICE_MA_REV": "price_ma_rev_score",
 }
 
 # ─── 스코어링 규칙 ───
@@ -1104,6 +1178,7 @@ SCORING_RULES = {
     "f_eps_m": "rule2",
     "price_m": "rule3", "ndebt_ebitda": "rule3",
     "current_ratio": "rule2",
+    "price_ma_rev": "rule2",
 }
 
 # ─── 운용 파라미터 ───
