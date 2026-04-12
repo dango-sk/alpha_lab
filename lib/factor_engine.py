@@ -1195,6 +1195,7 @@ WEIGHTS_LARGE = {
     "T_SPSG": .10, "F_SPSG": .10,
     "F_EPS_M": .15,
     "PRICE_MA_REV": 0,
+    "OBV_SLOPE": 0,
 }
 
 WEIGHTS_SMALL = {}
