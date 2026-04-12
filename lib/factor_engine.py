@@ -384,9 +384,9 @@ def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, s
         if denom == 0:
             return np.nan
         slope = (x * y).sum() / denom
-        # 종목별 OBV 스케일 차이 제거: OBV MA 표준편차로 정규화
-        std = series.std()
-        return slope / std if std > 0 else 0.0
+        # 종목별 OBV 스케일 차이 제거: OBV MA 평균값으로 정규화 (변화율)
+        mean_val = abs(series.mean())
+        return slope / mean_val if mean_val > 0 else 0.0
 
     result = last_n.groupby("stock_code")["obv_ma"].apply(linreg_slope).reset_index()
     result.columns = ["stock_code", "obv_slope"]
