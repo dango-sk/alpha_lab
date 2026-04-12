@@ -24,7 +24,7 @@ const FACTOR_CATEGORIES: Record<string, { factors: string[]; color: string }> = 
     color: '#4CAF50',
   },
   '차별화': {
-    factors: ['F_EPS_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'NDEBT_EBITDA', 'CURRENT'],
+    factors: ['F_EPS_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'MFI', 'NDEBT_EBITDA', 'CURRENT'],
     color: '#f59e0b',
   },
 };
@@ -47,6 +47,7 @@ const FACTOR_LABELS: Record<string, string> = {
   PRICE_M: '가격 모멘텀',
   PRICE_MA_REV: '가격 모멘텀 (MA회귀)',
   OBV_SLOPE: 'OBV 기울기',
+  MFI: 'MFI (자금 유입)',
   NDEBT_EBITDA: '순부채/EBITDA',
   CURRENT: '유동비율',
 };
@@ -706,8 +707,9 @@ export default function LabPage() {
             {/* ─── Factor Weights Editor ─── */}
             {Object.keys(weights).length > 0 && (() => {
               const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0);
+              const ALWAYS_SHOW = new Set(['OBV_SLOPE', 'MFI']);
               const categoryData = Object.entries(FACTOR_CATEGORIES).map(([cat, { factors, color }]) => {
-                const active = factors.filter((f) => weights[f] !== undefined);
+                const active = factors.filter((f) => weights[f] !== undefined || ALWAYS_SHOW.has(f));
                 const catSum = active.reduce((s, f) => s + (weights[f] ?? 0), 0);
                 return { cat, color, active, catSum };
               }).filter((d) => d.active.length > 0);
@@ -755,7 +757,7 @@ export default function LabPage() {
 
                         {/* Factor rows */}
                         <div className="px-4 pb-3 space-y-2">
-                          {active.map((factor) => {
+                          {active.map((factor: string) => {
                             const w = weights[factor] ?? 0;
                             const barPct = totalWeight > 0 ? (Math.abs(w) / totalWeight) * 100 : 0;
                             return (

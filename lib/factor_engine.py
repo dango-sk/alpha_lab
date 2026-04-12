@@ -174,7 +174,7 @@ def prefetch_all_data(conn):
     """, conn)
 
     _prefetch_cache["price"] = read_sql("""
-        SELECT 'A' || stock_code as stock_code, trade_date, close, volume, market_cap, trade_amount
+        SELECT 'A' || stock_code as stock_code, trade_date, close, high, low, volume, market_cap, trade_amount
         FROM daily_price
     """, conn)
 
@@ -332,32 +332,74 @@ def _calc_ma_reversion(price_all: pd.DataFrame, calc_date: str, ma_window: int =
     return result
 
 
-def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, slope_window: int = 60) -> pd.DataFrame:
-    """OBV 20일 이동평균의 선형회귀 기울기 계산.
+def _calc_mfi(price_all: pd.DataFrame, calc_date: str, period: int = 14, lookback: int = 20) -> pd.DataFrame:
+    """MFI (Money Flow Index) 계산.
 
     Args:
-        obv_ma: OBV 이동평균 기간 (기본 20일)
-        slope_window: 기울기 계산에 사용할 최근 일수 (기본 60일)
+        period: MFI 계산 기간 (기본 14일)
+        lookback: 모멘텀 측정 기간 (기본 20일)
 
-    Returns: DataFrame with [stock_code, obv_slope]
-      - obv_slope: OBV MA의 선형회귀 기울기 (클수록 매집 강도 높음)
+    Returns: DataFrame with [stock_code, mfi]
+      - mfi: 낮은 수준에서 상승할수록 높은 점수 (자금 유입 초기)
     """
-    lookback_days = int((slope_window + obv_ma) * 1.5) + 30
+    lookback_days = (period + lookback) * 2 + 30
     cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
     recent = price_all[(price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)].copy()
-    if recent.empty:
-        return pd.DataFrame(columns=["stock_code", "obv_slope"])
-
-    if "volume" not in recent.columns:
-        return pd.DataFrame(columns=["stock_code", "obv_slope"])
+    if recent.empty or "high" not in recent.columns or "low" not in recent.columns:
+        return pd.DataFrame(columns=["stock_code", "mfi"])
 
     recent = recent.sort_values(["stock_code", "trade_date"])
 
-    # OBV 계산: 상승일 +volume, 하락일 -volume (transform으로 메모리 효율화)
+    # Typical Price & Money Flow
+    recent["tp"] = (recent["high"] + recent["low"] + recent["close"]) / 3
+    recent["mf"] = recent["tp"] * recent["volume"]
+
+    # 상승일/하락일 구분
+    tp_diff = recent.groupby("stock_code")["tp"].transform(lambda x: x.diff())
+    recent["pos_mf"] = np.where(tp_diff > 0, recent["mf"], 0.0)
+    recent["neg_mf"] = np.where(tp_diff < 0, recent["mf"], 0.0)
+
+    # 14일 롤링 합계
+    recent["pos_sum"] = recent.groupby("stock_code")["pos_mf"].transform(
+        lambda x: x.rolling(period, min_periods=period).sum()
+    )
+    recent["neg_sum"] = recent.groupby("stock_code")["neg_mf"].transform(
+        lambda x: x.rolling(period, min_periods=period).sum()
+    )
+
+    valid = recent[recent["pos_sum"].notna() & recent["neg_sum"].notna()].copy()
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "mfi"])
+
+    mfr = valid["pos_sum"] / valid["neg_sum"].replace(0, np.nan)
+    valid["mfi_val"] = 100 - (100 / (1 + mfr))
+
+    # 최근값과 lookback일 전 값으로 모멘텀 계산
+    last = valid.groupby("stock_code").tail(lookback)
+    first_val = last.groupby("stock_code")["mfi_val"].first()
+    last_val = last.groupby("stock_code")["mfi_val"].last()
+    current_mfi = last_val
+
+    # 스코어: 낮은 MFI(과매도)에서 상승할수록 높음
+    mfi_momentum = last_val - first_val
+    result = pd.DataFrame({"stock_code": current_mfi.index, "mfi_current": current_mfi.values, "mfi_momentum": mfi_momentum.values})
+
+    # 최종 mfi 팩터: 낮은 MFI + 상승 모멘텀 조합 (MFI < 50일 때 모멘텀에 보너스)
+    result["mfi"] = result["mfi_momentum"] + np.where(result["mfi_current"] < 50, (50 - result["mfi_current"]) * 0.2, 0)
+    return result[["stock_code", "mfi"]]
+
+
+def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, slope_window: int = 60) -> pd.DataFrame:
+    """OBV 20일 이동평균의 선형회귀 기울기 계산 (누적 자금 흐름 추세)."""
+    lookback_days = int((slope_window + obv_ma) * 1.5) + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = price_all[(price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)].copy()
+    if recent.empty or "volume" not in recent.columns:
+        return pd.DataFrame(columns=["stock_code", "obv_slope"])
+
+    recent = recent.sort_values(["stock_code", "trade_date"])
     direction = recent.groupby("stock_code")["close"].transform(lambda x: np.sign(x.diff().fillna(0)))
     recent["obv"] = (direction * recent["volume"]).groupby(recent["stock_code"]).cumsum()
-
-    # OBV 20일 이동평균
     recent["obv_ma"] = recent.groupby("stock_code")["obv"].transform(
         lambda x: x.rolling(obv_ma, min_periods=obv_ma).mean()
     )
@@ -365,22 +407,18 @@ def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, s
     if valid.empty:
         return pd.DataFrame(columns=["stock_code", "obv_slope"])
 
-    # 최근 slope_window일의 OBV MA에 대해 선형회귀 기울기 계산
     last_n = valid.groupby("stock_code").tail(slope_window)
 
     def linreg_slope(series):
         n = len(series)
         if n < 5:
             return np.nan
-        x = np.arange(n, dtype=float)
-        x -= x.mean()
-        y = series.values.astype(float)
-        y -= y.mean()
+        x = np.arange(n, dtype=float) - np.arange(n, dtype=float).mean()
+        y = series.values.astype(float) - series.values.mean()
         denom = (x ** 2).sum()
         if denom == 0:
             return np.nan
         slope = (x * y).sum() / denom
-        # 종목별 OBV 스케일 차이 제거: OBV MA 평균값으로 정규화 (변화율)
         mean_val = abs(series.mean())
         return slope / mean_val if mean_val > 0 else 0.0
 
@@ -425,6 +463,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         master_df = _get_master_for_date(calc_date)
         # _ma_window already set above
         ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
+        mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
         obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
     else:
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
@@ -551,6 +590,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
             ORDER BY stock_code, trade_date
         """, conn, params=(_ma_cutoff, calc_date))
         ma_rev_df = _calc_ma_reversion(_ma_price_all, calc_date, ma_window=_ma_window) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
+        mfi_df = _calc_mfi(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "mfi"])
         obv_df = _calc_obv_slope(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "obv_slope"])
 
         # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
@@ -568,7 +608,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # ─── 병합 ───
     merged = fin_df.merge(price_df, on="stock_code", how="inner")
     merged = merged.merge(master_df, on="stock_code", how="inner")
-    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, obv_df]:
+    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, mfi_df, obv_df]:
         if not df_extra.empty:
             merged = merged.merge(df_extra, on="stock_code", how="left")
     merged = merged[(merged["market_cap"] > 0) & (merged["close"] > 0)].copy()
@@ -714,6 +754,10 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # 가점 적용: 현재가 <= MA선인 종목은 이탈도 20% 강화
     m_below = merged["below_ma"] == 1
     merged.loc[m_below, "price_ma_rev"] = merged.loc[m_below, "price_ma_rev"] * 1.2
+
+    # MFI (Money Flow Index 기반 자금 유입 팩터)
+    if "mfi" not in merged.columns:
+        merged["mfi"] = np.nan
 
     # OBV_SLOPE (OBV 20일 MA 선형회귀 기울기)
     if "obv_slope" not in merged.columns:
@@ -1192,6 +1236,7 @@ WEIGHTS_LARGE = {
     "F_EPS_M": .15,
     "PRICE_MA_REV": 0,
     "OBV_SLOPE": 0,
+    "MFI": 0,
 }
 
 WEIGHTS_SMALL = {}
@@ -1226,6 +1271,7 @@ SCORE_MAP = {
     "CURRENT": "current_ratio_score",
     "PRICE_MA_REV": "price_ma_rev_score",
     "OBV_SLOPE": "obv_slope_score",
+    "MFI": "mfi_score",
 }
 
 # ─── 스코어링 규칙 ───
@@ -1246,6 +1292,7 @@ SCORING_RULES = {
     "current_ratio": "rule2",
     "price_ma_rev": "rule2",
     "obv_slope": "rule2",
+    "mfi": "rule2",
 }
 
 # ─── 운용 파라미터 ───

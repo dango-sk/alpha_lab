@@ -697,6 +697,7 @@ def main():
         if not args.skip_backtest:
             run("백테스트", step_backtest)
             run("커스텀 전략 재계산", step_custom_strategies)
+            run("레짐조합 전략 재계산", step_regime_combo_strategies)
             run("강건성 검증", step_robustness)
 
     # ── 요약 ──
