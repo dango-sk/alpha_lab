@@ -353,13 +353,9 @@ def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, s
 
     recent = recent.sort_values(["stock_code", "trade_date"])
 
-    # OBV 계산: 상승일 +volume, 하락일 -volume
-    def calc_obv(df):
-        direction = np.sign(df["close"].diff().fillna(0))
-        signed_vol = direction * df["volume"]
-        return signed_vol.cumsum()
-
-    recent["obv"] = recent.groupby("stock_code", group_keys=False).apply(calc_obv)
+    # OBV 계산: 상승일 +volume, 하락일 -volume (transform으로 메모리 효율화)
+    direction = recent.groupby("stock_code")["close"].transform(lambda x: np.sign(x.diff().fillna(0)))
+    recent["obv"] = (direction * recent["volume"]).groupby(recent["stock_code"]).cumsum()
 
     # OBV 20일 이동평균
     recent["obv_ma"] = recent.groupby("stock_code")["obv"].transform(
