@@ -707,7 +707,7 @@ export default function LabPage() {
             {/* ─── Factor Weights Editor ─── */}
             {Object.keys(weights).length > 0 && (() => {
               const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0);
-              const ALWAYS_SHOW = new Set(['OBV_SLOPE', 'MFI']);
+              const ALWAYS_SHOW = new Set(['OBV_SLOPE', 'MFI', 'PRICE_MA_REV']);
               const categoryData = Object.entries(FACTOR_CATEGORIES).map(([cat, { factors, color }]) => {
                 const active = factors.filter((f) => weights[f] !== undefined || ALWAYS_SHOW.has(f));
                 const catSum = active.reduce((s, f) => s + (weights[f] ?? 0), 0);
