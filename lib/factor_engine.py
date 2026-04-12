@@ -389,9 +389,14 @@ def _calc_mfi(price_all: pd.DataFrame, calc_date: str, period: int = 14, lookbac
     return result[["stock_code", "mfi"]]
 
 
-def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, slope_window: int = 60) -> pd.DataFrame:
-    """OBV 20일 이동평균의 선형회귀 기울기 계산 (누적 자금 흐름 추세)."""
-    lookback_days = int((slope_window + obv_ma) * 1.5) + 30
+def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, momentum_window: int = 60) -> pd.DataFrame:
+    """OBV Volume Momentum 팩터.
+
+    - OBV Momentum = (현재OBV - 60일전OBV) / |60일전OBV|
+    - OBV Trend Deviation = (현재OBV - OBV 20MA) / |OBV 20MA|
+    - 두 지표 합산
+    """
+    lookback_days = int((momentum_window + obv_ma) * 1.5) + 30
     cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
     recent = price_all[(price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)].copy()
     if recent.empty or "volume" not in recent.columns:
@@ -400,31 +405,25 @@ def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, s
     recent = recent.sort_values(["stock_code", "trade_date"])
     direction = recent.groupby("stock_code")["close"].transform(lambda x: np.sign(x.diff().fillna(0)))
     recent["obv"] = (direction * recent["volume"]).groupby(recent["stock_code"]).cumsum()
+
     recent["obv_ma"] = recent.groupby("stock_code")["obv"].transform(
         lambda x: x.rolling(obv_ma, min_periods=obv_ma).mean()
     )
-    valid = recent[recent["obv_ma"].notna()].copy()
+    recent["obv_60d_ago"] = recent.groupby("stock_code")["obv"].transform(
+        lambda x: x.shift(momentum_window)
+    )
+
+    valid = recent[recent["obv_ma"].notna() & recent["obv_60d_ago"].notna()].copy()
     if valid.empty:
         return pd.DataFrame(columns=["stock_code", "obv_slope"])
 
-    last_n = valid.groupby("stock_code").tail(slope_window)
+    latest = valid.groupby("stock_code").last().reset_index()
 
-    def linreg_slope(series):
-        n = len(series)
-        if n < 5:
-            return np.nan
-        x = np.arange(n, dtype=float) - np.arange(n, dtype=float).mean()
-        y = series.values.astype(float) - series.values.mean()
-        denom = (x ** 2).sum()
-        if denom == 0:
-            return np.nan
-        slope = (x * y).sum() / denom
-        mean_val = abs(series.mean())
-        return slope / mean_val if mean_val > 0 else 0.0
+    obv_momentum = (latest["obv"] - latest["obv_60d_ago"]) / latest["obv_60d_ago"].abs().replace(0, np.nan)
+    obv_deviation = (latest["obv"] - latest["obv_ma"]) / latest["obv_ma"].abs().replace(0, np.nan)
+    latest["obv_slope"] = obv_momentum.fillna(0) + obv_deviation.fillna(0)
 
-    result = last_n.groupby("stock_code")["obv_ma"].apply(linreg_slope).reset_index()
-    result.columns = ["stock_code", "obv_slope"]
-    return result
+    return latest[["stock_code", "obv_slope"]]
 
 
 def _get_master_for_date(calc_date: str) -> pd.DataFrame:
