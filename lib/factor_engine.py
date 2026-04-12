@@ -174,7 +174,7 @@ def prefetch_all_data(conn):
     """, conn)
 
     _prefetch_cache["price"] = read_sql("""
-        SELECT 'A' || stock_code as stock_code, trade_date, close, market_cap, trade_amount
+        SELECT 'A' || stock_code as stock_code, trade_date, close, volume, market_cap, trade_amount
         FROM daily_price
     """, conn)
 
@@ -332,6 +332,67 @@ def _calc_ma_reversion(price_all: pd.DataFrame, calc_date: str, ma_window: int =
     return result
 
 
+def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, slope_window: int = 60) -> pd.DataFrame:
+    """OBV 20일 이동평균의 선형회귀 기울기 계산.
+
+    Args:
+        obv_ma: OBV 이동평균 기간 (기본 20일)
+        slope_window: 기울기 계산에 사용할 최근 일수 (기본 60일)
+
+    Returns: DataFrame with [stock_code, obv_slope]
+      - obv_slope: OBV MA의 선형회귀 기울기 (클수록 매집 강도 높음)
+    """
+    lookback_days = int((slope_window + obv_ma) * 1.5) + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = price_all[(price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)].copy()
+    if recent.empty:
+        return pd.DataFrame(columns=["stock_code", "obv_slope"])
+
+    if "volume" not in recent.columns:
+        return pd.DataFrame(columns=["stock_code", "obv_slope"])
+
+    recent = recent.sort_values(["stock_code", "trade_date"])
+
+    # OBV 계산: 상승일 +volume, 하락일 -volume
+    def calc_obv(df):
+        direction = np.sign(df["close"].diff().fillna(0))
+        signed_vol = direction * df["volume"]
+        return signed_vol.cumsum()
+
+    recent["obv"] = recent.groupby("stock_code", group_keys=False).apply(calc_obv)
+
+    # OBV 20일 이동평균
+    recent["obv_ma"] = recent.groupby("stock_code")["obv"].transform(
+        lambda x: x.rolling(obv_ma, min_periods=obv_ma).mean()
+    )
+    valid = recent[recent["obv_ma"].notna()].copy()
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "obv_slope"])
+
+    # 최근 slope_window일의 OBV MA에 대해 선형회귀 기울기 계산
+    last_n = valid.groupby("stock_code").tail(slope_window)
+
+    def linreg_slope(series):
+        n = len(series)
+        if n < 5:
+            return np.nan
+        x = np.arange(n, dtype=float)
+        x -= x.mean()
+        y = series.values.astype(float)
+        y -= y.mean()
+        denom = (x ** 2).sum()
+        if denom == 0:
+            return np.nan
+        slope = (x * y).sum() / denom
+        # 종목별 OBV 스케일 차이 제거: OBV MA 표준편차로 정규화
+        std = series.std()
+        return slope / std if std > 0 else 0.0
+
+    result = last_n.groupby("stock_code")["obv_ma"].apply(linreg_slope).reset_index()
+    result.columns = ["stock_code", "obv_slope"]
+    return result
+
+
 def _get_master_for_date(calc_date: str) -> pd.DataFrame:
     """프리페치 캐시에서 마스터 데이터 추출."""
     master_all = _prefetch_cache["master"]
@@ -368,6 +429,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         master_df = _get_master_for_date(calc_date)
         # _ma_window already set above
         ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
+        obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
     else:
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
@@ -487,12 +549,13 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         _ma_lookback = int((250 + _ma_window) * 1.5) + 30
         _ma_cutoff = (dt - timedelta(days=_ma_lookback)).strftime("%Y-%m-%d")
         _ma_price_all = read_sql("""
-            SELECT 'A' || stock_code as stock_code, trade_date, close
+            SELECT 'A' || stock_code as stock_code, trade_date, close, volume
             FROM daily_price
             WHERE trade_date >= %s AND trade_date < %s
             ORDER BY stock_code, trade_date
         """, conn, params=(_ma_cutoff, calc_date))
         ma_rev_df = _calc_ma_reversion(_ma_price_all, calc_date, ma_window=_ma_window) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
+        obv_df = _calc_obv_slope(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "obv_slope"])
 
         # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
         _snap_month = calc_date[:7]
@@ -509,7 +572,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # ─── 병합 ───
     merged = fin_df.merge(price_df, on="stock_code", how="inner")
     merged = merged.merge(master_df, on="stock_code", how="inner")
-    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df]:
+    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, obv_df]:
         if not df_extra.empty:
             merged = merged.merge(df_extra, on="stock_code", how="left")
     merged = merged[(merged["market_cap"] > 0) & (merged["close"] > 0)].copy()
@@ -655,6 +718,10 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # 가점 적용: 현재가 <= MA선인 종목은 이탈도 20% 강화
     m_below = merged["below_ma"] == 1
     merged.loc[m_below, "price_ma_rev"] = merged.loc[m_below, "price_ma_rev"] * 1.2
+
+    # OBV_SLOPE (OBV 20일 MA 선형회귀 기울기)
+    if "obv_slope" not in merged.columns:
+        merged["obv_slope"] = np.nan
 
     # NDEBT_EBITDA
     ebitda_col = "ebitda" if ("ebitda" in merged.columns and merged["ebitda"].notna().sum() > 10) else "ebit"
@@ -1161,6 +1228,7 @@ SCORE_MAP = {
     "PRICE_M": "price_m_score", "NDEBT_EBITDA": "ndebt_ebitda_score",
     "CURRENT": "current_ratio_score",
     "PRICE_MA_REV": "price_ma_rev_score",
+    "OBV_SLOPE": "obv_slope_score",
 }
 
 # ─── 스코어링 규칙 ───
@@ -1180,6 +1248,7 @@ SCORING_RULES = {
     "price_m": "rule3", "ndebt_ebitda": "rule3",
     "current_ratio": "rule2",
     "price_ma_rev": "rule2",
+    "obv_slope": "rule2",
 }
 
 # ─── 운용 파라미터 ───

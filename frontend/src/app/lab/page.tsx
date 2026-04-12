@@ -24,7 +24,7 @@ const FACTOR_CATEGORIES: Record<string, { factors: string[]; color: string }> = 
     color: '#4CAF50',
   },
   '차별화': {
-    factors: ['F_EPS_M', 'PRICE_M', 'PRICE_MA_REV', 'NDEBT_EBITDA', 'CURRENT'],
+    factors: ['F_EPS_M', 'PRICE_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'NDEBT_EBITDA', 'CURRENT'],
     color: '#f59e0b',
   },
 };
@@ -46,6 +46,7 @@ const FACTOR_LABELS: Record<string, string> = {
   F_EPS_M: 'EPS 모멘텀',
   PRICE_M: '가격 모멘텀',
   PRICE_MA_REV: '가격 모멘텀',
+  OBV_SLOPE: 'OBV 기울기',
   NDEBT_EBITDA: '순부채/EBITDA',
   CURRENT: '유동비율',
 };
