@@ -106,6 +106,13 @@ function parseStrategyParams(code: string): {
   return result;
 }
 
+// ALWAYS_SHOW 팩터의 SCORE_MAP / SCORING_RULES 매핑
+const EXTRA_FACTOR_META: Record<string, { scoreCol: string; rule: string }> = {
+  PRICE_MA_REV: { scoreCol: 'price_ma_rev_score', rule: 'rule2' },
+  OBV_SLOPE:    { scoreCol: 'obv_slope_score',    rule: 'rule2' },
+  MFI:          { scoreCol: 'mfi_score',           rule: 'rule2' },
+};
+
 function updateWeightInCode(code: string, factor: string, newValue: number): string {
   // Update a single weight value in WEIGHTS_LARGE block
   const regex = new RegExp(
@@ -114,12 +121,37 @@ function updateWeightInCode(code: string, factor: string, newValue: number): str
   if (regex.test(code)) {
     return code.replace(regex, `$1${newValue.toFixed(2)}`);
   }
-  // 팩터가 없으면 WEIGHTS_LARGE 블록 닫기 직전에 추가
+  // 팩터가 없으면 WEIGHTS_LARGE에 추가
+  let updated = code;
   const insertRegex = /(WEIGHTS_LARGE\s*=\s*\{[\s\S]*?)(\})/;
-  if (insertRegex.test(code)) {
-    return code.replace(insertRegex, `$1    '${factor}': ${newValue.toFixed(2)},\n$2`);
+  if (insertRegex.test(updated)) {
+    updated = updated.replace(insertRegex, `$1    '${factor}': ${newValue.toFixed(2)},\n$2`);
   }
-  return code;
+  // SCORE_MAP에도 없으면 추가
+  const meta = EXTRA_FACTOR_META[factor];
+  if (meta) {
+    const scoreMapHas = new RegExp(`["']${factor}["']\\s*:`).test(
+      (updated.match(/SCORE_MAP\s*=\s*\{([\s\S]*?)\}/) || ['', ''])[1]
+    );
+    if (!scoreMapHas) {
+      updated = updated.replace(
+        /(SCORE_MAP\s*=\s*\{[\s\S]*?)(\})/,
+        `$1    '${factor}': '${meta.scoreCol}',\n$2`
+      );
+    }
+    // SCORING_RULES에도 없으면 추가
+    const ruleKey = meta.scoreCol.replace('_score', '');
+    const scoringRulesHas = new RegExp(`["']${ruleKey}["']\\s*:`).test(
+      (updated.match(/SCORING_RULES\s*=\s*\{([\s\S]*?)\}/) || ['', ''])[1]
+    );
+    if (!scoringRulesHas) {
+      updated = updated.replace(
+        /(SCORING_RULES\s*=\s*\{[\s\S]*?)(\})/,
+        `$1    '${ruleKey}': '${meta.rule}',\n$2`
+      );
+    }
+  }
+  return updated;
 }
 
 // ─── Saved strategy type ───
