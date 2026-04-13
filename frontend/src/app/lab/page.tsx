@@ -57,7 +57,7 @@ const FACTOR_LABELS: Record<string, string> = {
 function parseWeights(code: string): Record<string, number> {
   const weights: Record<string, number> = {};
   // Match WEIGHTS_LARGE = { ... } block
-  const match = code.match(/WEIGHTS_LARGE\s*=\s*\{([^}]+)\}/);
+  const match = code.match(/WEIGHTS_LARGE\s*=\s*\{([\s\S]*?)\}/);
 
   if (!match) return weights;
   const block = match[1];
