@@ -109,11 +109,15 @@ function parseStrategyParams(code: string): {
 function updateWeightInCode(code: string, factor: string, newValue: number): string {
   // Update a single weight value in WEIGHTS_LARGE block
   const regex = new RegExp(
-    `(WEIGHTS_LARGE\\s*=\\s*\\{[^}]*["']${factor}["']\\s*:\\s*)([+-]?(?:\\d+\\.?\\d*|\\.\\d+))`,
-    's'
+    `(WEIGHTS_LARGE\\s*=\\s*\\{[\\s\\S]*?["']${factor}["']\\s*:\\s*)([+-]?(?:\\d+\\.?\\d*|\\.\\d+))`
   );
   if (regex.test(code)) {
     return code.replace(regex, `$1${newValue.toFixed(2)}`);
+  }
+  // 팩터가 없으면 WEIGHTS_LARGE 블록 닫기 직전에 추가
+  const insertRegex = /(WEIGHTS_LARGE\s*=\s*\{[\s\S]*?)(\})/;
+  if (insertRegex.test(code)) {
+    return code.replace(insertRegex, `$1    '${factor}': ${newValue.toFixed(2)},\n$2`);
   }
   return code;
 }
