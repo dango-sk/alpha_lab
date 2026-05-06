@@ -341,8 +341,14 @@ def step_regime_combo_strategies():
             bull_key, bear_key = m.group(1), m.group(2)
             # 저장된 결과에서 regime_mode 추출 (없으면 cycle)
             regime_mode = "cycle"
-            if isinstance(results_json, dict):
-                regime_mode = results_json.get("_debug_regime_mode", "cycle")
+            _rj = results_json
+            if isinstance(_rj, str):
+                try:
+                    _rj = json.loads(_rj)
+                except Exception:
+                    _rj = {}
+            if isinstance(_rj, dict):
+                regime_mode = _rj.get("_debug_regime_mode", "cycle")
 
             print(f"    ▶ {name} (bull={bull_key}, bear={bear_key}, mode={regime_mode})")
             result = run_regime_combo_backtest(
