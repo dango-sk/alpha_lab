@@ -20,7 +20,17 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 load_dotenv(Path(__file__).parent.parent / '.env')
 
-conn = psycopg2.connect(os.environ['DATABASE_URL'])
+def get_conn():
+    """DB 연결을 반환. 끊어졌으면 재연결."""
+    global _conn
+    try:
+        _conn.isolation_level  # connection alive check
+        return _conn
+    except Exception:
+        _conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        return _conn
+
+_conn = psycopg2.connect(os.environ['DATABASE_URL'])
 claude_client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
 openai_client = openai.OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -30,14 +40,14 @@ GPT_MODEL = "gpt-4o"
 print("데이터 사전 로딩 중...")
 _technical_df = pd.read_sql(
     "SELECT trade_date, indicator, value, COALESCE(symbol, 'KOSPI') AS symbol FROM alpha_lab.technical_indicators ORDER BY trade_date",
-    conn, parse_dates=['trade_date']
+    _conn, parse_dates=['trade_date']
 )
 _technical_df['trade_date'] = pd.to_datetime(_technical_df['trade_date']).dt.date
 print(f"  technical: {len(_technical_df)}건")
 
 _macro_df = pd.read_sql(
     "SELECT indicator, period, freq, value FROM alpha_lab.macro_indicators",
-    conn
+    _conn
 )
 print(f"  macro: {len(_macro_df)}건")
 print("데이터 로딩 완료")
@@ -107,7 +117,7 @@ def get_investor_flow(as_of: date, n_days: int = 20):
 def get_news_summary(as_of: date):
     """직전 달 macro 뉴스 - lookahead bias 방지. news_nate → news 순으로 조회"""
     prev_month = (as_of - relativedelta(months=1)).strftime('%Y-%m')
-    cur = conn.cursor()
+    cur = get_conn().cursor()
     # news_nate 먼저 (네이트 뉴스)
     cur.execute("""
         SELECT title, summary
@@ -135,7 +145,7 @@ def get_news_summary(as_of: date):
 
 def get_trade_amount_series(as_of: date, n_months: int = 6):
     """KOSPI ETF(069500) 월별 평균 거래대금 + 12개월 평균 대비 배율"""
-    cur = conn.cursor()
+    cur = get_conn().cursor()
     cutoff = (as_of - relativedelta(days=1)).strftime('%Y-%m-%d')
     cur.execute("""
         SELECT trade_date, trade_amount FROM alpha_lab.daily_price
@@ -166,7 +176,8 @@ def get_trade_amount_series(as_of: date, n_months: int = 6):
 
 def get_kospi_return(from_date: date, to_date: date):
     """KOSPI(069500) 수익률 계산"""
-    cur = conn.cursor()
+    c = get_conn()
+    cur = c.cursor()
     cur.execute("""
         SELECT trade_date, close FROM alpha_lab.daily_price
         WHERE stock_code = '069500'
@@ -808,9 +819,18 @@ def main():
             new_results.append(r)
             all_results.append(r)  # 다음 월 판정 시 교훈으로 활용
             all_results.sort(key=lambda r: r.get('as_of', ''))
+            # 중간 저장
+            _interim = existing + new_results
+            _interim.sort(key=lambda x: x.get('as_of', ''))
+            with open(Path(__file__).parent / "regime_agent_results.json", 'w', encoding='utf-8') as _f:
+                json.dump(_interim, _f, ensure_ascii=False, indent=2)
+            print(f"  💾 중간 저장 완료 ({len(_interim)}건)")
         except Exception as e:
             print(f"  ❌ {current} 오류: {e}")
-            conn.rollback()
+            try:
+                get_conn().rollback()
+            except Exception:
+                pass
             new_results.append({"as_of": str(current), "error": str(e)})
 
     # 기존 + 신규 합치고 날짜순 정렬
@@ -843,7 +863,7 @@ def main():
 
     print(f"\n결과 저장: {out_path}")
     print(f"리포트 저장: {html_path}")
-    conn.close()
+    _conn.close()
 
 
 def generate_html(results: list, out_path: Path):
