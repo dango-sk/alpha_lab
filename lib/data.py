@@ -1623,7 +1623,7 @@ def run_regime_combo_backtest(
     universe: str = None,
     rebal_type: str = None,
     ma_window: int = 50,
-    regime_mode: str = "ma",  # "ma" or "cycle" or "ai"
+    regime_mode: str = "ma",  # "ma" | "cycle" | "ai" | "inertia"
 ) -> dict | None:
     print(f"[REGIME COMBO BACKTEST] regime_mode={regime_mode}, bull={bull_key}, bear={bear_key}", flush=True)
     """
@@ -1678,6 +1678,177 @@ def run_regime_combo_backtest(
     _conn_regime = _get_conn()
     regime_cache: dict[str, str] = {}
 
+    # Inertia Regime 판정 (regime_mode="inertia"일 때)
+    # JM(jp=3.0) OR MA200 + Crash Overlay(10일 < -5%)
+    _inertia_regime_map = {}
+    if regime_mode == "inertia":
+        import os as _os
+        import psycopg2 as _pg2
+        from jumpmodels.jump import JumpModel as _JumpModel
+        from dotenv import load_dotenv as _load_dotenv
+        _load_dotenv()
+        _jm_conn = _pg2.connect(_os.environ['DATABASE_URL'])
+        _tech = pd.read_sql(
+            "SELECT trade_date, indicator, value, COALESCE(symbol, 'KOSPI') AS symbol "
+            "FROM alpha_lab.technical_indicators WHERE indicator IN ('close','foreign_net') ORDER BY trade_date",
+            _jm_conn, parse_dates=['trade_date']
+        )
+        _tech['trade_date'] = pd.to_datetime(_tech['trade_date']).dt.date
+        _kospi = _tech[(_tech['indicator']=='close')&(_tech['symbol']=='KOSPI')].sort_values('trade_date').copy()
+        _kospi['value'] = _kospi['value'].astype(float)
+        _kospi.index = pd.to_datetime(_kospi['trade_date'])
+        _kospi_price = _kospi['value']
+        _ret = np.log(_kospi_price / _kospi_price.shift(1)).dropna()
+        _feat = pd.DataFrame({
+            'ret': _ret,
+            'vol20': _ret.rolling(20).std(),
+            'vol60': _ret.rolling(60).std(),
+            'mom20': _kospi_price.pct_change(20),
+            'mom60': _kospi_price.pct_change(60),
+            'ma50_r': _kospi_price / _kospi_price.rolling(50).mean(),
+            'ma200_r': _kospi_price / _kospi_price.rolling(200).mean(),
+        }, index=_kospi_price.index).dropna()
+
+        # MA200 신호 사전 계산
+        _ma200 = _kospi_price.rolling(200).mean()
+        _ma200_bull = (_kospi_price >= _ma200).dropna()
+
+        # Crash Overlay: 10일 수익률 < -5%
+        _ret10 = _kospi_price.pct_change(10)
+        _crash = (_ret10 < -0.05)
+
+        # JM walk-forward (jp=3.0, 2-state)
+        _jm_bull_map = {}
+        _cur = pd.Timestamp('2018-04-01')
+        _end = _feat.index[-1]
+        while _cur <= _end:
+            _ym = _cur.strftime('%Y-%m')
+            _train = _feat[_feat.index < _cur]
+            if len(_train) >= 250:
+                try:
+                    _jm = _JumpModel(n_components=2, jump_penalty=3.0, random_state=42, verbose=0)
+                    _rs = pd.Series(_train['ret'].values, index=_train.index)
+                    _jm.fit(_train, ret_ser=_rs, sort_by='cumret')
+                    _st = _jm.predict(_train)
+                    if isinstance(_st, pd.Series):
+                        _st = _st.values
+                    _sm = {}
+                    for _s in range(2):
+                        _m = _st == _s
+                        if _m.sum() > 0:
+                            _sm[_s] = _train['ret'].values[_m].mean()
+                    _bull_s = max(_sm, key=_sm.get)
+                    _jm_bull_map[_ym] = int(_st[-1]) == _bull_s
+                except Exception:
+                    _jm_bull_map[_ym] = True
+            _cur += pd.DateOffset(months=1)
+
+        # 결합: (JM Bull OR MA200 Bull) AND NOT Crash
+        _cur = pd.Timestamp('2018-04-01')
+        while _cur <= _end:
+            _ym = _cur.strftime('%Y-%m')
+            # 해당 월 마지막 거래일 기준
+            _month_dates = _feat.index[(_feat.index.year == _cur.year) & (_feat.index.month == _cur.month)]
+            if len(_month_dates) == 0:
+                _cur += pd.DateOffset(months=1)
+                continue
+            _last_d = _month_dates[-1]
+
+            _jm_is_bull = _jm_bull_map.get(_ym, True)
+            _ma_is_bull = bool(_ma200_bull.get(_last_d, True)) if _last_d in _ma200_bull.index else True
+            _is_crash = bool(_crash.get(_last_d, False)) if _last_d in _crash.index else False
+
+            if _is_crash:
+                _inertia_regime_map[_ym] = "Bear"
+            elif _jm_is_bull or _ma_is_bull:
+                _inertia_regime_map[_ym] = "Bull"
+            else:
+                _inertia_regime_map[_ym] = "Bear"
+
+            _cur += pd.DateOffset(months=1)
+        _jm_conn.close()
+        _bull_cnt = sum(1 for v in _inertia_regime_map.values() if v == 'Bull')
+        print(f"[INERTIA REGIME] loaded {len(_inertia_regime_map)} months, Bull={_bull_cnt}, Bear={len(_inertia_regime_map)-_bull_cnt}", flush=True)
+
+    # JM+V1 레짐 판정 (regime_mode="jm_v1"일 때)
+    _jm_v1_regime_map = {}
+    if regime_mode == "jm_v1":
+        import json as _json
+        from pathlib import Path as _Path
+        # V1 결과에서 expected_return 로드
+        _v1_path = _Path(__file__).parent.parent / "analysis" / "regime_agent_results_v1_backup.json"
+        if not _v1_path.exists():
+            _v1_path = ALPHA_LAB_DIR / "analysis" / "regime_agent_results_v1_backup.json"
+        _v1_er_map = {}
+        if _v1_path.exists():
+            with open(_v1_path) as _f:
+                for _r in _json.load(_f):
+                    _ym = _r.get("as_of", "")[:7]
+                    _v1_er_map[_ym] = _r.get("expected_return", 0)
+
+        # JM OOS Bull 판정 (매월 expanding window)
+        import os as _os
+        import psycopg2 as _pg2
+        from jumpmodels.jump import JumpModel as _JumpModel
+        from dotenv import load_dotenv as _load_dotenv
+        _load_dotenv()
+        _jm_conn = _pg2.connect(_os.environ['DATABASE_URL'])
+        _tech = pd.read_sql(
+            "SELECT trade_date, indicator, value, COALESCE(symbol, 'KOSPI') AS symbol "
+            "FROM alpha_lab.technical_indicators WHERE indicator IN ('close','foreign_net') ORDER BY trade_date",
+            _jm_conn, parse_dates=['trade_date']
+        )
+        _tech['trade_date'] = pd.to_datetime(_tech['trade_date']).dt.date
+        _kospi = _tech[(_tech['indicator']=='close')&(_tech['symbol']=='KOSPI')].sort_values('trade_date').copy()
+        _kospi['value'] = _kospi['value'].astype(float)
+        _kospi.index = pd.to_datetime(_kospi['trade_date'])
+        _kospi = _kospi['value']
+        _ret = np.log(_kospi / _kospi.shift(1)).dropna()
+        _feat = pd.DataFrame({
+            'ret': _ret,
+            'vol20': _ret.rolling(20).std(),
+            'vol60': _ret.rolling(60).std(),
+            'mom20': _kospi.pct_change(20),
+            'mom60': _kospi.pct_change(60),
+            'ma50_r': _kospi / _kospi.rolling(50).mean(),
+            'ma200_r': _kospi / _kospi.rolling(200).mean(),
+        }, index=_kospi.index).dropna()
+        _jm_conn.close()
+
+        # 각 월에 대해 JM Bull 판정
+        _jm_bull_map = {}
+        _cur = pd.Timestamp('2018-04-01')
+        _end = _feat.index[-1]
+        while _cur <= _end:
+            _ym = _cur.strftime('%Y-%m')
+            _train = _feat[_feat.index < _cur]
+            if len(_train) >= 250:
+                try:
+                    _jm = _JumpModel(n_components=3, jump_penalty=0.1, random_state=42, verbose=0)
+                    _rs = pd.Series(_train['ret'].values, index=_train.index)
+                    _jm.fit(_train, ret_ser=_rs, sort_by='cumret')
+                    _st = _jm.predict(_train)
+                    if isinstance(_st, pd.Series):
+                        _st = _st.values
+                    _sm = {}
+                    for _s in range(3):
+                        _m = _st == _s
+                        if _m.sum() > 0:
+                            _sm[_s] = _train['ret'].values[_m].mean()
+                    _bull_s = max(_sm, key=_sm.get)
+                    _jm_bull_map[_ym] = int(_st[-1]) == _bull_s
+                except Exception:
+                    _jm_bull_map[_ym] = False
+            _cur += pd.DateOffset(months=1)
+
+        # 결합: JM Bull이면 Bull, 아니면 V1 expected_return 기준
+        for _ym in sorted(set(list(_jm_bull_map.keys()) + list(_v1_er_map.keys()))):
+            if _jm_bull_map.get(_ym, False):
+                _jm_v1_regime_map[_ym] = "Bull"
+            else:
+                _jm_v1_regime_map[_ym] = "Bull" if _v1_er_map.get(_ym, 0) > 0 else "Bear"
+        print(f"[JM+V1 REGIME] loaded {len(_jm_v1_regime_map)} months, Bull={sum(1 for v in _jm_v1_regime_map.values() if v=='Bull')}", flush=True)
+
     # AI 레짐 판정 로드 (regime_mode="ai"일 때)
     _ai_regime_map = {}
     if regime_mode == "ai":
@@ -1709,7 +1880,13 @@ def run_regime_combo_backtest(
     def _get_regime(calc_date: str) -> str:
         if calc_date in regime_cache:
             return regime_cache[calc_date]
-        if regime_mode == "ai":
+        if regime_mode == "inertia":
+            ym = calc_date[:7]
+            result_regime = _inertia_regime_map.get(ym, "Bull")
+        elif regime_mode == "jm_v1":
+            ym = calc_date[:7]
+            result_regime = _jm_v1_regime_map.get(ym, "Bull")
+        elif regime_mode == "ai":
             ym = calc_date[:7]
             result_regime = _ai_regime_map.get(ym, "Bull")
         elif regime_mode == "cycle":

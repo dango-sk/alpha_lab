@@ -220,7 +220,7 @@ export default function LabPage() {
   const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
   const [regimeMaWindow, setRegimeMaWindow] = useState(50);
   const [regimeMaWindowInput, setRegimeMaWindowInput] = useState('50');
-  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai'>('ma');
+  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai' | 'inertia'>('ma');
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
@@ -1115,6 +1115,10 @@ export default function LabPage() {
                       onClick={() => setRegimeMode('ai')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >AI 기준</button>
+                    <button
+                      onClick={() => setRegimeMode('inertia')}
+                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'inertia' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
+                    >Inertia 기준</button>
                   </div>
                 </div>
                 {regimeMode === 'ma' && (
@@ -1148,11 +1152,14 @@ export default function LabPage() {
                 {regimeMode === 'ai' && (
                   <span className="text-xs text-muted">GPT-4o 멀티에이전트 월간 방향 예측</span>
                 )}
+                {regimeMode === 'inertia' && (
+                  <span className="text-xs text-muted">JM(jp=3.0) OR MA200 + Crash Overlay (10일 &lt; -5%)</span>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs text-muted font-medium">
-                    {regimeMode === 'ma' ? `강세장 전략 (Bull: KOSPI 200 ≥ ${regimeMaWindow}일 MA)` : '강세장 전략 (Bull)'}
+                    {regimeMode === 'ma' ? `강세장 전략 (Bull: KOSPI 200 ≥ ${regimeMaWindow}일 MA)` : regimeMode === 'inertia' ? '강세장 전략 (Bull: JM OR MA200)' : '강세장 전략 (Bull)'}
                   </label>
                   <select
                     value={regimeBullKey}
