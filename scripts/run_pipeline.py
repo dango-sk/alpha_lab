@@ -84,8 +84,10 @@ def timeit(label):
 # Forward / Consensus 수집 (PG 증분)
 # ═══════════════════════════════════════════════════════════
 
-def _get_consensus_conn_and_range():
-    """공통: PG 연결 + 최근 2거래일 기준 수집 범위 반환"""
+def _get_consensus_conn_and_range(from_date_override=None):
+    """공통: PG 연결 + 수집 범위 반환.
+    from_date_override: "YYYYMMDD" 형식으로 시작일 강제 지정 (일회성 보충용)
+    """
     from step7_collect_consensus import get_pg_conn, create_tables, get_universe_stocks
     conn = get_pg_conn()
     cur = conn.cursor()
@@ -93,20 +95,23 @@ def _get_consensus_conn_and_range():
     conn.commit()
     stocks = get_universe_stocks(cur)
     to_date = datetime.now().strftime("%Y%m%d")
-    cur.execute("""
-        SELECT DISTINCT trade_date FROM alpha_lab.daily_price
-        ORDER BY trade_date DESC LIMIT 3
-    """)
-    recent_dates = [r[0] for r in cur.fetchall()]
-    from_date = min(recent_dates).replace("-", "") if recent_dates else to_date
+    if from_date_override:
+        from_date = from_date_override
+    else:
+        cur.execute("""
+            SELECT DISTINCT trade_date FROM alpha_lab.daily_price
+            ORDER BY trade_date DESC LIMIT 3
+        """)
+        recent_dates = [r[0] for r in cur.fetchall()]
+        from_date = min(recent_dates).replace("-", "") if recent_dates else to_date
     from_dash = f"{from_date[:4]}-{from_date[4:6]}-{from_date[6:]}"
     return conn, cur, stocks, from_date, to_date, from_dash
 
 
-def step_collect_forward():
+def step_collect_forward(from_date_override=None):
     """Forward 지표만 수집 (최근 2거래일 DELETE + 재수집)"""
     from step7_collect_consensus import collect_forward, save_progress
-    conn, cur, stocks, from_date, to_date, from_dash = _get_consensus_conn_and_range()
+    conn, cur, stocks, from_date, to_date, from_dash = _get_consensus_conn_and_range(from_date_override)
     print(f"  universe 종목: {len(stocks)}개")
 
     cur.execute("DELETE FROM alpha_lab.fnspace_forward WHERE trade_date >= %s", (from_dash,))
@@ -119,7 +124,7 @@ def step_collect_forward():
     conn.close()
 
 
-def step_collect_consensus_daily():
+def step_collect_consensus_daily(from_date_override=None):
     """Consensus Daily만 수집 (최근 2거래일 DELETE + 재수집)"""
     import time as _time
     from psycopg2.extras import execute_values
@@ -127,7 +132,7 @@ def step_collect_consensus_daily():
         api_call, chunk_list,
         CONSENSUS_DAILY_ITEMS, CONSENSUS_COLS, MAX_CODES_PER_CALL, API_DELAY,
     )
-    conn, cur, stocks, from_date, to_date, from_dash = _get_consensus_conn_and_range()
+    conn, cur, stocks, from_date, to_date, from_dash = _get_consensus_conn_and_range(from_date_override)
     print(f"  universe 종목: {len(stocks)}개")
 
     cur.execute("DELETE FROM alpha_lab.fnspace_consensus_daily WHERE trade_date >= %s", (from_dash,))
@@ -203,10 +208,10 @@ def step_collect_consensus_daily():
     conn.close()
 
 
-def step_collect_consensus():
+def step_collect_consensus(from_date_override=None):
     """Forward + Consensus Daily 둘 다 수집"""
-    step_collect_forward()
-    step_collect_consensus_daily()
+    step_collect_forward(from_date_override)
+    step_collect_consensus_daily(from_date_override)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -647,6 +652,7 @@ def main():
     parser.add_argument("--skip-universe", action="store_true", help="유니버스 재구축 스킵")
     parser.add_argument("--skip-combos", type=str, default="", help="스킵할 콤보 (예: KOSPI_monthly,KOSPI_biweekly)")
     parser.add_argument("--only-custom", action="store_true", help="커스텀 전략 재계산+강건성만 실행")
+    parser.add_argument("--consensus-from", type=str, default="", help="Forward/Consensus 수집 시작일 (YYYYMMDD, 일회성 보충용)")
     args = parser.parse_args()
 
     is_monthly = args.monthly or datetime.now().day <= 3
@@ -672,6 +678,7 @@ def main():
             print(f"  ✗ {name} 실패: {e}")
 
     skip_combos = [s.strip() for s in args.skip_combos.split(",") if s.strip()] if args.skip_combos else []
+    consensus_from = args.consensus_from or None
 
     if args.only_custom:
         # 커스텀 전략 재계산 + 강건성만
@@ -697,7 +704,7 @@ def main():
         run("유니버스 재구축", step_build_universe)
 
         # ── 매일 (주가/시총은 LG 그램에서 PG로 별도 업로드) ──
-        run("Forward/Consensus 수집", step_collect_consensus)
+        run("Forward/Consensus 수집", lambda: step_collect_consensus(consensus_from))
         run("뉴스 수집", step_collect_news)
 
         if not args.skip_backtest:
