@@ -190,23 +190,29 @@ def calc_portfolio_return(conn, stocks, start_date, end_date):
 
 def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
                                         stop_loss_pct=15, stop_loss_mode="sell",
-                                        stop_loss_basis="entry"):
+                                        stop_loss_basis="entry",
+                                        carry_over: dict | None = None):
     """손절 로직 포함 포트폴리오 수익률 계산.
 
     리밸런싱 기간 내 일별 가격을 확인하여 손절 기준 이하로 하락한 종목에 대해 조치.
 
     stop_loss_basis:
-        "entry" — 매입가 대비 -stop_loss_pct% 하락 시 손절
-        "peak"  — 고점 대비 -stop_loss_pct% 하락 시 손절 (trailing stop)
+        "entry" — 최초 편입가 대비 -stop_loss_pct% 하락 시 손절 (연속 보유 시 리셋 안 됨)
+        "peak"  — 최초 편입 이후 누적 고점 대비 -stop_loss_pct% 하락 시 손절 (trailing stop, 연속 보유 시 리셋 안 됨)
 
     stop_loss_mode:
         "sell"         — 전량 매도, 나머지 기간 현금 보유
         "reduce"       — 비중 50% 매도, 나머지 50%는 기간 끝까지 보유
         "redistribute" — 전량 매도 후, 매도 비중을 나머지 보유 종목에 시총 비례 재배분
 
+    carry_over:
+        연속 보유 종목의 추적 정보. {stock_code: {"first_entry_price": float, "peak_price": float}}
+        "first_entry" / "first_peak" 모드에서 사용.
+
     Returns:
-        (portfolio_return, stoploss_events)
+        (portfolio_return, stoploss_events, updated_carry_over)
         stoploss_events: [(stock_code, trigger_date, loss_pct, weight_sold), ...]
+        updated_carry_over: 다음 기간에 넘길 carry_over dict
     """
     if not stocks:
         return 0.0, []
@@ -253,6 +259,11 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
     for code, dt, price in daily_rows:
         daily_map.setdefault(code, []).append((dt, price))
 
+    # ─── carry_over 초기화 (연속 보유 종목의 최초 편입가/고점 추적) ───
+    if carry_over is None:
+        carry_over = {}
+    updated_carry_over = {}
+
     # ─── 1차: 종목별 손절 여부 판정 ───
     stoploss_events = []
     # {idx: (trigger_date, trigger_ret)} for stopped stocks
@@ -263,25 +274,43 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
         if entry_price <= 0:
             continue
         daily_prices = daily_map.get(code, [])
-        peak_price = entry_price  # 고점 추적용
+
+        # carry_over에서 최초 편입가/고점 복원 (연속 보유 종목)
+        prev = carry_over.get(code)
+        first_entry_price = prev["first_entry_price"] if prev else entry_price
+        peak_price = prev["peak_price"] if prev else entry_price
+
+        stopped = False
         for dt, price in daily_prices:
             if dt <= start_date:
                 continue
             if stop_loss_basis == "peak":
-                # 고점 대비 trailing stop
+                # 최초 편입 이후 누적 고점 대비 trailing stop
                 if price > peak_price:
                     peak_price = price
                 drawdown = (price - peak_price) / peak_price
                 if drawdown <= threshold:
                     ret_so_far = (price - entry_price) / entry_price
                     stopped_info[i] = (dt, ret_so_far)
+                    stopped = True
+                    print(f"  [손절] {code} | {dt} | 최초편입가={first_entry_price:,.0f} 고점={peak_price:,.0f} 현재={price:,.0f} 고점대비={drawdown*100:.1f}%")
                     break
             else:
-                # 매입가 대비 (기존 로직)
-                ret_so_far = (price - entry_price) / entry_price
-                if ret_so_far <= threshold:
+                # entry: 최초 편입가 대비
+                ret_from_first = (price - first_entry_price) / first_entry_price
+                if ret_from_first <= threshold:
+                    ret_so_far = (price - entry_price) / entry_price
                     stopped_info[i] = (dt, ret_so_far)
+                    stopped = True
+                    print(f"  [손절] {code} | {dt} | 최초편입가={first_entry_price:,.0f} 현재={price:,.0f} 편입가대비={ret_from_first*100:.1f}%")
                     break
+
+        # carry_over 업데이트 (손절된 종목은 제외)
+        if not stopped:
+            updated_carry_over[code] = {
+                "first_entry_price": first_entry_price,
+                "peak_price": peak_price,
+            }
 
     # ─── 2차: 모드별 수익률 계산 ───
     weighted_returns = []
@@ -350,7 +379,7 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
                     weighted_returns.append(-1.0 * weights[i])
 
     portfolio_return = sum(weighted_returns) if weighted_returns else 0.0
-    return portfolio_return, stoploss_events
+    return portfolio_return, stoploss_events, updated_carry_over
 
 
 def calc_etf_return(conn, etf_code, start_date, end_date):
@@ -490,6 +519,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     portfolio_sizes = []
     prev_stocks_list = []
     holdings_by_date = {}  # {date: [(code, score, weight, mcap), ...]}
+    sl_carry_state = {}  # 연속 보유 종목 추적 (first_entry/first_peak 모드용)
 
     total_periods = len(rebalance_dates) - 1
     for i in range(total_periods):
@@ -558,10 +588,12 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         sl_basis = BACKTEST_CONFIG.get("stop_loss_basis", "entry")
 
         if sl_enabled:
-            raw_return, sl_events = calc_portfolio_return_with_stoploss(
+            raw_return, sl_events, sl_carry_over = calc_portfolio_return_with_stoploss(
                 conn, stocks, start, end, stop_loss_pct=sl_pct, stop_loss_mode=sl_mode,
                 stop_loss_basis=sl_basis,
+                carry_over=sl_carry_state,
             )
+            sl_carry_state = sl_carry_over
         else:
             raw_return = calc_portfolio_return(conn, stocks, start, end)
             sl_events = []

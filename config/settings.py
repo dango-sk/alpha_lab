@@ -57,7 +57,7 @@ BACKTEST_CONFIG = {
     "stop_loss_enabled": False,
     "stop_loss_pct": 15,                 # 손절 기준 (매입가 대비 -N%)
     "stop_loss_mode": "sell",            # "sell": 전량 매도, "reduce": 비중 50% 축소
-    "stop_loss_basis": "entry",          # "entry": 매입가 대비, "peak": 고점 대비 (trailing stop)
+    "stop_loss_basis": "peak",           # "entry": 최초 편입가 대비, "peak": 최초 편입 이후 고점 대비 (trailing stop)
     "regime_cap_enabled": False,
     "regime_bull_cap_pct": 30,           # 강세장 비중상한 (%)
     "regime_bear_cap_pct": 10,           # 약세장 비중상한 (%)
