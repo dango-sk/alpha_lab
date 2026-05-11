@@ -10,6 +10,7 @@ __pycache__/
 # Cache — JSON 캐시는 git에 포함 (Railway 대시보드에서 읽음)
 # cache/
 *.db
+*.db.gz
 
 # Logs
 *.log
