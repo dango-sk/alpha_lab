@@ -648,6 +648,35 @@ def notify(title, message):
 # 메인
 # ═══════════════════════════════════════════════════════════
 
+def step_ai_filter(strategy_path: str = None):
+    """AI 종목 필터: 팩터 상위 30종목 → AI 분석 → 최종 10종목."""
+    from lib.ai_stock_filter import run_ai_filter
+    from lib.factor_engine import score_stocks_from_strategy, load_strategy_module, code_to_module, DEFAULT_STRATEGY_CODE
+    from lib.db import get_conn
+
+    conn = get_conn()
+    try:
+        calc_date = datetime.now().strftime("%Y-%m-%d")
+        if strategy_path:
+            strategy = load_strategy_module(strategy_path)
+            print(f"  전략: {strategy_path}")
+        else:
+            strategy = code_to_module(DEFAULT_STRATEGY_CODE)
+            print(f"  전략: 기본 (A0)")
+        stocks = score_stocks_from_strategy(conn, calc_date, strategy)
+        stocks = stocks[:30]
+        print(f"  팩터 상위 {len(stocks)}종목 → AI 필터 시작")
+        result = run_ai_filter(stocks, calc_date, conn)
+        portfolio = result.get("final_portfolio", [])
+        print(f"  최종 {len(portfolio)}종목 선정 완료")
+        for item in portfolio:
+            print(f"    {item.get('stock_name', '?'):>10s} | "
+                  f"비중: {item.get('weight_pct', 0):5.1f}% | "
+                  f"{item.get('reason', '')}")
+    finally:
+        conn.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Alpha Lab 파이프라인 (PG)")
     parser.add_argument("--monthly", action="store_true", help="월초 전체 실행")
@@ -657,6 +686,9 @@ def main():
     parser.add_argument("--skip-combos", type=str, default="", help="스킵할 콤보 (예: KOSPI_monthly,KOSPI_biweekly)")
     parser.add_argument("--only-custom", action="store_true", help="커스텀 전략 재계산+강건성만 실행")
     parser.add_argument("--consensus-from", type=str, default="", help="Forward/Consensus 수집 시작일 (YYYYMMDD, 일회성 보충용)")
+    parser.add_argument("--ai-filter", action="store_true", help="AI 종목 필터 실행 (30→10종목)")
+    parser.add_argument("--only-ai-filter", action="store_true", help="AI 종목 필터만 실행")
+    parser.add_argument("--ai-strategy", type=str, default=None, help="AI 필터에 사용할 전략 파일 경로")
     args = parser.parse_args()
 
     is_monthly = args.monthly or datetime.now().day <= 3
@@ -684,7 +716,9 @@ def main():
     skip_combos = [s.strip() for s in args.skip_combos.split(",") if s.strip()] if args.skip_combos else []
     consensus_from = args.consensus_from or None
 
-    if args.only_custom:
+    if args.only_ai_filter:
+        run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy))
+    elif args.only_custom:
         # 커스텀 전략 재계산 + 강건성만
         run("커스텀 전략 재계산", step_custom_strategies)
         run("레짐조합 전략 재계산", step_regime_combo_strategies)
@@ -716,6 +750,9 @@ def main():
             run("커스텀 전략 재계산", step_custom_strategies)
             run("레짐조합 전략 재계산", step_regime_combo_strategies)
             run("강건성 검증", step_robustness)
+
+        if args.ai_filter:
+            run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy))
 
     # ── 요약 ──
     elapsed = time.time() - t0
