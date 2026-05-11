@@ -28,6 +28,7 @@ nondeterminism_runs/
 cache/prefetch/
 
 # IDE & OS
+.idea/
 .claude/
 .DS_Store
 *.swp
