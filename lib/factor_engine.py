@@ -150,12 +150,26 @@ _QUARTILE_MAP = {
 _prefetch_cache: dict[str, pd.DataFrame] = {}
 
 
-def prefetch_all_data(conn):
+def prefetch_all_data(conn, use_local_cache=False):
     """백테스트 전에 대형 테이블을 한 번에 메모리로 로드.
-    이후 load_factor_data가 DB 대신 이 캐시에서 읽음."""
+    이후 load_factor_data가 DB 대신 이 캐시에서 읽음.
+    use_local_cache=True면 로컬 pickle 캐시를 우선 사용."""
     global _prefetch_cache
     import time
+    from pathlib import Path
     t0 = time.time()
+
+    cache_dir = Path(__file__).parent.parent / "cache" / "prefetch"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    if use_local_cache and (cache_dir / "finance.pkl").exists():
+        import pickle
+        for key in ["finance", "forward", "price", "master"]:
+            pkl = cache_dir / f"{key}.pkl"
+            if pkl.exists():
+                _prefetch_cache[key] = pickle.loads(pkl.read_bytes())
+        print(f"[PREFETCH] Loaded from local cache in {time.time()-t0:.1f}s", flush=True)
+        return
 
     _prefetch_cache["finance"] = read_sql("""
         SELECT stock_code, fiscal_year, fiscal_quarter,
@@ -184,6 +198,13 @@ def prefetch_all_data(conn):
     """, conn)
 
     print(f"[PREFETCH] Loaded all data in {time.time()-t0:.1f}s", flush=True)
+
+    # 로컬 캐시 저장
+    if use_local_cache:
+        import pickle
+        for key in ["finance", "forward", "price", "master"]:
+            (cache_dir / f"{key}.pkl").write_bytes(pickle.dumps(_prefetch_cache[key]))
+        print(f"[PREFETCH] Saved local cache to {cache_dir}", flush=True)
 
 
 def clear_prefetch_cache():

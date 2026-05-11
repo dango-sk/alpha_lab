@@ -1681,13 +1681,13 @@ def run_regime_combo_backtest(
     # Inertia Regime 판정 (regime_mode="inertia"일 때)
     # JM(jp=3.0) OR MA200 + Crash Overlay(10일 < -5%)
     _inertia_regime_map = {}
-    if regime_mode == "inertia":
+    if regime_mode in ("inertia", "ensemble"):
         import os as _os
         import psycopg2 as _pg2
         from jumpmodels.jump import JumpModel as _JumpModel
         from dotenv import load_dotenv as _load_dotenv
         _load_dotenv()
-        _jm_conn = _pg2.connect(_os.environ['DATABASE_URL'])
+        _jm_conn = _pg2.connect(_os.environ['DATABASE_URL'], keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5)
         _tech = pd.read_sql(
             "SELECT trade_date, indicator, value, COALESCE(symbol, 'KOSPI') AS symbol "
             "FROM alpha_lab.technical_indicators WHERE indicator IN ('close','foreign_net') ORDER BY trade_date",
@@ -1717,6 +1717,19 @@ def run_regime_combo_backtest(
         _ret10 = _kospi_price.pct_change(10)
         _crash = (_ret10 < -0.05)
 
+        # V3 추가 overlay 신호
+        _ret20 = _kospi_price.pct_change(20)
+        _mom_breakdown = (_ret20 < -0.05)  # 20일 모멘텀 붕괴
+        _vol20 = _ret.rolling(20).std()
+        _vol60 = _ret.rolling(60).std()
+        _vol_spike = (_vol20 > _vol60 * 1.5)  # 변동성 급등
+        # 외국인 순매도 신호
+        _foreign = _tech[(_tech['indicator']=='foreign_net')&(_tech['symbol']=='KOSPI')].sort_values('trade_date').copy()
+        _foreign['value'] = _foreign['value'].astype(float)
+        _foreign.index = pd.to_datetime(_foreign['trade_date'])
+        _foreign_20d = _foreign['value'].rolling(20).sum()  # 20일 누적 순매수
+        _foreign_selling = (_foreign_20d < 0)  # 20일 누적 순매도
+
         # JM walk-forward (jp=3.0, 2-state)
         _jm_bull_map = {}
         _cur = pd.Timestamp('2018-04-01')
@@ -1743,11 +1756,12 @@ def run_regime_combo_backtest(
                     _jm_bull_map[_ym] = True
             _cur += pd.DateOffset(months=1)
 
-        # 결합: (JM Bull OR MA200 Bull) AND NOT Crash
+        # 결합 로직 (regime_mode에 따라 분기)
+        _prev_regime = "Bull"
+        _consec_bull = 0
         _cur = pd.Timestamp('2018-04-01')
         while _cur <= _end:
             _ym = _cur.strftime('%Y-%m')
-            # 해당 월 마지막 거래일 기준
             _month_dates = _feat.index[(_feat.index.year == _cur.year) & (_feat.index.month == _cur.month)]
             if len(_month_dates) == 0:
                 _cur += pd.DateOffset(months=1)
@@ -1758,13 +1772,16 @@ def run_regime_combo_backtest(
             _ma_is_bull = bool(_ma200_bull.get(_last_d, True)) if _last_d in _ma200_bull.index else True
             _is_crash = bool(_crash.get(_last_d, False)) if _last_d in _crash.index else False
 
-            if _is_crash:
-                _inertia_regime_map[_ym] = "Bear"
-            elif _jm_is_bull or _ma_is_bull:
-                _inertia_regime_map[_ym] = "Bull"
-            else:
-                _inertia_regime_map[_ym] = "Bear"
+            if regime_mode == "inertia":
+                # V1: (JM OR MA200) AND NOT Crash
+                if _is_crash:
+                    _inertia_regime_map[_ym] = "Bear"
+                elif _jm_is_bull or _ma_is_bull:
+                    _inertia_regime_map[_ym] = "Bull"
+                else:
+                    _inertia_regime_map[_ym] = "Bear"
 
+            _prev_regime = _inertia_regime_map[_ym]
             _cur += pd.DateOffset(months=1)
         _jm_conn.close()
         _bull_cnt = sum(1 for v in _inertia_regime_map.values() if v == 'Bull')
@@ -1792,7 +1809,7 @@ def run_regime_combo_backtest(
         from jumpmodels.jump import JumpModel as _JumpModel
         from dotenv import load_dotenv as _load_dotenv
         _load_dotenv()
-        _jm_conn = _pg2.connect(_os.environ['DATABASE_URL'])
+        _jm_conn = _pg2.connect(_os.environ['DATABASE_URL'], keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5)
         _tech = pd.read_sql(
             "SELECT trade_date, indicator, value, COALESCE(symbol, 'KOSPI') AS symbol "
             "FROM alpha_lab.technical_indicators WHERE indicator IN ('close','foreign_net') ORDER BY trade_date",
@@ -1849,19 +1866,36 @@ def run_regime_combo_backtest(
                 _jm_v1_regime_map[_ym] = "Bull" if _v1_er_map.get(_ym, 0) > 0 else "Bear"
         print(f"[JM+V1 REGIME] loaded {len(_jm_v1_regime_map)} months, Bull={sum(1 for v in _jm_v1_regime_map.values() if v=='Bull')}", flush=True)
 
-    # AI 레짐 판정 로드 (regime_mode="ai"일 때)
+    # AI 레짐 판정 로드 (ai 및 ai 조합 모드에서 사용)
+    # RF 레짐 맵 로드 (regime_mode="rf")
+    _rf_regime_map = {}
+    if regime_mode == "rf":
+        import json as _json_rf
+        from pathlib import Path as _PathRF
+        _rf_path = _PathRF(__file__).parent.parent / "analysis" / "regime_rf_map.json"
+        if not _rf_path.exists():
+            _rf_path = ALPHA_LAB_DIR / "analysis" / "regime_rf_map.json"
+        if _rf_path.exists():
+            with open(_rf_path) as _f_rf:
+                _rf_regime_map = _json_rf.load(_f_rf)
+            print(f"[RF REGIME] loaded {len(_rf_regime_map)} months, Bull={sum(1 for v in _rf_regime_map.values() if v=='Bull')}", flush=True)
+        else:
+            print(f"[RF REGIME] WARNING: {_rf_path} not found, defaulting to Bull", flush=True)
+
+    _COMBO_MODES = ("ai", "ai_jm_accel", "ai_hmm_accel", "ai_or_hmm", "ai_jm_hmm", "ensemble")
     _ai_regime_map = {}
-    if regime_mode == "ai":
+    _ai_er_map = {}
+    if regime_mode in _COMBO_MODES:
         import json as _json
+        import os as _os_ai
         from pathlib import Path as _Path
-        _ai_path = _Path(__file__).parent.parent / "analysis" / "regime_agent_results.json"
+        _ai_path = _Path(_os_ai.environ['AI_REGIME_RESULTS_PATH']) if 'AI_REGIME_RESULTS_PATH' in _os_ai.environ else _Path(__file__).parent.parent / "analysis" / "regime_agent_results.json"
         # Railway 등 배포 환경에서 경로가 다를 수 있음
         if not _ai_path.exists():
             _ai_path = ALPHA_LAB_DIR / "analysis" / "regime_agent_results.json"
         print(f"[AI REGIME] path={_ai_path}, exists={_ai_path.exists()}", flush=True)
         if _ai_path.exists():
             # 비대칭 threshold: Bear 진입 -2% 이하, Bull 복귀 +1% 이상
-            _ai_er_map = {}  # ym -> expected_return
             with open(_ai_path) as _f:
                 for _r in _json.load(_f):
                     _ym = _r.get("as_of", "")[:7]
@@ -1877,6 +1911,167 @@ def run_regime_combo_backtest(
                 _prev_regime = _ai_regime_map[_ym]
             print(f"[AI REGIME] loaded {len(_ai_regime_map)} months (threshold: Bear<=-2%, Bull>=+1%)", flush=True)
 
+    # JM walk-forward for combo modes (ai_jm_accel, ai_jm_hmm)
+    _jm_combo_map = {}  # ym -> "Bull"/"Bear"
+    if regime_mode in ("ai_jm_accel", "ai_jm_hmm"):
+        import os as _os2
+        import psycopg2 as _pg2b
+        from jumpmodels.jump import JumpModel as _JM2
+        from dotenv import load_dotenv as _ld2
+        _ld2()
+        _jm2_conn = _pg2b.connect(_os2.environ['DATABASE_URL'], keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5)
+        _tech2 = pd.read_sql(
+            "SELECT trade_date, indicator, value, COALESCE(symbol, 'KOSPI') AS symbol "
+            "FROM alpha_lab.technical_indicators WHERE indicator='close' ORDER BY trade_date",
+            _jm2_conn, parse_dates=['trade_date']
+        )
+        _k2 = _tech2[(_tech2['indicator']=='close')&(_tech2['symbol']=='KOSPI')].sort_values('trade_date').copy()
+        _k2['value'] = _k2['value'].astype(float)
+        _k2.index = pd.to_datetime(_k2['trade_date'])
+        _kp2 = _k2['value']
+        _r2 = np.log(_kp2 / _kp2.shift(1)).dropna()
+        _f2 = pd.DataFrame({
+            'ret': _r2, 'vol20': _r2.rolling(20).std(), 'vol60': _r2.rolling(60).std(),
+            'mom20': _kp2.pct_change(20), 'mom60': _kp2.pct_change(60),
+            'ma50_r': _kp2 / _kp2.rolling(50).mean(), 'ma200_r': _kp2 / _kp2.rolling(200).mean(),
+        }, index=_kp2.index).dropna()
+        _jm2_cur = pd.Timestamp('2018-04-01')
+        _jm2_end = _f2.index[-1]
+        while _jm2_cur <= _jm2_end:
+            _ym = _jm2_cur.strftime('%Y-%m')
+            _tr = _f2[_f2.index < _jm2_cur]
+            if len(_tr) >= 250:
+                try:
+                    _jm = _JM2(n_components=2, jump_penalty=3.0, random_state=42, verbose=0)
+                    _rs = pd.Series(_tr['ret'].values, index=_tr.index)
+                    _jm.fit(_tr, ret_ser=_rs, sort_by='cumret')
+                    _st = _jm.predict(_tr)
+                    if isinstance(_st, pd.Series): _st = _st.values
+                    _sm = {}
+                    for _s in range(2):
+                        _mask = _st == _s
+                        if _mask.sum() > 0: _sm[_s] = _tr['ret'].values[_mask].mean()
+                    _bull_s = max(_sm, key=_sm.get)
+                    _jm_combo_map[_ym] = "Bull" if int(_st[-1]) == _bull_s else "Bear"
+                except Exception:
+                    _jm_combo_map[_ym] = "Bull"
+            else:
+                _jm_combo_map[_ym] = "Bull"
+            _jm2_cur += pd.DateOffset(months=1)
+        _jm2_conn.close()
+        _jm_bear = sum(1 for v in _jm_combo_map.values() if v == "Bear")
+        print(f"[JM COMBO] loaded {len(_jm_combo_map)} months, Bear={_jm_bear}", flush=True)
+
+    # HMM(VIX변화율+CLI변화율) walk-forward for combo modes
+    _hmm_regime_map = {}  # ym -> "Bull"/"Bear"
+    if regime_mode in ("ai_hmm_accel", "ai_or_hmm", "hmm_hyst", "ai_jm_hmm"):
+        import os as _os3
+        import psycopg2 as _pg2c
+        from hmmlearn.hmm import GaussianHMM as _GaussHMM
+        from dotenv import load_dotenv as _ld3
+        _ld3()
+        _hmm_conn = _pg2c.connect(_os3.environ['DATABASE_URL'], keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5)
+        _vix = pd.read_sql("SELECT period as date, value as vix FROM alpha_lab.macro_indicators WHERE indicator='vix' ORDER BY period", _hmm_conn)
+        _vix['date'] = pd.to_datetime(_vix['date']); _vix = _vix.set_index('date')
+        _vix_m = _vix.resample('ME').last(); _vix_m.columns = ['vix']
+        _cli = pd.read_sql("SELECT period, value as cli FROM alpha_lab.macro_indicators WHERE indicator='leading_index' ORDER BY period", _hmm_conn)
+        _cli['date'] = pd.to_datetime(_cli['period'] + '01', format='%Y%m%d') + pd.offsets.MonthEnd(0)
+        _cli = _cli.set_index('date')[['cli']]
+        _hmm_conn.close()
+        _macro = _vix_m.join(_cli, how='inner').dropna()
+        _log_vix = np.log(_macro['vix'])
+        _hmm_df = pd.DataFrame({'lv_chg': _log_vix.diff(), 'cli_chg': _macro['cli'].pct_change()}).dropna()
+        _HMM_TRAIN_MIN = 24
+        for _i in range(_HMM_TRAIN_MIN, len(_hmm_df)):
+            _tr = _hmm_df.iloc[:_i].values
+            _ym = _hmm_df.index[_i].strftime('%Y-%m')
+            _mu = _tr.mean(axis=0); _sd = _tr.std(axis=0); _sd[_sd == 0] = 1
+            _tr_s = (_tr - _mu) / _sd
+            try:
+                _hm = _GaussHMM(n_components=2, covariance_type='full', n_iter=200, random_state=42, verbose=False)
+                _hm.fit(_tr_s)
+                _states = _hm.predict(_tr_s)
+                _bear_s = 0 if _hm.means_[0, 0] > _hm.means_[1, 0] else 1
+                _hmm_regime_map[_ym] = "Bear" if _states[-1] == _bear_s else "Bull"
+            except Exception:
+                _hmm_regime_map[_ym] = "Bull"
+        _hmm_bear = sum(1 for v in _hmm_regime_map.values() if v == "Bear")
+        _hmm_trans = sum(1 for i, ym in enumerate(sorted(_hmm_regime_map.keys())) if i > 0 and _hmm_regime_map[ym] != _hmm_regime_map[sorted(_hmm_regime_map.keys())[i-1]])
+        print(f"[HMM REGIME] loaded {len(_hmm_regime_map)} months, Bear={_hmm_bear}, trans={_hmm_trans}", flush=True)
+
+    # 조합 regime map 생성
+    _ai_jm_accel_map = {}
+    _ai_hmm_accel_map = {}
+    _ai_or_hmm_map = {}
+    _hmm_hyst_map = {}
+    _ai_jm_hmm_map = {}
+
+    if regime_mode == "ai_jm_accel" and _ai_er_map and _jm_combo_map:
+        # AI + JM가속: er -0.5~-2에서 JM Bear면 Bear 진입 가속
+        _cur_r = "Bull"
+        for _ym in sorted(_ai_er_map.keys()):
+            _er = _ai_er_map[_ym]
+            _jb = _jm_combo_map.get(_ym) == "Bear"
+            if _cur_r == "Bull":
+                if _er <= -2: _cur_r = "Bear"
+                elif _er <= -0.5 and _jb: _cur_r = "Bear"
+            elif _cur_r == "Bear":
+                if _er >= 1: _cur_r = "Bull"
+            _ai_jm_accel_map[_ym] = _cur_r
+        print(f"[AI+JM_ACCEL] Bear={sum(1 for v in _ai_jm_accel_map.values() if v=='Bear')}/{len(_ai_jm_accel_map)}", flush=True)
+
+    if regime_mode == "ai_hmm_accel" and _ai_er_map and _hmm_regime_map:
+        # AI + HMM가속: er -0.5~-2에서 HMM Bear면 Bear 진입 가속
+        _cur_r = "Bull"
+        for _ym in sorted(_ai_er_map.keys()):
+            _er = _ai_er_map[_ym]
+            _hb = _hmm_regime_map.get(_ym) == "Bear"
+            if _cur_r == "Bull":
+                if _er <= -2: _cur_r = "Bear"
+                elif _er <= -0.5 and _hb: _cur_r = "Bear"
+            elif _cur_r == "Bear":
+                if _er >= 1: _cur_r = "Bull"
+            _ai_hmm_accel_map[_ym] = _cur_r
+        print(f"[AI+HMM_ACCEL] Bear={sum(1 for v in _ai_hmm_accel_map.values() if v=='Bear')}/{len(_ai_hmm_accel_map)}", flush=True)
+
+    if regime_mode == "ai_or_hmm" and _ai_regime_map and _hmm_regime_map:
+        # AI OR HMM: 둘 중 하나라도 Bear면 Bear
+        for _ym in sorted(_ai_regime_map.keys()):
+            _ab = _ai_regime_map.get(_ym) == "Bear"
+            _hb = _hmm_regime_map.get(_ym) == "Bear"
+            _ai_or_hmm_map[_ym] = "Bear" if (_ab or _hb) else "Bull"
+        print(f"[AI_OR_HMM] Bear={sum(1 for v in _ai_or_hmm_map.values() if v=='Bear')}/{len(_ai_or_hmm_map)}", flush=True)
+
+    if regime_mode == "hmm_hyst" and _hmm_regime_map:
+        # HMM + 2개월 hysteresis (whipsaw 방지)
+        _cur_r = "Bull"
+        _sorted_yms = sorted(_hmm_regime_map.keys())
+        for _idx, _ym in enumerate(_sorted_yms):
+            _raw = _hmm_regime_map[_ym]
+            if _cur_r == "Bull" and _raw == "Bear":
+                if _idx > 0 and _hmm_regime_map.get(_sorted_yms[_idx - 1]) == "Bear":
+                    _cur_r = "Bear"
+            elif _cur_r == "Bear" and _raw == "Bull":
+                if _idx > 0 and _hmm_regime_map.get(_sorted_yms[_idx - 1]) == "Bull":
+                    _cur_r = "Bull"
+            _hmm_hyst_map[_ym] = _cur_r
+        print(f"[HMM_HYST] Bear={sum(1 for v in _hmm_hyst_map.values() if v=='Bear')}/{len(_hmm_hyst_map)}", flush=True)
+
+    if regime_mode == "ai_jm_hmm" and _ai_er_map and _jm_combo_map and _hmm_regime_map:
+        # AI + JM가속 + HMM탈출지연
+        _cur_r = "Bull"
+        for _ym in sorted(_ai_er_map.keys()):
+            _er = _ai_er_map[_ym]
+            _jb = _jm_combo_map.get(_ym) == "Bear"
+            _hb = _hmm_regime_map.get(_ym) == "Bear"
+            if _cur_r == "Bull":
+                if _er <= -2: _cur_r = "Bear"
+                elif _er <= -1 and _jb: _cur_r = "Bear"
+            elif _cur_r == "Bear":
+                if _er >= 1 and not _hb: _cur_r = "Bull"
+            _ai_jm_hmm_map[_ym] = _cur_r
+        print(f"[AI+JM+HMM] Bear={sum(1 for v in _ai_jm_hmm_map.values() if v=='Bear')}/{len(_ai_jm_hmm_map)}", flush=True)
+
     def _get_regime(calc_date: str) -> str:
         if calc_date in regime_cache:
             return regime_cache[calc_date]
@@ -1886,9 +2081,22 @@ def run_regime_combo_backtest(
         elif regime_mode == "jm_v1":
             ym = calc_date[:7]
             result_regime = _jm_v1_regime_map.get(ym, "Bull")
+        elif regime_mode == "rf":
+            ym = calc_date[:7]
+            result_regime = _rf_regime_map.get(ym, "Bull")
         elif regime_mode == "ai":
             ym = calc_date[:7]
             result_regime = _ai_regime_map.get(ym, "Bull")
+        elif regime_mode == "ai_jm_accel":
+            result_regime = _ai_jm_accel_map.get(calc_date[:7], "Bull")
+        elif regime_mode == "ai_hmm_accel":
+            result_regime = _ai_hmm_accel_map.get(calc_date[:7], "Bull")
+        elif regime_mode == "ai_or_hmm":
+            result_regime = _ai_or_hmm_map.get(calc_date[:7], "Bull")
+        elif regime_mode == "hmm_hyst":
+            result_regime = _hmm_hyst_map.get(calc_date[:7], "Bull")
+        elif regime_mode == "ai_jm_hmm":
+            result_regime = _ai_jm_hmm_map.get(calc_date[:7], "Bull")
         elif regime_mode == "cycle":
             result_regime = _get_regime_by_cycle(calc_date)
         else:
@@ -1947,9 +2155,18 @@ def run_regime_combo_backtest(
         BACKTEST_CONFIG["rebal_type"] = _rebal
         BACKTEST_CONFIG["universe"] = _universe
 
-        _pf_conn = get_db()
-        prefetch_all_data(_pf_conn)
-        _pf_conn.close()
+        from lib.factor_engine import _prefetch_cache
+        if not _prefetch_cache:
+            _pf_conn = get_db()
+            prefetch_all_data(_pf_conn)
+            _pf_conn.close()
+
+        # prefetch 동안 idle이던 _conn_regime 재연결
+        try:
+            _conn_regime.close()
+        except Exception:
+            pass
+        _conn_regime = _get_conn()
 
         result = run_backtest(
             "regime_combo",
@@ -1992,7 +2209,7 @@ def run_regime_combo_backtest(
 
     finally:
         _conn_regime.close()
-        clear_prefetch_cache()
+        # clear_prefetch_cache()  # 연속 실행 시 재활용을 위해 비활성화
         BACKTEST_CONFIG["top_n_stocks"] = orig["top_n_stocks"]
         BACKTEST_CONFIG["transaction_cost_bp"] = orig["transaction_cost_bp"]
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]

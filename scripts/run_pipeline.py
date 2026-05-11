@@ -543,6 +543,7 @@ def step_collect_finance():
 
     for ci, code_chunk in enumerate(code_chunks):
         codes_str = ",".join(code_chunk)
+        row_dict = {}  # (code, fy, fq) -> {col: val}
 
         for item_group in item_groups:
             items_str = ",".join(item_group)
@@ -564,7 +565,6 @@ def step_collect_finance():
                 time.sleep(API_DELAY)
                 continue
 
-            rows = []
             for sd in data["dataset"]:
                 code = sd.get("CODE", "")
                 for row in sd.get("DATA", []):
@@ -572,29 +572,33 @@ def step_collect_finance():
                     fq = row.get("FS_QTR", "Annual")
                     if not fy:
                         continue
-                    values = {}
+                    key = (code, fy, fq)
+                    if key not in row_dict:
+                        row_dict[key] = {}
                     for ik in item_group:
                         val = row.get(ik)
                         if val is not None:
-                            values[FINANCE_ITEMS[ik]] = val
-                    if values:
-                        r = [code, fy, fq] + [values.get(c) for c in COL_NAMES]
-                        rows.append(tuple(r))
-
-            if rows:
-                cols_sql = ", ".join(COL_NAMES)
-                ph = ", ".join(["%s"] * (3 + len(COL_NAMES)))
-                update_set = ", ".join(f"{c}=EXCLUDED.{c}" for c in COL_NAMES)
-                execute_values(cur, f"""
-                    INSERT INTO alpha_lab.fnspace_finance
-                    (stock_code, fiscal_year, fiscal_quarter, {cols_sql})
-                    VALUES %s
-                    ON CONFLICT (stock_code, fiscal_year, fiscal_quarter) DO UPDATE SET
-                    {update_set}, updated_at=NOW()
-                """, rows, template=f"({ph})")
-                total_saved += len(rows)
+                            row_dict[key][FINANCE_ITEMS[ik]] = val
 
             time.sleep(API_DELAY)
+
+        # item_group 루프 끝난 뒤 중복 없이 한번에 insert
+        if row_dict:
+            rows = []
+            for (code, fy, fq), vals in row_dict.items():
+                r = [code, fy, fq] + [vals.get(c) for c in COL_NAMES]
+                rows.append(tuple(r))
+            cols_sql = ", ".join(COL_NAMES)
+            ph = ", ".join(["%s"] * (3 + len(COL_NAMES)))
+            update_set = ", ".join(f"{c}=EXCLUDED.{c}" for c in COL_NAMES)
+            execute_values(cur, f"""
+                INSERT INTO alpha_lab.fnspace_finance
+                (stock_code, fiscal_year, fiscal_quarter, {cols_sql})
+                VALUES %s
+                ON CONFLICT (stock_code, fiscal_year, fiscal_quarter) DO UPDATE SET
+                {update_set}, updated_at=NOW()
+            """, rows, template=f"({ph})")
+            total_saved += len(rows)
 
         if (ci + 1) % 20 == 0 or ci == len(code_chunks) - 1:
             conn.commit()

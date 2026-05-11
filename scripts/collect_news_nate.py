@@ -186,12 +186,47 @@ def get_last_date(conn):
         return row[0] if row and row[0] else None
 
 
+def run_daily():
+    """정기 수집: DB 마지막 수집일 다음날 ~ 어제"""
+    conn = get_conn()
+    create_table(conn)
+    last = get_last_date(conn)
+    conn.close()
+
+    yesterday = datetime.now() - timedelta(days=1)
+
+    if last:
+        start = datetime.strptime(last, "%Y-%m-%d") + timedelta(days=1)
+    else:
+        # 최초 실행: 30일 전부터
+        start = yesterday - timedelta(days=30)
+
+    if start > yesterday:
+        print(f"이미 {last}까지 수집 완료, 스킵")
+        return 0
+
+    print(f"수집 기간: {start.strftime('%Y-%m-%d')} ~ {yesterday.strftime('%Y-%m-%d')}")
+    total = crawl_date_range(start, yesterday)
+
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*) FROM alpha_lab.news_nate")
+        print(f"완료! 이번: {total}건, 전체: {cur.fetchone()[0]}건")
+    conn.close()
+    return total
+
+
 def main():
     parser = argparse.ArgumentParser(description="네이트 뉴스 매크로 수집")
-    parser.add_argument("--start", required=True, help="시작일 (YYYY.MM.DD)")
-    parser.add_argument("--end", required=True, help="종료일 (YYYY.MM.DD)")
+    parser.add_argument("--start", default=None, help="시작일 (YYYY.MM.DD)")
+    parser.add_argument("--end", default=None, help="종료일 (YYYY.MM.DD)")
     parser.add_argument("--no-resume", dest="resume", action="store_false", default=True)
     args = parser.parse_args()
+
+    # --start/--end 없으면 정기 수집 모드
+    if not args.start and not args.end:
+        run_daily()
+        return
 
     conn = get_conn()
     create_table(conn)

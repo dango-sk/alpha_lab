@@ -108,7 +108,14 @@ def get_conn():
     """환경에 맞는 DB 커넥션 반환."""
     if _is_pg:
         import psycopg2
-        conn = psycopg2.connect(DATABASE_URL, connect_timeout=30)
+        conn = psycopg2.connect(
+            DATABASE_URL,
+            connect_timeout=30,
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5,
+        )
         cur = conn.cursor()
         cur.execute("SET search_path TO alpha_lab, public")
         conn.commit()

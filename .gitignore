@@ -12,7 +12,19 @@ __pycache__/
 *.db
 
 # Logs
+*.log
 pipeline.log
+
+# Temp/backup files
+*_backup*.json
+*_prev*.json
+*.bak_*
+nondeterminism_runs/
+**/legacy/
+
+# Personal/misc
+*.xlsx
+cache/prefetch/
 
 # IDE & OS
 .claude/

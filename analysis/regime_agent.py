@@ -794,8 +794,8 @@ def run_month(as_of: date, past_results: list = None) -> dict:
 
 
 def main():
-    # 백테스트 기간과 동일: 2018-04 ~ 2026-03
-    test_months = [date(y, m, 1) for y in range(2018, 2027) for m in range(1, 13) if date(2018, 4, 1) <= date(y, m, 1) <= date(2026, 3, 1)]
+    # 5월만 재실행 (기존 결과 유지, 5월만 교체)
+    test_months = [date(2026, 5, 1)]
 
     # 기존 결과 로드 (테스트 대상은 제거 → 재실행)
     out_path = Path(__file__).parent / "regime_agent_results.json"
