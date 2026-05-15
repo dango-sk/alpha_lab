@@ -7,7 +7,7 @@ Alpha Lab 일일 파이프라인 (Railway PostgreSQL)
 
 매일:
   1. Forward/Consensus     FnSpace → PG (증분)
-  2. 백테스트 캐시 갱신    4콤보 (KOSPI×월간, KOSPI×격주, KOSPI+KOSDAQ×월간, KOSPI+KOSDAQ×격주)
+  2. 백테스트 캐시 갱신    KOSPI × 월간
   3. 강건성 검증           IS/OOS + bootstrap + 롤링윈도우 → PG
 
 ※ 주가(daily_price) + 시총은 LG 그램에서 Railway PG로 별도 업로드
@@ -16,8 +16,8 @@ Alpha Lab 일일 파이프라인 (Railway PostgreSQL)
   + 마스터 스냅샷          FnSpace CompanyListApi → PG fnspace_master
   + 재무 보충              FnSpace FinanceApi → PG fnspace_finance
 
-월초 + 15일:
-  + 유니버스 재구축        PG → PG universe (biweekly 리밸런싱 대응)
+월초:
+  + 유니버스 재구축        PG → PG universe
 """
 import argparse
 import os
@@ -231,9 +231,6 @@ def step_backtest(skip_combos=None):
 
     combos = [
         ("KOSPI", "monthly"),
-        ("KOSPI", "biweekly"),
-        ("KOSPI+KOSDAQ", "monthly"),
-        ("KOSPI+KOSDAQ", "biweekly"),
     ]
 
     for universe, rebal_type in combos:
@@ -274,6 +271,8 @@ def step_custom_strategies():
         FROM backtest_cache
         WHERE strategy_code IS NOT NULL
           AND name NOT IN ('A0', 'KOSPI', '__ROBUSTNESS__')
+          AND universe = 'KOSPI'
+          AND rebal_type = 'monthly'
     """)
     rows = cur.fetchall()
     conn.close()
@@ -325,6 +324,8 @@ def step_regime_combo_strategies():
         SELECT name, results_json, universe, rebal_type
         FROM backtest_cache
         WHERE name LIKE '레짐조합_%%'
+          AND universe = 'KOSPI'
+          AND rebal_type = 'monthly'
     """)
     rows = cur.fetchall()
     conn.close()
@@ -648,7 +649,7 @@ def notify(title, message):
 # 메인
 # ═══════════════════════════════════════════════════════════
 
-def step_ai_filter(strategy_path: str = None):
+def step_ai_filter(strategy_path: str = None, calc_date: str = None):
     """AI 종목 필터: 팩터 상위 30종목 → AI 분석 → 최종 10종목."""
     from lib.ai_stock_filter import run_ai_filter
     from lib.factor_engine import score_stocks_from_strategy, load_strategy_module, code_to_module, DEFAULT_STRATEGY_CODE
@@ -656,7 +657,7 @@ def step_ai_filter(strategy_path: str = None):
 
     conn = get_conn()
     try:
-        calc_date = datetime.now().strftime("%Y-%m-%d")
+        calc_date = calc_date or datetime.now().strftime("%Y-%m-%d")
         if strategy_path:
             strategy = load_strategy_module(strategy_path)
             print(f"  전략: {strategy_path}")
@@ -689,6 +690,7 @@ def main():
     parser.add_argument("--ai-filter", action="store_true", help="AI 종목 필터 실행 (30→10종목)")
     parser.add_argument("--only-ai-filter", action="store_true", help="AI 종목 필터만 실행")
     parser.add_argument("--ai-strategy", type=str, default=None, help="AI 필터에 사용할 전략 파일 경로")
+    parser.add_argument("--ai-date", type=str, default=None, help="AI 필터 기준일 (YYYY-MM-DD)")
     args = parser.parse_args()
 
     is_monthly = args.monthly or datetime.now().day <= 3
@@ -717,7 +719,7 @@ def main():
     consensus_from = args.consensus_from or None
 
     if args.only_ai_filter:
-        run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy))
+        run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy, args.ai_date))
     elif args.only_custom:
         # 커스텀 전략 재계산 + 강건성만
         run("커스텀 전략 재계산", step_custom_strategies)
@@ -739,7 +741,8 @@ def main():
             run("TTM 계산", step_calc_ttm)
 
         # ── 유니버스 재구축 (매 실행 시) ──
-        run("유니버스 재구축", step_build_universe)
+        if not args.skip_universe:
+            run("유니버스 재구축", step_build_universe)
 
         # ── 매일 (주가/시총은 LG 그램에서 PG로 별도 업로드) ──
         run("Forward/Consensus 수집", lambda: step_collect_consensus(consensus_from))
@@ -752,7 +755,7 @@ def main():
             run("강건성 검증", step_robustness)
 
         if args.ai_filter:
-            run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy))
+            run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy, args.ai_date))
 
     # ── 요약 ──
     elapsed = time.time() - t0
