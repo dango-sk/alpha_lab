@@ -49,20 +49,20 @@ export default function FilterBar({
   className,
   children,
 }: FilterBarProps) {
+  const universeOptions = [{ value: 'KOSPI', label: 'KOSPI' }];
+  const rebalOptions = [{ value: 'monthly', label: '월간' }];
+  const hasToggles = universeOptions.length > 1 || rebalOptions.length > 1;
+  if (!hasToggles && !children) return null;
   return (
     <div className={cn('flex items-center gap-3 flex-wrap', className)}>
       <ToggleGroup
         value={universe}
-        options={[
-          { value: 'KOSPI', label: 'KOSPI' },
-        ]}
+        options={universeOptions}
         onChange={(v) => onUniverseChange(v as 'KOSPI' | 'KOSPI+KOSDAQ')}
       />
       <ToggleGroup
         value={rebalType}
-        options={[
-          { value: 'monthly', label: '월간' },
-        ]}
+        options={rebalOptions}
         onChange={(v) => onRebalTypeChange(v as 'monthly' | 'biweekly')}
       />
       {children}
