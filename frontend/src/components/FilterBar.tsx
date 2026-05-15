@@ -20,6 +20,7 @@ function ToggleGroup({
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
 }) {
+  if (options.length <= 1) return null;
   return (
     <div className="flex rounded-lg overflow-hidden border border-border">
       {options.map((opt) => (
@@ -54,7 +55,6 @@ export default function FilterBar({
         value={universe}
         options={[
           { value: 'KOSPI', label: 'KOSPI' },
-          { value: 'KOSPI+KOSDAQ', label: 'KOSPI+KOSDAQ' },
         ]}
         onChange={(v) => onUniverseChange(v as 'KOSPI' | 'KOSPI+KOSDAQ')}
       />
@@ -62,7 +62,6 @@ export default function FilterBar({
         value={rebalType}
         options={[
           { value: 'monthly', label: '월간' },
-          { value: 'biweekly', label: '격주' },
         ]}
         onChange={(v) => onRebalTypeChange(v as 'monthly' | 'biweekly')}
       />
