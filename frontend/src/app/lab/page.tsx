@@ -189,7 +189,7 @@ export default function LabPage() {
   const [stopLossEnabled, setStopLossEnabled] = useState(false);
   const [stopLossPct, setStopLossPct] = useState(15);
   const [stopLossMode, setStopLossMode] = useState<'sell' | 'reduce' | 'redistribute'>('sell');
-  const [stopLossBasis, setStopLossBasis] = useState<'entry' | 'peak'>('entry');
+  const [stopLossBasis, setStopLossBasis] = useState<'entry' | 'peak'>('peak');
 
   // ─── Code ───
   const [code, setCode] = useState('');
@@ -218,9 +218,8 @@ export default function LabPage() {
   const [regimeResult, setRegimeResult] = useState<Record<string, unknown> | null>(null);
   const [regimeLoading, setRegimeLoading] = useState(false);
   const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
-  const [regimeMaWindow, setRegimeMaWindow] = useState(50);
-  const [regimeMaWindowInput, setRegimeMaWindowInput] = useState('50');
-  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai' | 'inertia'>('ma');
+  const [regimeMaWindow] = useState(50);
+  const [regimeMode, setRegimeMode] = useState<'cycle' | 'ai'>('ai');
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
@@ -308,11 +307,9 @@ export default function LabPage() {
         if (parsed.maRevWindow !== undefined) setMaRevWindow(parsed.maRevWindow as 120 | 250);
         if (parsed.universe) setUniverse(parsed.universe);
         if (parsed.rebalType) setRebalType(parsed.rebalType);
-        // 유니버스/리밸런싱은 전략 이름에서도 파싱
-        if (/코스피\+코스닥|KOSPI\+KOSDAQ/i.test(name)) setUniverse('KOSPI+KOSDAQ');
-        else if (/코스피|KOSPI/i.test(name)) setUniverse('KOSPI');
-        if (/격주|biweekly/i.test(name)) setRebalType('biweekly');
-        else if (/월간|monthly/i.test(name)) setRebalType('monthly');
+        // 유니버스/리밸런싱은 KOSPI/월간으로 고정 (옵션 단순화)
+        setUniverse('KOSPI');
+        setRebalType('monthly');
       }
     } catch {
       // 코드 없는 전략 (레짐 조합 등)은 무시
@@ -628,7 +625,6 @@ export default function LabPage() {
                     onChange={(e) => setUniverse(e.target.value as 'KOSPI' | 'KOSPI+KOSDAQ')}
                   >
                     <option value="KOSPI">KOSPI</option>
-                    <option value="KOSPI+KOSDAQ">KOSPI+KOSDAQ</option>
                   </select>
                 </div>
                 <div>
@@ -675,7 +671,6 @@ export default function LabPage() {
                     onChange={(e) => setRebalType(e.target.value as 'monthly' | 'biweekly')}
                   >
                     <option value="monthly">월간</option>
-                    <option value="biweekly">격주</option>
                   </select>
                 </div>
               </div>
@@ -1104,10 +1099,6 @@ export default function LabPage() {
                   <span className="text-xs text-muted font-medium">레짐 기준</span>
                   <div className="flex rounded-lg border border-border overflow-hidden text-xs">
                     <button
-                      onClick={() => setRegimeMode('ma')}
-                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'ma' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
-                    >MA 기준</button>
-                    <button
                       onClick={() => setRegimeMode('cycle')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'cycle' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >사이클 기준</button>
@@ -1115,51 +1106,19 @@ export default function LabPage() {
                       onClick={() => setRegimeMode('ai')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >AI 기준</button>
-                    <button
-                      onClick={() => setRegimeMode('inertia')}
-                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'inertia' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
-                    >Inertia 기준</button>
                   </div>
                 </div>
-                {regimeMode === 'ma' && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted font-medium">MA 기간 (KOSPI 200 기준)</span>
-                    <input
-                      type="number"
-                      min={5}
-                      max={500}
-                      value={regimeMaWindowInput}
-                      onChange={(e) => setRegimeMaWindowInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          const v = parseInt(regimeMaWindowInput);
-                          if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
-                        }
-                      }}
-                      onBlur={() => {
-                        const v = parseInt(regimeMaWindowInput);
-                        if (!isNaN(v) && v >= 5 && v <= 500) setRegimeMaWindow(v);
-                        else setRegimeMaWindowInput(String(regimeMaWindow));
-                      }}
-                      className="w-20 px-2 py-1 rounded border border-border bg-background text-center text-sm"
-                    />
-                    <span className="text-xs text-muted">일</span>
-                  </div>
-                )}
                 {regimeMode === 'cycle' && (
                   <span className="text-xs text-muted">고점 대비 -20% 하락 사이클 기준 (2018년 이후)</span>
                 )}
                 {regimeMode === 'ai' && (
                   <span className="text-xs text-muted">GPT-4o 멀티에이전트 월간 방향 예측</span>
                 )}
-                {regimeMode === 'inertia' && (
-                  <span className="text-xs text-muted">JM(jp=3.0) OR MA200 + Crash Overlay (10일 &lt; -5%)</span>
-                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs text-muted font-medium">
-                    {regimeMode === 'ma' ? `강세장 전략 (Bull: KOSPI 200 ≥ ${regimeMaWindow}일 MA)` : regimeMode === 'inertia' ? '강세장 전략 (Bull: JM OR MA200)' : '강세장 전략 (Bull)'}
+                    강세장 전략 (Bull)
                   </label>
                   <select
                     value={regimeBullKey}
@@ -1174,7 +1133,7 @@ export default function LabPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted font-medium">
-                    {regimeMode === 'ma' ? `약세장 전략 (Bear: KOSPI 200 < ${regimeMaWindow}일 MA)` : '약세장 전략 (Bear)'}
+                    약세장 전략 (Bear)
                   </label>
                   <select
                     value={regimeBearKey}

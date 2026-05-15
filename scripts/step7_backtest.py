@@ -588,15 +588,23 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         sl_basis = BACKTEST_CONFIG.get("stop_loss_basis", "entry")
 
         if sl_enabled:
-            raw_return, sl_events, sl_carry_over = calc_portfolio_return_with_stoploss(
+            raw_return, sl_events, sl_carry_state = calc_portfolio_return_with_stoploss(
                 conn, stocks, start, end, stop_loss_pct=sl_pct, stop_loss_mode=sl_mode,
                 stop_loss_basis=sl_basis,
                 carry_over=sl_carry_state,
             )
-            sl_carry_state = sl_carry_over
         else:
-            raw_return = calc_portfolio_return(conn, stocks, start, end)
             sl_events = []
+            if sl_carry_state:
+                # 자연 설계: stop-loss 꺼진 기간(Bull)에도 peak 추적 → 다음 stop-loss 기간(Bear)에서 정확한 trailing stop
+                raw_return, _, sl_carry_state = calc_portfolio_return_with_stoploss(
+                    conn, stocks, start, end,
+                    stop_loss_pct=9999, stop_loss_mode="sell",
+                    stop_loss_basis=sl_basis,
+                    carry_over=sl_carry_state,
+                )
+            else:
+                raw_return = calc_portfolio_return(conn, stocks, start, end)
 
         if stocks:
             slip_codes = [c for c, _ in stocks]
