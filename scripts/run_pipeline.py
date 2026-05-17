@@ -624,10 +624,10 @@ def step_calc_ttm():
 # 월초: 유니버스 재구축
 # ═══════════════════════════════════════════════════════════
 
-def step_build_universe():
-    """step6_build_universe 호출"""
+def step_build_universe(rebuild_all: bool = False):
+    """step6_build_universe 호출. 기본은 incremental (기존 데이터 보존)."""
     from step6_build_universe import build_universe
-    build_universe()
+    build_universe(rebuild_all=rebuild_all)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -684,6 +684,8 @@ def main():
     parser.add_argument("--skip-backtest", action="store_true", help="백테스트 스킵")
     parser.add_argument("--only-backtest", action="store_true", help="유니버스+백테스트+커스텀만 실행 (수집 스킵)")
     parser.add_argument("--skip-universe", action="store_true", help="유니버스 재구축 스킵")
+    parser.add_argument("--rebuild-universe", action="store_true",
+                        help="유니버스 전체 재구축 (기존 DELETE 후 처음부터). 평소엔 incremental만 돈다")
     parser.add_argument("--skip-combos", type=str, default="", help="스킵할 콤보 (예: KOSPI_monthly,KOSPI_biweekly)")
     parser.add_argument("--only-custom", action="store_true", help="커스텀 전략 재계산+강건성만 실행")
     parser.add_argument("--consensus-from", type=str, default="", help="Forward/Consensus 수집 시작일 (YYYYMMDD, 일회성 보충용)")
@@ -728,7 +730,7 @@ def main():
     elif args.only_backtest:
         # 유니버스 + 백테스트 + 커스텀만 (수집 스킵)
         if not args.skip_universe:
-            run("유니버스 재구축", step_build_universe)
+            run("유니버스 재구축", lambda: step_build_universe(rebuild_all=args.rebuild_universe))
         run("백테스트", lambda: step_backtest(skip_combos=skip_combos))
         run("커스텀 전략 재계산", step_custom_strategies)
         run("레짐조합 전략 재계산", step_regime_combo_strategies)
@@ -742,7 +744,7 @@ def main():
 
         # ── 유니버스 재구축 (매 실행 시) ──
         if not args.skip_universe:
-            run("유니버스 재구축", step_build_universe)
+            run("유니버스 재구축", lambda: step_build_universe(rebuild_all=args.rebuild_universe))
 
         # ── 매일 (주가/시총은 LG 그램에서 PG로 별도 업로드) ──
         run("Forward/Consensus 수집", lambda: step_collect_consensus(consensus_from))
