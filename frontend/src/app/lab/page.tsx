@@ -24,7 +24,7 @@ const FACTOR_CATEGORIES: Record<string, { factors: string[]; color: string }> = 
     color: '#4CAF50',
   },
   '차별화': {
-    factors: ['F_EPS_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'MFI', 'W52_HIGH_GAP', 'NDEBT_EBITDA', 'CURRENT'],
+    factors: ['F_EPS_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'MFI', 'NDEBT_EBITDA', 'CURRENT'],
     color: '#f59e0b',
   },
 };
@@ -48,7 +48,6 @@ const FACTOR_LABELS: Record<string, string> = {
   PRICE_MA_REV: '가격 모멘텀 (MA회귀)',
   OBV_SLOPE: 'OBV 기울기',
   MFI: 'MFI (자금 유입)',
-  W52_HIGH_GAP: '52주 신고가 괴리율',
   NDEBT_EBITDA: '순부채/EBITDA',
   CURRENT: '유동비율',
 };
@@ -112,7 +111,6 @@ const EXTRA_FACTOR_META: Record<string, { scoreCol: string; rule: string }> = {
   PRICE_MA_REV: { scoreCol: 'price_ma_rev_score', rule: 'rule2' },
   OBV_SLOPE:    { scoreCol: 'obv_slope_score',    rule: 'rule2' },
   MFI:          { scoreCol: 'mfi_score',           rule: 'rule2' },
-  W52_HIGH_GAP: { scoreCol: 'w52_high_gap_score', rule: 'rule2' },
 };
 
 function updateWeightInCode(code: string, factor: string, newValue: number): string {
