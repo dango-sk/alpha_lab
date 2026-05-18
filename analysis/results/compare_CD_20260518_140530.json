@@ -1,0 +1,2307 @@
+{
+  "meta": {
+    "bull_key": "수정전략_코스피_cap30%_top30_tx30bp_월간",
+    "bear_key": "cap30%_손절율15%(고점)",
+    "generated_at": "2026-05-18T14:05:31"
+  },
+  "C": {
+    "total_return": 3.8796748659208387,
+    "cagr": 0.2142070817519972,
+    "mdd": -0.33847016708458916,
+    "sharpe": 0.8500944459522255,
+    "avg_monthly_return": 0.019164784892664856,
+    "monthly_std": 0.07809574879186888,
+    "monthly_returns": [
+      0.022397367175264596,
+      -0.007707842097837342,
+      -0.06892207296031341,
+      0.05246896014503752,
+      -0.02021789353223665,
+      -0.008656840101712497,
+      -0.11968841705568048,
+      0.060160911214998794,
+      -0.08561406850566998,
+      0.14524346791638446,
+      -0.03202299752485961,
+      0.017373590485423855,
+      0.007020815637782705,
+      -0.0860001991387081,
+      0.03034885392647546,
+      -0.013334604086252868,
+      -0.039350260012360604,
+      0.02471681029870445,
+      -0.02149122830608242,
+      0.023538203823807852,
+      0.008831111785822368,
+      -0.08708745714517421,
+      -0.09612452512188534,
+      -0.013949623414447861,
+      0.13276824310162016,
+      0.11360871321695323,
+      -0.03973109182980176,
+      0.07073693409853753,
+      0.06607783759710754,
+      0.05108155515293103,
+      -0.0031962721132140102,
+      0.07302919790506027,
+      0.06969720319196146,
+      0.08597829265976813,
+      0.02066920397150423,
+      0.07490784528809523,
+      0.03461951750030818,
+      0.08689615048059529,
+      -0.0367241495133434,
+      0.026313716476607126,
+      -0.016646256122861365,
+      -0.05944812479224669,
+      0.006542527193815778,
+      -0.055020725837834565,
+      0.04868159783922997,
+      -0.025128050209697182,
+      -0.013904736901877062,
+      -0.0036598483552915018,
+      -0.014627481720354918,
+      -0.002263658682225134,
+      -0.1225121637672326,
+      0.017108336616181073,
+      -0.010096938791088493,
+      -0.09954461068428602,
+      0.025725406741763362,
+      0.05359961709599219,
+      -0.10408291522394623,
+      0.09908305261228172,
+      0.035328991360162765,
+      0.026060217774231714,
+      -0.003934142177218281,
+      -0.03318478401764295,
+      0.04032440478893497,
+      -0.009259816808268153,
+      -0.029335487922408646,
+      -0.0106472516036669,
+      -0.0431642867970457,
+      0.08014323664979776,
+      0.06609679077593983,
+      0.03718461770417931,
+      0.10972046106469249,
+      -0.033982010345861874,
+      0.04092352743263591,
+      0.024664942826534423,
+      0.04939634771814292,
+      -0.07394966188886537,
+      -0.03216001157464887,
+      -0.013910278539425518,
+      0.014640003078955173,
+      -0.001955237441934283,
+      0.002563349122235839,
+      -0.023885886564843164,
+      0.017536502142334702,
+      0.026926100661432358,
+      -0.08297547616400561,
+      0.081588253094618,
+      0.19929208271638915,
+      -0.05114432149579962,
+      0.01065719327990728,
+      0.20101227834386548,
+      0.33100943820096557,
+      0.012370827188638609,
+      0.08559648927667664,
+      0.16028362896367304,
+      0.15535612311879335,
+      -0.10684553250055298,
+      0.2841277354577805,
+      0.09320957498033308
+    ],
+    "rebalance_dates": [
+      "2018-04-02",
+      "2018-05-02",
+      "2018-06-01",
+      "2018-07-02",
+      "2018-08-01",
+      "2018-09-03",
+      "2018-10-01",
+      "2018-11-01",
+      "2018-12-03",
+      "2019-01-02",
+      "2019-02-01",
+      "2019-03-04",
+      "2019-04-01",
+      "2019-05-02",
+      "2019-06-03",
+      "2019-07-01",
+      "2019-08-01",
+      "2019-09-02",
+      "2019-10-01",
+      "2019-11-01",
+      "2019-12-02",
+      "2020-01-02",
+      "2020-02-03",
+      "2020-03-02",
+      "2020-04-01",
+      "2020-05-04",
+      "2020-06-01",
+      "2020-07-01",
+      "2020-08-03",
+      "2020-09-01",
+      "2020-10-05",
+      "2020-11-02",
+      "2020-12-01",
+      "2021-01-04",
+      "2021-02-01",
+      "2021-03-02",
+      "2021-04-01",
+      "2021-05-03",
+      "2021-06-01",
+      "2021-07-01",
+      "2021-08-02",
+      "2021-09-01",
+      "2021-10-01",
+      "2021-11-01",
+      "2021-12-01",
+      "2022-01-03",
+      "2022-02-03",
+      "2022-03-02",
+      "2022-04-01",
+      "2022-05-02",
+      "2022-06-02",
+      "2022-07-01",
+      "2022-08-01",
+      "2022-09-01",
+      "2022-10-04",
+      "2022-11-01",
+      "2022-12-01",
+      "2023-01-02",
+      "2023-02-01",
+      "2023-03-02",
+      "2023-04-03",
+      "2023-05-02",
+      "2023-06-01",
+      "2023-07-03",
+      "2023-08-01",
+      "2023-09-01",
+      "2023-10-04",
+      "2023-11-01",
+      "2023-12-01",
+      "2024-01-02",
+      "2024-02-01",
+      "2024-03-04",
+      "2024-04-01",
+      "2024-05-02",
+      "2024-06-03",
+      "2024-07-01",
+      "2024-08-01",
+      "2024-09-02",
+      "2024-10-02",
+      "2024-11-01",
+      "2024-12-02",
+      "2025-01-02",
+      "2025-02-03",
+      "2025-03-04",
+      "2025-04-01",
+      "2025-05-02",
+      "2025-06-02",
+      "2025-07-01",
+      "2025-08-01",
+      "2025-09-01",
+      "2025-10-01",
+      "2025-11-03",
+      "2025-12-01",
+      "2026-01-02",
+      "2026-02-02",
+      "2026-03-03",
+      "2026-04-01",
+      "2026-05-04",
+      "2026-05-15"
+    ]
+  },
+  "D": {
+    "total_return": 3.699805870231123,
+    "cagr": 0.208635928996177,
+    "mdd": -0.3631787707072523,
+    "sharpe": 0.8268469166046015,
+    "avg_monthly_return": 0.018847670413201914,
+    "monthly_std": 0.07896291829697738,
+    "monthly_returns": [
+      0.022397367175264596,
+      -0.007707842097837342,
+      -0.06892207296031341,
+      0.05246896014503752,
+      -0.02021789353223665,
+      -0.008656840101712497,
+      -0.11968841705568048,
+      0.060160911214998794,
+      -0.10622977517085554,
+      0.1428406683889594,
+      -0.03194465451587159,
+      0.016937295472677905,
+      0.007305559018878274,
+      -0.09404411189404382,
+      0.03034885392647546,
+      -0.013334604086252868,
+      -0.039350260012360604,
+      0.05815634654659462,
+      -0.020874129434087087,
+      0.023538203823807852,
+      0.008831111785822368,
+      -0.08708745714517421,
+      -0.09612452512188534,
+      -0.060063646173363384,
+      0.13276824310162016,
+      0.11360871321695323,
+      -0.03973109182980176,
+      0.07073693409853753,
+      0.06607783759710754,
+      0.05108155515293103,
+      -0.0031962721132140102,
+      0.07302919790506027,
+      0.06969720319196146,
+      0.08597829265976813,
+      0.02066920397150423,
+      0.07490784528809523,
+      0.03461951750030818,
+      0.09782905993774017,
+      -0.0367241495133434,
+      0.026313716476607126,
+      -0.016646256122861365,
+      -0.05944812479224669,
+      0.006542527193815778,
+      -0.055020725837834565,
+      0.04868159783922997,
+      -0.025128050209697182,
+      -0.013904736901877062,
+      -0.0036598483552915018,
+      -0.014627481720354918,
+      -0.0034413298234027114,
+      -0.13178057443540744,
+      0.01902464407502541,
+      -0.0068627883769890015,
+      -0.10558758965684308,
+      0.008044894098137316,
+      0.05398113344135073,
+      -0.11091194980931396,
+      0.09908305261228172,
+      0.035328991360162765,
+      0.026060217774231714,
+      -0.003934142177218281,
+      -0.03318478401764295,
+      0.04032440478893497,
+      -0.009259816808268153,
+      -0.029335487922408646,
+      -0.0106472516036669,
+      -0.0431642867970457,
+      0.08014323664979776,
+      0.06609679077593983,
+      0.03718461770417931,
+      0.10972046106469249,
+      -0.033982010345861874,
+      0.04092352743263591,
+      0.031373988862248924,
+      0.04939634771814292,
+      -0.07394966188886537,
+      -0.03216001157464887,
+      -0.013910278539425518,
+      -0.0016113258414794229,
+      -0.008308745623281811,
+      0.007182468418571372,
+      -0.023065104082156184,
+      0.017479095539469212,
+      0.026926100661432358,
+      -0.036371068501673695,
+      0.082146661879923,
+      0.19929208271638915,
+      -0.05114432149579962,
+      0.01065719327990728,
+      0.20101227834386548,
+      0.33100943820096557,
+      0.012370827188638609,
+      0.08559648927667664,
+      0.16028362896367304,
+      0.15535612311879335,
+      -0.10684553250055298,
+      0.2841277354577805,
+      0.09320957498033308
+    ],
+    "rebalance_dates": [
+      "2018-04-02",
+      "2018-05-02",
+      "2018-06-01",
+      "2018-07-02",
+      "2018-08-01",
+      "2018-09-03",
+      "2018-10-01",
+      "2018-11-01",
+      "2018-12-03",
+      "2019-01-02",
+      "2019-02-01",
+      "2019-03-04",
+      "2019-04-01",
+      "2019-05-02",
+      "2019-06-03",
+      "2019-07-01",
+      "2019-08-01",
+      "2019-09-02",
+      "2019-10-01",
+      "2019-11-01",
+      "2019-12-02",
+      "2020-01-02",
+      "2020-02-03",
+      "2020-03-02",
+      "2020-04-01",
+      "2020-05-04",
+      "2020-06-01",
+      "2020-07-01",
+      "2020-08-03",
+      "2020-09-01",
+      "2020-10-05",
+      "2020-11-02",
+      "2020-12-01",
+      "2021-01-04",
+      "2021-02-01",
+      "2021-03-02",
+      "2021-04-01",
+      "2021-05-03",
+      "2021-06-01",
+      "2021-07-01",
+      "2021-08-02",
+      "2021-09-01",
+      "2021-10-01",
+      "2021-11-01",
+      "2021-12-01",
+      "2022-01-03",
+      "2022-02-03",
+      "2022-03-02",
+      "2022-04-01",
+      "2022-05-02",
+      "2022-06-02",
+      "2022-07-01",
+      "2022-08-01",
+      "2022-09-01",
+      "2022-10-04",
+      "2022-11-01",
+      "2022-12-01",
+      "2023-01-02",
+      "2023-02-01",
+      "2023-03-02",
+      "2023-04-03",
+      "2023-05-02",
+      "2023-06-01",
+      "2023-07-03",
+      "2023-08-01",
+      "2023-09-01",
+      "2023-10-04",
+      "2023-11-01",
+      "2023-12-01",
+      "2024-01-02",
+      "2024-02-01",
+      "2024-03-04",
+      "2024-04-01",
+      "2024-05-02",
+      "2024-06-03",
+      "2024-07-01",
+      "2024-08-01",
+      "2024-09-02",
+      "2024-10-02",
+      "2024-11-01",
+      "2024-12-02",
+      "2025-01-02",
+      "2025-02-03",
+      "2025-03-04",
+      "2025-04-01",
+      "2025-05-02",
+      "2025-06-02",
+      "2025-07-01",
+      "2025-08-01",
+      "2025-09-01",
+      "2025-10-01",
+      "2025-11-03",
+      "2025-12-01",
+      "2026-01-02",
+      "2026-02-02",
+      "2026-03-03",
+      "2026-04-01",
+      "2026-05-04",
+      "2026-05-15"
+    ],
+    "replacement_log": [
+      {
+        "stopped_code": "005490",
+        "replacement_code": "161390",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.104293,
+        "stopped_ret": -0.017341,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "003240",
+        "replacement_code": "009830",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.007075,
+        "stopped_ret": -0.007252,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "009410",
+        "replacement_code": "006260",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.003786,
+        "stopped_ret": 0.0,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "004800",
+        "replacement_code": "002350",
+        "entry_date": "2018-12-28",
+        "slot_weight": 0.003294,
+        "stopped_ret": -0.034758,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "000660",
+        "replacement_code": "000070",
+        "entry_date": "2018-12-20",
+        "slot_weight": 0.236587,
+        "stopped_ret": -0.168794,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "010780",
+        "replacement_code": "005180",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.004444,
+        "stopped_ret": -0.0176,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "011780",
+        "replacement_code": "012330",
+        "entry_date": "2018-12-10",
+        "slot_weight": 0.013075,
+        "stopped_ret": -0.107411,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "069960",
+        "replacement_code": "003550",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.010086,
+        "stopped_ret": -0.002139,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "004000",
+        "replacement_code": "023530",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.005203,
+        "stopped_ret": -0.018286,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "001430",
+        "replacement_code": "004170",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.00281,
+        "stopped_ret": -0.011765,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "078930",
+        "replacement_code": "010060",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.022486,
+        "stopped_ret": -0.00381,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "000990",
+        "replacement_code": "111770",
+        "entry_date": "2018-12-26",
+        "slot_weight": 0.002507,
+        "stopped_ret": -0.159184,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "000880",
+        "replacement_code": "057050",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.01066,
+        "stopped_ret": -0.019449,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "006650",
+        "replacement_code": "069260",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.005094,
+        "stopped_ret": -0.026471,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "093050",
+        "replacement_code": "037560",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.00337,
+        "stopped_ret": -0.026,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "004020",
+        "replacement_code": "103140",
+        "entry_date": "2018-12-04",
+        "slot_weight": 0.028266,
+        "stopped_ret": 0.005441,
+        "period_start": "2018-12-03"
+      },
+      {
+        "stopped_code": "069260",
+        "replacement_code": "006260",
+        "entry_date": "2019-01-04",
+        "slot_weight": 0.004198,
+        "stopped_ret": -0.051282,
+        "period_start": "2019-01-02"
+      },
+      {
+        "stopped_code": "011170",
+        "replacement_code": "002350",
+        "entry_date": "2019-01-04",
+        "slot_weight": 0.041366,
+        "stopped_ret": -0.067271,
+        "period_start": "2019-01-02"
+      },
+      {
+        "stopped_code": "161390",
+        "replacement_code": "005180",
+        "entry_date": "2019-01-08",
+        "slot_weight": 0.022154,
+        "stopped_ret": -0.088344,
+        "period_start": "2019-01-02"
+      },
+      {
+        "stopped_code": "004000",
+        "replacement_code": "004020",
+        "entry_date": "2019-03-28",
+        "slot_weight": 0.006031,
+        "stopped_ret": -0.131474,
+        "period_start": "2019-03-04"
+      },
+      {
+        "stopped_code": "006650",
+        "replacement_code": "161390",
+        "entry_date": "2019-03-27",
+        "slot_weight": 0.005267,
+        "stopped_ret": -0.103448,
+        "period_start": "2019-03-04"
+      },
+      {
+        "stopped_code": "011170",
+        "replacement_code": "009830",
+        "entry_date": "2019-03-22",
+        "slot_weight": 0.049958,
+        "stopped_ret": -0.102239,
+        "period_start": "2019-03-04"
+      },
+      {
+        "stopped_code": "006360",
+        "replacement_code": "069960",
+        "entry_date": "2019-04-10",
+        "slot_weight": 0.014294,
+        "stopped_ret": -0.066745,
+        "period_start": "2019-04-01"
+      },
+      {
+        "stopped_code": "003240",
+        "replacement_code": "047040",
+        "entry_date": "2019-04-23",
+        "slot_weight": 0.007534,
+        "stopped_ret": -0.081784,
+        "period_start": "2019-04-01"
+      },
+      {
+        "stopped_code": "006650",
+        "replacement_code": "069260",
+        "entry_date": "2019-05-13",
+        "slot_weight": 0.004043,
+        "stopped_ret": -0.063333,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "000660",
+        "replacement_code": "139480",
+        "entry_date": "2019-05-22",
+        "slot_weight": 0.24364,
+        "stopped_ret": -0.146221,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "006260",
+        "replacement_code": "047040",
+        "entry_date": "2019-05-10",
+        "slot_weight": 0.006677,
+        "stopped_ret": -0.081,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "005440",
+        "replacement_code": "010780",
+        "entry_date": "2019-05-24",
+        "slot_weight": 0.005612,
+        "stopped_ret": -0.10831,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "005490",
+        "replacement_code": "034310",
+        "entry_date": "2019-05-10",
+        "slot_weight": 0.091838,
+        "stopped_ret": -0.051181,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "034730",
+        "replacement_code": "018670",
+        "entry_date": "2019-05-29",
+        "slot_weight": 0.075281,
+        "stopped_ret": -0.112403,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "096770",
+        "replacement_code": "009150",
+        "entry_date": "2019-05-28",
+        "slot_weight": 0.070173,
+        "stopped_ret": -0.120219,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "001800",
+        "replacement_code": "030200",
+        "entry_date": "2019-05-20",
+        "slot_weight": 0.005027,
+        "stopped_ret": -0.098191,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "004490",
+        "replacement_code": "097950",
+        "entry_date": "2019-05-29",
+        "slot_weight": 0.002737,
+        "stopped_ret": -0.116649,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "001040",
+        "replacement_code": "004170",
+        "entry_date": "2019-05-13",
+        "slot_weight": 0.01464,
+        "stopped_ret": -0.103306,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "093050",
+        "replacement_code": "010120",
+        "entry_date": "2019-05-21",
+        "slot_weight": 0.003092,
+        "stopped_ret": -0.105882,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "006840",
+        "replacement_code": "057050",
+        "entry_date": "2019-05-09",
+        "slot_weight": 0.002961,
+        "stopped_ret": -0.081633,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "006120",
+        "replacement_code": "020000",
+        "entry_date": "2019-05-23",
+        "slot_weight": 0.002392,
+        "stopped_ret": -0.163366,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "069960",
+        "replacement_code": "027410",
+        "entry_date": "2019-05-16",
+        "slot_weight": 0.009948,
+        "stopped_ret": -0.154146,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "000880",
+        "replacement_code": "000990",
+        "entry_date": "2019-05-13",
+        "slot_weight": 0.009108,
+        "stopped_ret": -0.064846,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "000070",
+        "replacement_code": "011170",
+        "entry_date": "2019-05-30",
+        "slot_weight": 0.002859,
+        "stopped_ret": -0.089449,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "004020",
+        "replacement_code": "192080",
+        "entry_date": "2019-05-20",
+        "slot_weight": 0.025374,
+        "stopped_ret": -0.094875,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "011780",
+        "replacement_code": "286940",
+        "entry_date": "2019-05-13",
+        "slot_weight": 0.012319,
+        "stopped_ret": -0.094359,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "267270",
+        "replacement_code": "001820",
+        "entry_date": "2019-05-09",
+        "slot_weight": 0.003913,
+        "stopped_ret": -0.093946,
+        "period_start": "2019-05-02"
+      },
+      {
+        "stopped_code": "093050",
+        "replacement_code": "034310",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.00512,
+        "stopped_ret": 0.015385,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "004000",
+        "replacement_code": "012330",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.010125,
+        "stopped_ret": 0.003432,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "005490",
+        "replacement_code": "009150",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.164815,
+        "stopped_ret": 0.002375,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "034730",
+        "replacement_code": "139480",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.127005,
+        "stopped_ret": 0.012438,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "004170",
+        "replacement_code": "047040",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.02091,
+        "stopped_ret": 0.052854,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "011780",
+        "replacement_code": "192080",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.019235,
+        "stopped_ret": -0.004267,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "003240",
+        "replacement_code": "006650",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.010655,
+        "stopped_ret": 0.052533,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "005440",
+        "replacement_code": "008060",
+        "entry_date": "2019-09-09",
+        "slot_weight": 0.010047,
+        "stopped_ret": 0.004376,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "009410",
+        "replacement_code": "020000",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.008336,
+        "stopped_ret": 0.012379,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "001040",
+        "replacement_code": "003550",
+        "entry_date": "2019-09-03",
+        "slot_weight": 0.021302,
+        "stopped_ret": -0.00861,
+        "period_start": "2019-09-02"
+      },
+      {
+        "stopped_code": "001800",
+        "replacement_code": "139480",
+        "entry_date": "2019-10-04",
+        "slot_weight": 0.006853,
+        "stopped_ret": -0.043478,
+        "period_start": "2019-10-01"
+      },
+      {
+        "stopped_code": "241560",
+        "replacement_code": "192080",
+        "entry_date": "2019-10-30",
+        "slot_weight": 0.023771,
+        "stopped_ret": -0.098854,
+        "period_start": "2019-10-01"
+      },
+      {
+        "stopped_code": "057050",
+        "replacement_code": "003090",
+        "entry_date": "2019-10-02",
+        "slot_weight": 0.007419,
+        "stopped_ret": -0.020879,
+        "period_start": "2019-10-01"
+      },
+      {
+        "stopped_code": "004020",
+        "replacement_code": "006650",
+        "entry_date": "2019-10-25",
+        "slot_weight": 0.035359,
+        "stopped_ret": -0.116667,
+        "period_start": "2019-10-01"
+      },
+      {
+        "stopped_code": "069960",
+        "replacement_code": "005440",
+        "entry_date": "2020-03-03",
+        "slot_weight": 0.01628,
+        "stopped_ret": 0.0,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "005440",
+        "replacement_code": "006650",
+        "entry_date": "2020-03-13",
+        "slot_weight": 0.01628,
+        "stopped_ret": -0.190802,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "006650",
+        "replacement_code": "001630",
+        "entry_date": "2020-03-19",
+        "slot_weight": 0.01628,
+        "stopped_ret": -0.242611,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "004170",
+        "replacement_code": "034730",
+        "entry_date": "2020-03-03",
+        "slot_weight": 0.023775,
+        "stopped_ret": -0.006173,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "034730",
+        "replacement_code": "011170",
+        "entry_date": "2020-03-12",
+        "slot_weight": 0.023775,
+        "stopped_ret": -0.143603,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "011170",
+        "replacement_code": "001040",
+        "entry_date": "2020-03-17",
+        "slot_weight": 0.023775,
+        "stopped_ret": -0.151432,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "001040",
+        "replacement_code": "307950",
+        "entry_date": "2020-03-23",
+        "slot_weight": 0.023775,
+        "stopped_ret": -0.179289,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "001800",
+        "replacement_code": "005180",
+        "entry_date": "2020-03-03",
+        "slot_weight": 0.008903,
+        "stopped_ret": 0.003497,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "005180",
+        "replacement_code": "005850",
+        "entry_date": "2020-03-17",
+        "slot_weight": 0.008903,
+        "stopped_ret": -0.192669,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "005850",
+        "replacement_code": "000720",
+        "entry_date": "2020-03-19",
+        "slot_weight": 0.008903,
+        "stopped_ret": -0.151113,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "002350",
+        "replacement_code": "004800",
+        "entry_date": "2020-03-13",
+        "slot_weight": 0.006144,
+        "stopped_ret": -0.210111,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "004800",
+        "replacement_code": "006260",
+        "entry_date": "2020-03-19",
+        "slot_weight": 0.006144,
+        "stopped_ret": -0.24507,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "000270",
+        "replacement_code": "003240",
+        "entry_date": "2020-03-03",
+        "slot_weight": 0.138983,
+        "stopped_ret": 0.011594,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "003240",
+        "replacement_code": "020000",
+        "entry_date": "2020-03-13",
+        "slot_weight": 0.138983,
+        "stopped_ret": -0.211443,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "020000",
+        "replacement_code": "006060",
+        "entry_date": "2020-03-19",
+        "slot_weight": 0.138983,
+        "stopped_ret": -0.170792,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "004990",
+        "replacement_code": "042660",
+        "entry_date": "2020-03-03",
+        "slot_weight": 0.030235,
+        "stopped_ret": 0.02069,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "042660",
+        "replacement_code": "010120",
+        "entry_date": "2020-03-12",
+        "slot_weight": 0.030235,
+        "stopped_ret": -0.159796,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "010120",
+        "replacement_code": "069260",
+        "entry_date": "2020-03-17",
+        "slot_weight": 0.030235,
+        "stopped_ret": -0.184615,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "069260",
+        "replacement_code": "014820",
+        "entry_date": "2020-03-19",
+        "slot_weight": 0.030235,
+        "stopped_ret": -0.151007,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "111770",
+        "replacement_code": "086280",
+        "entry_date": "2020-03-06",
+        "slot_weight": 0.013959,
+        "stopped_ret": -0.064669,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "086280",
+        "replacement_code": "011780",
+        "entry_date": "2020-03-13",
+        "slot_weight": 0.013959,
+        "stopped_ret": -0.161828,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "011780",
+        "replacement_code": "008060",
+        "entry_date": "2020-03-19",
+        "slot_weight": 0.013959,
+        "stopped_ret": -0.180037,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "000990",
+        "replacement_code": "001680",
+        "entry_date": "2020-03-03",
+        "slot_weight": 0.011317,
+        "stopped_ret": -0.017544,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "001680",
+        "replacement_code": "033780",
+        "entry_date": "2020-03-12",
+        "slot_weight": 0.011317,
+        "stopped_ret": -0.14578,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "033780",
+        "replacement_code": "010130",
+        "entry_date": "2020-03-23",
+        "slot_weight": 0.011317,
+        "stopped_ret": -0.2,
+        "period_start": "2020-03-02"
+      },
+      {
+        "stopped_code": "002380",
+        "replacement_code": "000720",
+        "entry_date": "2021-05-26",
+        "slot_weight": 0.028026,
+        "stopped_ret": 0.047059,
+        "period_start": "2021-05-03"
+      },
+      {
+        "stopped_code": "139480",
+        "replacement_code": "000240",
+        "entry_date": "2021-05-06",
+        "slot_weight": 0.049795,
+        "stopped_ret": -0.047478,
+        "period_start": "2021-05-03"
+      },
+      {
+        "stopped_code": "103140",
+        "replacement_code": "005250",
+        "entry_date": "2021-05-24",
+        "slot_weight": 0.011275,
+        "stopped_ret": 0.054018,
+        "period_start": "2021-05-03"
+      },
+      {
+        "stopped_code": "000880",
+        "replacement_code": "004490",
+        "entry_date": "2021-05-04",
+        "slot_weight": 0.023681,
+        "stopped_ret": 0.025168,
+        "period_start": "2021-05-03"
+      },
+      {
+        "stopped_code": "000070",
+        "replacement_code": "003240",
+        "entry_date": "2021-05-14",
+        "slot_weight": 0.012575,
+        "stopped_ret": -0.133583,
+        "period_start": "2021-05-03"
+      },
+      {
+        "stopped_code": "011170",
+        "replacement_code": "006650",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.038303,
+        "stopped_ret": -0.005048,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "034220",
+        "replacement_code": "006040",
+        "entry_date": "2022-05-06",
+        "slot_weight": 0.033726,
+        "stopped_ret": 0.020925,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "011780",
+        "replacement_code": "000270",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.026418,
+        "stopped_ret": 0.0,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "005490",
+        "replacement_code": "034730",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.144181,
+        "stopped_ret": -0.013652,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "004020",
+        "replacement_code": "010950",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.033177,
+        "stopped_ret": -0.012486,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "001230",
+        "replacement_code": "030200",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.010422,
+        "stopped_ret": -0.015488,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "069960",
+        "replacement_code": "267250",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.010038,
+        "stopped_ret": -0.009211,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "103140",
+        "replacement_code": "078930",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.005133,
+        "stopped_ret": -0.010786,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "137310",
+        "replacement_code": "001040",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.027162,
+        "stopped_ret": 0.001073,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "298020",
+        "replacement_code": "111770",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.009891,
+        "stopped_ret": 0.0,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "000210",
+        "replacement_code": "000240",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.007357,
+        "stopped_ret": 0.051447,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "161390",
+        "replacement_code": "001800",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.02489,
+        "stopped_ret": -0.019663,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "241560",
+        "replacement_code": "069260",
+        "entry_date": "2022-05-19",
+        "slot_weight": 0.023255,
+        "stopped_ret": -0.107056,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "000880",
+        "replacement_code": "012330",
+        "entry_date": "2022-05-03",
+        "slot_weight": 0.012523,
+        "stopped_ret": -0.003378,
+        "period_start": "2022-05-02"
+      },
+      {
+        "stopped_code": "078930",
+        "replacement_code": "000210",
+        "entry_date": "2022-06-23",
+        "slot_weight": 0.029491,
+        "stopped_ret": -0.118736,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "004800",
+        "replacement_code": "006650",
+        "entry_date": "2022-06-22",
+        "slot_weight": 0.012371,
+        "stopped_ret": -0.065961,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "001230",
+        "replacement_code": "020000",
+        "entry_date": "2022-06-15",
+        "slot_weight": 0.011879,
+        "stopped_ret": -0.152781,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "007700",
+        "replacement_code": "001800",
+        "entry_date": "2022-06-17",
+        "slot_weight": 0.006221,
+        "stopped_ret": -0.15,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "011200",
+        "replacement_code": "012330",
+        "entry_date": "2022-06-13",
+        "slot_weight": 0.104327,
+        "stopped_ret": -0.082658,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "004000",
+        "replacement_code": "034220",
+        "entry_date": "2022-06-20",
+        "slot_weight": 0.014915,
+        "stopped_ret": -0.130383,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "018670",
+        "replacement_code": "363280",
+        "entry_date": "2022-06-22",
+        "slot_weight": 0.008361,
+        "stopped_ret": -0.122137,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "005880",
+        "replacement_code": "006040",
+        "entry_date": "2022-06-20",
+        "slot_weight": 0.006776,
+        "stopped_ret": -0.15798,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "004020",
+        "replacement_code": "000660",
+        "entry_date": "2022-06-20",
+        "slot_weight": 0.038249,
+        "stopped_ret": -0.182147,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "011780",
+        "replacement_code": "000270",
+        "entry_date": "2022-06-23",
+        "slot_weight": 0.033519,
+        "stopped_ret": -0.14375,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "028670",
+        "replacement_code": "096770",
+        "entry_date": "2022-06-13",
+        "slot_weight": 0.027872,
+        "stopped_ret": -0.11008,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "096770",
+        "replacement_code": "137310",
+        "entry_date": "2022-06-23",
+        "slot_weight": 0.027872,
+        "stopped_ret": -0.162109,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "004170",
+        "replacement_code": "161390",
+        "entry_date": "2022-06-20",
+        "slot_weight": 0.017156,
+        "stopped_ret": -0.105159,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "285130",
+        "replacement_code": "214320",
+        "entry_date": "2022-06-13",
+        "slot_weight": 0.015109,
+        "stopped_ret": -0.068548,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "016380",
+        "replacement_code": "034120",
+        "entry_date": "2022-06-23",
+        "slot_weight": 0.011999,
+        "stopped_ret": -0.152738,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "010780",
+        "replacement_code": "001040",
+        "entry_date": "2022-06-16",
+        "slot_weight": 0.01067,
+        "stopped_ret": -0.162162,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "001120",
+        "replacement_code": "011210",
+        "entry_date": "2022-06-22",
+        "slot_weight": 0.010292,
+        "stopped_ret": -0.102865,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "344820",
+        "replacement_code": "010950",
+        "entry_date": "2022-06-14",
+        "slot_weight": 0.006438,
+        "stopped_ret": -0.087479,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "010950",
+        "replacement_code": "030200",
+        "entry_date": "2022-07-01",
+        "slot_weight": 0.006438,
+        "stopped_ret": -0.156962,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "005490",
+        "replacement_code": "032640",
+        "entry_date": "2022-06-22",
+        "slot_weight": 0.173634,
+        "stopped_ret": -0.157986,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "034730",
+        "replacement_code": "267250",
+        "entry_date": "2022-06-22",
+        "slot_weight": 0.12793,
+        "stopped_ret": -0.128257,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "003490",
+        "replacement_code": "139480",
+        "entry_date": "2022-06-22",
+        "slot_weight": 0.06963,
+        "stopped_ret": -0.139896,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "103140",
+        "replacement_code": "111770",
+        "entry_date": "2022-06-21",
+        "slot_weight": 0.005872,
+        "stopped_ret": -0.136964,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "000990",
+        "replacement_code": "181710",
+        "entry_date": "2022-06-20",
+        "slot_weight": 0.021061,
+        "stopped_ret": -0.19242,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "047050",
+        "replacement_code": "069260",
+        "entry_date": "2022-06-20",
+        "slot_weight": 0.020262,
+        "stopped_ret": -0.111579,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "298020",
+        "replacement_code": "005440",
+        "entry_date": "2022-06-22",
+        "slot_weight": 0.012447,
+        "stopped_ret": -0.191106,
+        "period_start": "2022-06-02"
+      },
+      {
+        "stopped_code": "011780",
+        "replacement_code": "000210",
+        "entry_date": "2022-07-15",
+        "slot_weight": 0.03086,
+        "stopped_ret": -0.153571,
+        "period_start": "2022-07-01"
+      },
+      {
+        "stopped_code": "069960",
+        "replacement_code": "298020",
+        "entry_date": "2022-07-06",
+        "slot_weight": 0.01197,
+        "stopped_ret": -0.046942,
+        "period_start": "2022-07-01"
+      },
+      {
+        "stopped_code": "011170",
+        "replacement_code": "001800",
+        "entry_date": "2022-07-11",
+        "slot_weight": 0.046012,
+        "stopped_ret": -0.062326,
+        "period_start": "2022-07-01"
+      },
+      {
+        "stopped_code": "010060",
+        "replacement_code": "006650",
+        "entry_date": "2022-07-12",
+        "slot_weight": 0.024814,
+        "stopped_ret": -0.150348,
+        "period_start": "2022-07-01"
+      },
+      {
+        "stopped_code": "020000",
+        "replacement_code": "034220",
+        "entry_date": "2022-07-12",
+        "slot_weight": 0.005645,
+        "stopped_ret": -0.095238,
+        "period_start": "2022-07-01"
+      },
+      {
+        "stopped_code": "000990",
+        "replacement_code": "137310",
+        "entry_date": "2022-07-12",
+        "slot_weight": 0.015651,
+        "stopped_ret": -0.157895,
+        "period_start": "2022-07-01"
+      },
+      {
+        "stopped_code": "137310",
+        "replacement_code": "007070",
+        "entry_date": "2022-07-28",
+        "slot_weight": 0.015651,
+        "stopped_ret": -0.15186,
+        "period_start": "2022-07-01"
+      },
+      {
+        "stopped_code": "011200",
+        "replacement_code": "000990",
+        "entry_date": "2022-08-23",
+        "slot_weight": 0.102373,
+        "stopped_ret": -0.125,
+        "period_start": "2022-08-01"
+      },
+      {
+        "stopped_code": "028670",
+        "replacement_code": "000210",
+        "entry_date": "2022-09-01",
+        "slot_weight": 0.025134,
+        "stopped_ret": -0.116608,
+        "period_start": "2022-08-01"
+      },
+      {
+        "stopped_code": "016380",
+        "replacement_code": "001800",
+        "entry_date": "2022-09-01",
+        "slot_weight": 0.010426,
+        "stopped_ret": -0.123506,
+        "period_start": "2022-08-01"
+      },
+      {
+        "stopped_code": "010060",
+        "replacement_code": "006650",
+        "entry_date": "2022-09-01",
+        "slot_weight": 0.024467,
+        "stopped_ret": -0.105258,
+        "period_start": "2022-08-01"
+      },
+      {
+        "stopped_code": "363280",
+        "replacement_code": "012330",
+        "entry_date": "2022-08-29",
+        "slot_weight": 0.007848,
+        "stopped_ret": -0.091644,
+        "period_start": "2022-08-01"
+      },
+      {
+        "stopped_code": "011200",
+        "replacement_code": "032640",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.042863,
+        "stopped_ret": -0.159722,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "028670",
+        "replacement_code": "011780",
+        "entry_date": "2022-09-30",
+        "slot_weight": 0.010846,
+        "stopped_ret": -0.1,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "034730",
+        "replacement_code": "007070",
+        "entry_date": "2022-09-27",
+        "slot_weight": 0.067246,
+        "stopped_ret": -0.100671,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "069960",
+        "replacement_code": "018670",
+        "entry_date": "2022-09-22",
+        "slot_weight": 0.005793,
+        "stopped_ret": -0.055738,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "001120",
+        "replacement_code": "103140",
+        "entry_date": "2022-09-16",
+        "slot_weight": 0.006716,
+        "stopped_ret": -0.032787,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "010780",
+        "replacement_code": "363280",
+        "entry_date": "2022-09-07",
+        "slot_weight": 0.004619,
+        "stopped_ret": -0.059701,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "363280",
+        "replacement_code": "267270",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.004619,
+        "stopped_ret": -0.163399,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "003490",
+        "replacement_code": "047050",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.039072,
+        "stopped_ret": -0.133843,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "241560",
+        "replacement_code": "000880",
+        "entry_date": "2022-09-28",
+        "slot_weight": 0.013831,
+        "stopped_ret": -0.170588,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "004000",
+        "replacement_code": "111770",
+        "entry_date": "2022-09-23",
+        "slot_weight": 0.007171,
+        "stopped_ret": -0.10219,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "047040",
+        "replacement_code": "004800",
+        "entry_date": "2022-09-28",
+        "slot_weight": 0.008466,
+        "stopped_ret": -0.177291,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "005490",
+        "replacement_code": "000240",
+        "entry_date": "2022-09-29",
+        "slot_weight": 0.089506,
+        "stopped_ret": -0.132411,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "096770",
+        "replacement_code": "069260",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.066973,
+        "stopped_ret": -0.112045,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "010950",
+        "replacement_code": "012330",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.045272,
+        "stopped_ret": -0.177598,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "004020",
+        "replacement_code": "017670",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.017463,
+        "stopped_ret": -0.077519,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "000990",
+        "replacement_code": "030200",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.008026,
+        "stopped_ret": -0.148148,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "298020",
+        "replacement_code": "010060",
+        "entry_date": "2022-09-21",
+        "slot_weight": 0.005381,
+        "stopped_ret": -0.04894,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "001230",
+        "replacement_code": "006260",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.004899,
+        "stopped_ret": -0.039576,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "016380",
+        "replacement_code": "011210",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.004464,
+        "stopped_ret": -0.2,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "344820",
+        "replacement_code": "375500",
+        "entry_date": "2022-09-26",
+        "slot_weight": 0.003324,
+        "stopped_ret": -0.176413,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "011170",
+        "replacement_code": "120110",
+        "entry_date": "2022-09-27",
+        "slot_weight": 0.023713,
+        "stopped_ret": -0.067444,
+        "period_start": "2022-09-01"
+      },
+      {
+        "stopped_code": "285130",
+        "replacement_code": "069260",
+        "entry_date": "2022-10-06",
+        "slot_weight": 0.007214,
+        "stopped_ret": -0.022752,
+        "period_start": "2022-10-04"
+      },
+      {
+        "stopped_code": "000270",
+        "replacement_code": "195870",
+        "entry_date": "2022-10-11",
+        "slot_weight": 0.130902,
+        "stopped_ret": -0.074176,
+        "period_start": "2022-10-04"
+      },
+      {
+        "stopped_code": "004170",
+        "replacement_code": "047050",
+        "entry_date": "2022-11-10",
+        "slot_weight": 0.009156,
+        "stopped_ret": -0.034722,
+        "period_start": "2022-11-01"
+      },
+      {
+        "stopped_code": "007700",
+        "replacement_code": "004690",
+        "entry_date": "2022-12-12",
+        "slot_weight": 0.006976,
+        "stopped_ret": -0.130199,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "241560",
+        "replacement_code": "001230",
+        "entry_date": "2022-12-05",
+        "slot_weight": 0.023279,
+        "stopped_ret": -0.048611,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "001230",
+        "replacement_code": "353200",
+        "entry_date": "2022-12-29",
+        "slot_weight": 0.023279,
+        "stopped_ret": -0.17411,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "001120",
+        "replacement_code": "003550",
+        "entry_date": "2022-12-28",
+        "slot_weight": 0.010476,
+        "stopped_ret": -0.140811,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "000990",
+        "replacement_code": "161390",
+        "entry_date": "2022-12-12",
+        "slot_weight": 0.013188,
+        "stopped_ret": -0.094463,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "010780",
+        "replacement_code": "004990",
+        "entry_date": "2022-12-12",
+        "slot_weight": 0.006785,
+        "stopped_ret": -0.138032,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "034730",
+        "replacement_code": "285130",
+        "entry_date": "2022-12-29",
+        "slot_weight": 0.104027,
+        "stopped_ret": -0.131034,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "016380",
+        "replacement_code": "000660",
+        "entry_date": "2022-12-20",
+        "slot_weight": 0.005896,
+        "stopped_ret": -0.143326,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "000270",
+        "replacement_code": "096770",
+        "entry_date": "2022-12-29",
+        "slot_weight": 0.17937,
+        "stopped_ret": -0.135569,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "000720",
+        "replacement_code": "097950",
+        "entry_date": "2022-12-23",
+        "slot_weight": 0.029521,
+        "stopped_ret": -0.150852,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "010060",
+        "replacement_code": "047040",
+        "entry_date": "2022-12-29",
+        "slot_weight": 0.014706,
+        "stopped_ret": -0.154813,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "000150",
+        "replacement_code": "011210",
+        "entry_date": "2023-01-02",
+        "slot_weight": 0.009869,
+        "stopped_ret": -0.170626,
+        "period_start": "2022-12-01"
+      },
+      {
+        "stopped_code": "003490",
+        "replacement_code": "004490",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.040363,
+        "stopped_ret": 0.004717,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "005850",
+        "replacement_code": "185750",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.008058,
+        "stopped_ret": -0.013413,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "012330",
+        "replacement_code": "009970",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.109442,
+        "stopped_ret": 0.0,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "161390",
+        "replacement_code": "001120",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.035036,
+        "stopped_ret": -0.036563,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "004020",
+        "replacement_code": "001430",
+        "entry_date": "2024-05-09",
+        "slot_weight": 0.021597,
+        "stopped_ret": 0.004792,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "010060",
+        "replacement_code": "267250",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.00961,
+        "stopped_ret": 0.015823,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "047040",
+        "replacement_code": "097950",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.008177,
+        "stopped_ret": -0.003942,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "241560",
+        "replacement_code": "078930",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.026954,
+        "stopped_ret": -0.009615,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "111770",
+        "replacement_code": "023530",
+        "entry_date": "2024-05-03",
+        "slot_weight": 0.008775,
+        "stopped_ret": 0.016971,
+        "period_start": "2024-05-02"
+      },
+      {
+        "stopped_code": "000270",
+        "replacement_code": "204320",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.239958,
+        "stopped_ret": -0.007092,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "000720",
+        "replacement_code": "007310",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.020515,
+        "stopped_ret": -0.008251,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "005850",
+        "replacement_code": "011210",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.009673,
+        "stopped_ret": 0.0,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "011210",
+        "replacement_code": "003570",
+        "entry_date": "2024-10-28",
+        "slot_weight": 0.009673,
+        "stopped_ret": -0.145957,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "294870",
+        "replacement_code": "028260",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.008656,
+        "stopped_ret": -0.027778,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "011070",
+        "replacement_code": "097950",
+        "entry_date": "2024-10-24",
+        "slot_weight": 0.029931,
+        "stopped_ret": -0.153846,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "161390",
+        "replacement_code": "006260",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.02911,
+        "stopped_ret": -0.002587,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "006260",
+        "replacement_code": "383220",
+        "entry_date": "2024-10-24",
+        "slot_weight": 0.02911,
+        "stopped_ret": -0.128,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "078930",
+        "replacement_code": "004370",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.024038,
+        "stopped_ret": 0.016451,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "010060",
+        "replacement_code": "028670",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.008231,
+        "stopped_ret": -0.00578,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "280360",
+        "replacement_code": "282330",
+        "entry_date": "2024-11-01",
+        "slot_weight": 0.008191,
+        "stopped_ret": -0.115546,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "004490",
+        "replacement_code": "051600",
+        "entry_date": "2024-10-04",
+        "slot_weight": 0.007125,
+        "stopped_ret": 0.005974,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "001040",
+        "replacement_code": "298020",
+        "entry_date": "2024-10-23",
+        "slot_weight": 0.020382,
+        "stopped_ret": -0.085292,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "002380",
+        "replacement_code": "009540",
+        "entry_date": "2024-10-21",
+        "slot_weight": 0.0161,
+        "stopped_ret": -0.105705,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "034230",
+        "replacement_code": "047040",
+        "entry_date": "2024-10-25",
+        "slot_weight": 0.006634,
+        "stopped_ret": -0.150547,
+        "period_start": "2024-10-02"
+      },
+      {
+        "stopped_code": "300720",
+        "replacement_code": "011200",
+        "entry_date": "2024-11-13",
+        "slot_weight": 0.005167,
+        "stopped_ret": -0.066571,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "280360",
+        "replacement_code": "017670",
+        "entry_date": "2024-11-15",
+        "slot_weight": 0.006363,
+        "stopped_ret": -0.158353,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "005300",
+        "replacement_code": "030200",
+        "entry_date": "2024-11-11",
+        "slot_weight": 0.005966,
+        "stopped_ret": -0.064784,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "004490",
+        "replacement_code": "097950",
+        "entry_date": "2024-11-21",
+        "slot_weight": 0.005181,
+        "stopped_ret": -0.096681,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "010060",
+        "replacement_code": "006260",
+        "entry_date": "2024-11-12",
+        "slot_weight": 0.007048,
+        "stopped_ret": -0.169565,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "006260",
+        "replacement_code": "383220",
+        "entry_date": "2024-11-18",
+        "slot_weight": 0.007048,
+        "stopped_ret": -0.182342,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "001040",
+        "replacement_code": "282330",
+        "entry_date": "2024-11-15",
+        "slot_weight": 0.015815,
+        "stopped_ret": -0.1133,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "000120",
+        "replacement_code": "028670",
+        "entry_date": "2024-11-14",
+        "slot_weight": 0.01077,
+        "stopped_ret": -0.107466,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "028260",
+        "replacement_code": "002790",
+        "entry_date": "2024-11-14",
+        "slot_weight": 0.113365,
+        "stopped_ret": -0.030151,
+        "period_start": "2024-11-01"
+      },
+      {
+        "stopped_code": "000720",
+        "replacement_code": "086280",
+        "entry_date": "2024-12-09",
+        "slot_weight": 0.019823,
+        "stopped_ret": -0.120438,
+        "period_start": "2024-12-02"
+      },
+      {
+        "stopped_code": "000240",
+        "replacement_code": "267250",
+        "entry_date": "2024-12-30",
+        "slot_weight": 0.010566,
+        "stopped_ret": -0.012259,
+        "period_start": "2024-12-02"
+      },
+      {
+        "stopped_code": "002380",
+        "replacement_code": "032640",
+        "entry_date": "2024-12-09",
+        "slot_weight": 0.013625,
+        "stopped_ret": -0.082627,
+        "period_start": "2024-12-02"
+      },
+      {
+        "stopped_code": "001120",
+        "replacement_code": "017670",
+        "entry_date": "2025-01-08",
+        "slot_weight": 0.004432,
+        "stopped_ret": -0.040892,
+        "period_start": "2025-01-02"
+      },
+      {
+        "stopped_code": "011070",
+        "replacement_code": "030200",
+        "entry_date": "2025-01-24",
+        "slot_weight": 0.015846,
+        "stopped_ret": -0.056508,
+        "period_start": "2025-01-02"
+      },
+      {
+        "stopped_code": "097950",
+        "replacement_code": "028050",
+        "entry_date": "2025-01-23",
+        "slot_weight": 0.015839,
+        "stopped_ret": -0.052525,
+        "period_start": "2025-01-02"
+      },
+      {
+        "stopped_code": "028670",
+        "replacement_code": "004170",
+        "entry_date": "2025-04-03",
+        "slot_weight": 0.004412,
+        "stopped_ret": -0.02489,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "001120",
+        "replacement_code": "047040",
+        "entry_date": "2025-04-07",
+        "slot_weight": 0.002351,
+        "stopped_ret": -0.047809,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "161390",
+        "replacement_code": "010060",
+        "entry_date": "2025-04-09",
+        "slot_weight": 0.011782,
+        "stopped_ret": -0.080051,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "000240",
+        "replacement_code": "007340",
+        "entry_date": "2025-04-03",
+        "slot_weight": 0.003492,
+        "stopped_ret": -0.04862,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "007340",
+        "replacement_code": "003570",
+        "entry_date": "2025-05-02",
+        "slot_weight": 0.003492,
+        "stopped_ret": 0.014925,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "073240",
+        "replacement_code": "120110",
+        "entry_date": "2025-04-07",
+        "slot_weight": 0.003329,
+        "stopped_ret": -0.117831,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "004490",
+        "replacement_code": "005380",
+        "entry_date": "2025-04-02",
+        "slot_weight": 0.00225,
+        "stopped_ret": 0.021053,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "011200",
+        "replacement_code": "032640",
+        "entry_date": "2025-04-07",
+        "slot_weight": 0.043761,
+        "stopped_ret": -0.111922,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "402340",
+        "replacement_code": "028050",
+        "entry_date": "2025-04-07",
+        "slot_weight": 0.029987,
+        "stopped_ret": -0.166846,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "003490",
+        "replacement_code": "001040",
+        "entry_date": "2025-04-02",
+        "slot_weight": 0.019135,
+        "stopped_ret": 0.004651,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "267250",
+        "replacement_code": "111770",
+        "entry_date": "2025-04-04",
+        "slot_weight": 0.014129,
+        "stopped_ret": -0.032432,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "298020",
+        "replacement_code": "282330",
+        "entry_date": "2025-04-07",
+        "slot_weight": 0.002285,
+        "stopped_ret": -0.098398,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "000660",
+        "replacement_code": "375500",
+        "entry_date": "2025-04-07",
+        "slot_weight": 0.3,
+        "stopped_ret": -0.163452,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "000270",
+        "replacement_code": "002790",
+        "entry_date": "2025-04-04",
+        "slot_weight": 0.089582,
+        "stopped_ret": -0.037554,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "002380",
+        "replacement_code": "294870",
+        "entry_date": "2025-04-07",
+        "slot_weight": 0.005638,
+        "stopped_ret": -0.089524,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "112610",
+        "replacement_code": "034230",
+        "entry_date": "2025-04-09",
+        "slot_weight": 0.003547,
+        "stopped_ret": -0.125,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "011070",
+        "replacement_code": "012330",
+        "entry_date": "2025-04-03",
+        "slot_weight": 0.009084,
+        "stopped_ret": -0.103904,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "006260",
+        "replacement_code": "271560",
+        "entry_date": "2025-04-02",
+        "slot_weight": 0.00811,
+        "stopped_ret": -0.019194,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "103140",
+        "replacement_code": "204320",
+        "entry_date": "2025-04-04",
+        "slot_weight": 0.00422,
+        "stopped_ret": -0.085072,
+        "period_start": "2025-04-01"
+      },
+      {
+        "stopped_code": "112610",
+        "replacement_code": "047040",
+        "entry_date": "2025-05-23",
+        "slot_weight": 0.004283,
+        "stopped_ret": 0.061358,
+        "period_start": "2025-05-02"
+      },
+      {
+        "stopped_code": "010060",
+        "replacement_code": "120110",
+        "entry_date": "2025-05-23",
+        "slot_weight": 0.003223,
+        "stopped_ret": 0.009288,
+        "period_start": "2025-05-02"
+      }
+    ]
+  }
+}
