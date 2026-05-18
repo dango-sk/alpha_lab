@@ -16,6 +16,7 @@ universe 테이블을 PG에 생성.
 
 리밸런싱 주기:
   - monthly: 매월 첫 거래일
+  - biweekly: 월초 + 월 중간 (15일 이후 첫 거래일)
 
 재무 데이터 look-ahead bias 방지:
   - 연간 재무제표는 익년 4월부터 적용 (공시 래그)
@@ -49,15 +50,7 @@ def get_applicable_fiscal_year(rebal_date):
         return year - 2
 
 
-def build_universe(rebuild_all: bool = False):
-    """
-    유니버스 테이블 채우기.
-
-    - 기본(incremental): 이미 있는 (rebal_date, rebal_type)은 스킵, 새 리밸 날짜만 추가.
-      → 다른 사람과 공유 DB에서 안전. 중간에 끊겨도 데이터 보존.
-    - rebuild_all=True: 기존 전체 DELETE 후 처음부터 재구축. 과거 데이터까지
-      뒤집어 다시 만들어야 할 때만 사용 (fnspace_master 스냅샷 정정 등).
-    """
+def build_universe():
     import psycopg2
 
     conn = psycopg2.connect(PG_URL)
@@ -73,15 +66,8 @@ def build_universe(rebuild_all: bool = False):
             PRIMARY KEY (rebal_date, rebal_type, stock_code)
         )
     """)
-    if rebuild_all:
-        print("  [rebuild_all=True] 기존 universe 전체 삭제 후 재구축")
-        cur.execute("DELETE FROM alpha_lab.universe")
-        conn.commit()
-        existing = set()
-    else:
-        cur.execute("SELECT DISTINCT rebal_date, rebal_type FROM alpha_lab.universe")
-        existing = {(r[0], r[1]) for r in cur.fetchall()}
-        print(f"  [incremental] 기존 {len(existing)}건 → 없는 리밸 날짜만 추가")
+    cur.execute("DELETE FROM alpha_lab.universe")
+    conn.commit()
 
     # 1) 리밸런싱 날짜 생성 (monthly: 매월 첫 거래일)
     cur.execute("""
@@ -93,16 +79,24 @@ def build_universe(rebuild_all: bool = False):
     """, (START_DATE,))
     monthly_dates = cur.fetchall()
 
+    # biweekly: 15일 이후 첫 거래일
+    cur.execute("""
+        SELECT SUBSTRING(trade_date FROM 1 FOR 7) AS ym, MIN(trade_date) AS mid_day
+        FROM alpha_lab.daily_price
+        WHERE trade_date >= %s AND CAST(SUBSTRING(trade_date FROM 9 FOR 2) AS INT) >= 15
+        GROUP BY SUBSTRING(trade_date FROM 1 FOR 7)
+        ORDER BY ym
+    """, (START_DATE,))
+    mid_dates = {r[0]: r[1] for r in cur.fetchall()}
+
     rebal_dates = []
     for ym, first_day in monthly_dates:
         rebal_dates.append((first_day, "monthly"))
+        rebal_dates.append((first_day, "biweekly"))
+        if ym in mid_dates:
+            rebal_dates.append((mid_dates[ym], "biweekly"))
 
-    todo_rebal_dates = [rd for rd in rebal_dates if rd not in existing]
-    print(f"리밸런싱 날짜: 전체 {len(rebal_dates)}건 / 추가 대상 {len(todo_rebal_dates)}건")
-    if not todo_rebal_dates:
-        print("  추가할 리밸런싱 날짜 없음 (이미 최신)")
-        conn.close()
-        return
+    print(f"리밸런싱 날짜: {len(rebal_dates)}건")
 
     # 2) fnspace_master 스냅샷 로드 (stock_code: A prefix)
     cur.execute("""
@@ -136,7 +130,7 @@ def build_universe(rebuild_all: bool = False):
     # 4) 각 리밸런싱 날짜별 유니버스 생성
     total_inserted = 0
 
-    for idx, (rebal_date, rebal_type) in enumerate(todo_rebal_dates):
+    for idx, (rebal_date, rebal_type) in enumerate(rebal_dates):
         rebal_ym = rebal_date[:7]
         applicable_fy = get_applicable_fiscal_year(rebal_date)
 
@@ -206,9 +200,9 @@ def build_universe(rebuild_all: bool = False):
             """, inserts)
             total_inserted += len(inserts)
 
-        if (idx + 1) % 20 == 0 or idx == len(todo_rebal_dates) - 1:
+        if (idx + 1) % 20 == 0 or idx == len(rebal_dates) - 1:
             conn.commit()
-            print(f"  [{idx+1}/{len(todo_rebal_dates)}] {rebal_date} ({rebal_type}): "
+            print(f"  [{idx+1}/{len(rebal_dates)}] {rebal_date} ({rebal_type}): "
                   f"{len(inserts)}종목, 누적: {total_inserted:,}건")
 
     conn.commit()
@@ -233,14 +227,8 @@ def build_universe(rebuild_all: bool = False):
 
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description="유니버스 테이블 채우기 (기본: incremental)")
-    parser.add_argument("--rebuild-all", action="store_true",
-                        help="기존 universe 전체 삭제 후 재구축 (주의: 도중 끊기면 데이터 손실)")
-    args = parser.parse_args()
-
     print(f"=== Step 6: 유니버스 생성 ({datetime.now():%Y-%m-%d %H:%M}) ===")
-    build_universe(rebuild_all=args.rebuild_all)
+    build_universe()
 
 
 if __name__ == "__main__":

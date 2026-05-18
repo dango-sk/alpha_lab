@@ -266,6 +266,65 @@ def run_comparison():
         json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f"\n  💾 결과 저장: {out_path.relative_to(Path(__file__).parent.parent)}")
 
+    # ═════════════════════════════════════════════════════════
+    # Excel 저장 — C 방식 손절 이벤트 전체
+    # ═════════════════════════════════════════════════════════
+    import pandas as pd
+    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    rows_xl = []
+    for period, evs in sorted(events["nat"].items()):
+        for code, trigger_date, loss_pct, weight in evs:
+            rows_xl.append({
+                "기간 시작":       period,
+                "손절일":          trigger_date,
+                "종목 코드":       code,
+                "종목명":          nm(code),
+                "손절 수익률 (%)": round(loss_pct * 100, 2),
+                "비중 (%)":        round(weight * 100, 2),
+            })
+
+    df_xl = pd.DataFrame(rows_xl)
+    total = len(df_xl)
+
+    xl_path = out_dir / f"stoploss_C_{stamp}.xlsx"
+    with pd.ExcelWriter(xl_path, engine="openpyxl") as writer:
+        df_xl.to_excel(writer, sheet_name="C_손절이벤트", index=False)
+        wb = writer.book
+        ws = wb["C_손절이벤트"]
+
+        # 헤더 스타일
+        hfill = PatternFill("solid", fgColor="2E4057")
+        hfont = Font(bold=True, color="FFFFFF", size=11)
+        thin  = Side(style="thin", color="CCCCCC")
+        bdr   = Border(left=thin, right=thin, top=thin, bottom=thin)
+        center = Alignment(horizontal="center", vertical="center")
+        left   = Alignment(horizontal="left",   vertical="center")
+
+        for cell in ws[1]:
+            cell.fill, cell.font, cell.alignment, cell.border = hfill, hfont, center, bdr
+
+        # 데이터 행
+        prev_period, toggle = None, False
+        for i, row in enumerate(ws.iter_rows(min_row=2), start=2):
+            p = ws.cell(i, 1).value
+            if p != prev_period:
+                toggle = not toggle
+                prev_period = p
+            fill = PatternFill("solid", fgColor="EAF4FB" if toggle else "F5F5F5")
+            for j, cell in enumerate(row, start=1):
+                cell.fill = fill
+                cell.border = bdr
+                cell.alignment = left if j == 4 else center
+
+        ws.freeze_panes = "A2"
+        for col in ws.columns:
+            w = max(len(str(c.value or "")) for c in col)
+            ws.column_dimensions[get_column_letter(col[0].column)].width = min(max(w + 2, 8), 28)
+
+    print(f"  📊 C 손절 이벤트 Excel ({total}건): {xl_path.relative_to(Path(__file__).parent.parent)}")
+
 
 if __name__ == "__main__":
     run_comparison()

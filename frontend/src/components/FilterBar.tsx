@@ -20,7 +20,6 @@ function ToggleGroup({
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
 }) {
-  if (options.length <= 1) return null;
   return (
     <div className="flex rounded-lg overflow-hidden border border-border">
       {options.map((opt) => (
@@ -49,20 +48,22 @@ export default function FilterBar({
   className,
   children,
 }: FilterBarProps) {
-  const universeOptions = [{ value: 'KOSPI', label: 'KOSPI' }];
-  const rebalOptions = [{ value: 'monthly', label: '월간' }];
-  const hasToggles = universeOptions.length > 1 || rebalOptions.length > 1;
-  if (!hasToggles && !children) return null;
   return (
     <div className={cn('flex items-center gap-3 flex-wrap', className)}>
       <ToggleGroup
         value={universe}
-        options={universeOptions}
+        options={[
+          { value: 'KOSPI', label: 'KOSPI' },
+          { value: 'KOSPI+KOSDAQ', label: 'KOSPI+KOSDAQ' },
+        ]}
         onChange={(v) => onUniverseChange(v as 'KOSPI' | 'KOSPI+KOSDAQ')}
       />
       <ToggleGroup
         value={rebalType}
-        options={rebalOptions}
+        options={[
+          { value: 'monthly', label: '월간' },
+          { value: 'biweekly', label: '격주' },
+        ]}
         onChange={(v) => onRebalTypeChange(v as 'monthly' | 'biweekly')}
       />
       {children}

@@ -1896,7 +1896,7 @@ def run_regime_combo_backtest(
         print(f"[AI REGIME] path={_ai_path}, exists={_ai_path.exists()}", flush=True)
         if _ai_path.exists():
             # 비대칭 threshold: Bear 진입 -2% 이하, Bull 복귀 +1% 이상
-            with open(_ai_path) as _f:
+            with open(_ai_path, encoding="utf-8") as _f:
                 for _r in _json.load(_f):
                     _ym = _r.get("as_of", "")[:7]
                     _ai_er_map[_ym] = _r.get("expected_return", 0)

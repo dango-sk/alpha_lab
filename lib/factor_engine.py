@@ -447,6 +447,25 @@ def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, m
     return latest[["stock_code", "obv_slope"]]
 
 
+def _calc_w52_high_gap(price_all: pd.DataFrame, calc_date: str) -> pd.DataFrame:
+    """52주 신고가 대비 괴리율 계산.
+
+    Returns: DataFrame with [stock_code, w52_high_gap]
+      - w52_high_gap: (52주 최고가 - 현재가) / 52주 최고가 × 100 (양수, 클수록 많이 빠짐)
+      - rule2(높을수록 좋음) → 신고가 대비 많이 빠진 종목에 높은 점수
+    """
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=365)).strftime("%Y-%m-%d")
+    recent = price_all[(price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)].copy()
+    if recent.empty:
+        return pd.DataFrame(columns=["stock_code", "w52_high_gap"])
+
+    high52 = recent.groupby("stock_code")["close"].max().reset_index().rename(columns={"close": "high52"})
+    latest = recent.sort_values("trade_date").groupby("stock_code").last()[["close"]].reset_index()
+    result = high52.merge(latest, on="stock_code", how="inner")
+    result["w52_high_gap"] = (result["high52"] - result["close"]) / result["high52"] * 100
+    return result[["stock_code", "w52_high_gap"]]
+
+
 def _get_master_for_date(calc_date: str) -> pd.DataFrame:
     """프리페치 캐시에서 마스터 데이터 추출."""
     master_all = _prefetch_cache["master"]
@@ -485,6 +504,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
         mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
         obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
+        w52_df = _calc_w52_high_gap(_prefetch_cache["price"], calc_date)
     else:
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
@@ -612,6 +632,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         ma_rev_df = _calc_ma_reversion(_ma_price_all, calc_date, ma_window=_ma_window) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
         mfi_df = _calc_mfi(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "mfi"])
         obv_df = _calc_obv_slope(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "obv_slope"])
+        w52_df = _calc_w52_high_gap(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "w52_high_gap"])
 
         # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
         _snap_month = calc_date[:7]
@@ -628,7 +649,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # ─── 병합 ───
     merged = fin_df.merge(price_df, on="stock_code", how="inner")
     merged = merged.merge(master_df, on="stock_code", how="inner")
-    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, mfi_df, obv_df]:
+    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, mfi_df, obv_df, w52_df]:
         if not df_extra.empty:
             merged = merged.merge(df_extra, on="stock_code", how="left")
     merged = merged[(merged["market_cap"] > 0) & (merged["close"] > 0)].copy()
@@ -782,6 +803,10 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # OBV_SLOPE (OBV 20일 MA 선형회귀 기울기)
     if "obv_slope" not in merged.columns:
         merged["obv_slope"] = np.nan
+
+    # W52_HIGH_GAP (52주 신고가 대비 괴리율)
+    if "w52_high_gap" not in merged.columns:
+        merged["w52_high_gap"] = np.nan
 
     # NDEBT_EBITDA
     ebitda_col = "ebitda" if ("ebitda" in merged.columns and merged["ebitda"].notna().sum() > 10) else "ebit"
@@ -1257,6 +1282,7 @@ WEIGHTS_LARGE = {
     "PRICE_MA_REV": 0,
     "OBV_SLOPE": 0,
     "MFI": 0,
+    "W52_HIGH_GAP": 0,
 }
 
 WEIGHTS_SMALL = {}
@@ -1292,6 +1318,7 @@ SCORE_MAP = {
     "PRICE_MA_REV": "price_ma_rev_score",
     "OBV_SLOPE": "obv_slope_score",
     "MFI": "mfi_score",
+    "W52_HIGH_GAP": "w52_high_gap_score",
 }
 
 # ─── 스코어링 규칙 ───
@@ -1313,6 +1340,7 @@ SCORING_RULES = {
     "price_ma_rev": "rule2",
     "obv_slope": "rule2",
     "mfi": "rule2",
+    "w52_high_gap": "rule2",
 }
 
 # ─── 운용 파라미터 ───
