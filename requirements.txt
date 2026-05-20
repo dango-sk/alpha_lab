@@ -10,3 +10,5 @@ anthropic==0.83.0
 rich>=13.0
 psycopg2-binary>=2.9
 jumpmodels
+google-genai>=2.4.0
+openai>=1.0.0

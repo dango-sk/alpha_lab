@@ -112,9 +112,10 @@ def get_conn():
             DATABASE_URL,
             connect_timeout=30,
             keepalives=1,
-            keepalives_idle=30,
-            keepalives_interval=10,
-            keepalives_count=5,
+            keepalives_idle=10,
+            keepalives_interval=5,
+            keepalives_count=20,
+            options="-c statement_timeout=0 -c idle_in_transaction_session_timeout=0",
         )
         cur = conn.cursor()
         cur.execute("SET search_path TO alpha_lab, public")
