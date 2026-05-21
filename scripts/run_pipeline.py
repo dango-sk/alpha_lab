@@ -506,7 +506,7 @@ def step_collect_finance():
         "M382100": "per", "M383300": "psr", "M331030": "ev_ebitda",
         "M123200": "ebitda", "M121000": "revenue", "M121500": "operating_income",
         "M122700": "net_income", "M211000": "oi_margin",
-        "M431800": "div_yield", "M385110": "pcf",
+        "M431800": "div_yield", "M385110": "pcf", "M124155": "fcf",
     }
     COL_NAMES = list(FINANCE_ITEMS.values())
     MAX_CODES = 10
@@ -514,6 +514,10 @@ def step_collect_finance():
 
     conn = get_pg()
     cur = conn.cursor()
+
+    # fcf 컬럼 없으면 추가 (최초 1회)
+    cur.execute("ALTER TABLE alpha_lab.fnspace_finance ADD COLUMN IF NOT EXISTS fcf FLOAT")
+    conn.commit()
 
     # 전체 종목
     cur.execute("SELECT DISTINCT stock_code FROM alpha_lab.fnspace_master")
