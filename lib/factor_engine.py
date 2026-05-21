@@ -149,6 +149,24 @@ _QUARTILE_MAP = {
 # ── 프리페치 캐시 (백테스트 속도 최적화) ──
 _prefetch_cache: dict[str, pd.DataFrame] = {}
 
+# ── fcf 컬럼 존재 여부 캐시 (프로세스당 1회 확인) ──
+_has_fcf_col: bool | None = None
+
+
+def _check_fcf_column(conn) -> bool:
+    global _has_fcf_col
+    if _has_fcf_col is None:
+        try:
+            result = read_sql(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='fnspace_finance' AND column_name='fcf' LIMIT 1",
+                conn
+            )
+            _has_fcf_col = len(result) > 0
+        except Exception:
+            _has_fcf_col = False
+    return _has_fcf_col
+
 
 def prefetch_all_data(conn, use_local_cache=False):
     """백테스트 전에 대형 테이블을 한 번에 메모리로 로드.
@@ -171,26 +189,16 @@ def prefetch_all_data(conn, use_local_cache=False):
         print(f"[PREFETCH] Loaded from local cache in {time.time()-t0:.1f}s", flush=True)
         return
 
-    try:
-        _prefetch_cache["finance"] = read_sql("""
-            SELECT stock_code, fiscal_year, fiscal_quarter,
-                   pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
-                   net_debt, interest_debt, total_equity,
-                   eps, bps, per, psr, ev_ebitda,
-                   revenue, operating_income, net_income,
-                   oi_margin, div_yield, pcf, fcf
-            FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
-        """, conn)
-    except Exception:
-        _prefetch_cache["finance"] = read_sql("""
-            SELECT stock_code, fiscal_year, fiscal_quarter,
-                   pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
-                   net_debt, interest_debt, total_equity,
-                   eps, bps, per, psr, ev_ebitda,
-                   revenue, operating_income, net_income,
-                   oi_margin, div_yield, pcf
-            FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
-        """, conn)
+    _fcf_sel = ", fcf" if _check_fcf_column(conn) else ""
+    _prefetch_cache["finance"] = read_sql(f"""
+        SELECT stock_code, fiscal_year, fiscal_quarter,
+               pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
+               net_debt, interest_debt, total_equity,
+               eps, bps, per, psr, ev_ebitda,
+               revenue, operating_income, net_income,
+               oi_margin, div_yield, pcf{_fcf_sel}
+        FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
+    """, conn)
 
     _prefetch_cache["forward"] = read_sql("""
         SELECT stock_code, trade_date, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
@@ -500,68 +508,37 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
         _ttm_year, _ttm_qtr = _available_ttm_quarter(calc_date)
-        try:
-            ttm_df = read_sql("""
-                SELECT ff.stock_code, ff.fiscal_year,
-                       ff.pbr, ff.roe, ff.roic,
-                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
-                       ff.net_debt, ff.interest_debt, ff.total_equity,
-                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
-                       ff.revenue, ff.operating_income, ff.net_income,
-                       ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
-                FROM fnspace_finance ff
-                WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
-            """, conn, params=(_ttm_qtr, _ttm_year))
-        except Exception:
-            ttm_df = read_sql("""
-                SELECT ff.stock_code, ff.fiscal_year,
-                       ff.pbr, ff.roe, ff.roic,
-                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
-                       ff.net_debt, ff.interest_debt, ff.total_equity,
-                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
-                       ff.revenue, ff.operating_income, ff.net_income,
-                       ff.oi_margin, ff.div_yield, ff.pcf
-                FROM fnspace_finance ff
-                WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
-            """, conn, params=(_ttm_qtr, _ttm_year))
+        _fcf_sel = ", ff.fcf" if _check_fcf_column(conn) else ""
+        ttm_df = read_sql(f"""
+            SELECT ff.stock_code, ff.fiscal_year,
+                   ff.pbr, ff.roe, ff.roic,
+                   ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                   ff.net_debt, ff.interest_debt, ff.total_equity,
+                   ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                   ff.revenue, ff.operating_income, ff.net_income,
+                   ff.oi_margin, ff.div_yield, ff.pcf{_fcf_sel}
+            FROM fnspace_finance ff
+            WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
+        """, conn, params=(_ttm_qtr, _ttm_year))
 
         # Annual fallback (TTM 없는 종목)
-        try:
-            annual_df = read_sql("""
-                SELECT ff.stock_code, ff.fiscal_year,
-                       ff.pbr, ff.roe, ff.roic,
-                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
-                       ff.net_debt, ff.interest_debt, ff.total_equity,
-                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
-                       ff.revenue, ff.operating_income, ff.net_income,
-                       ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
-                FROM fnspace_finance ff
-                INNER JOIN (
-                    SELECT stock_code, MAX(fiscal_year) as max_year
-                    FROM fnspace_finance
-                    WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
-                    GROUP BY stock_code
-                ) latest ON ff.stock_code = latest.stock_code
-                    AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
-            """, conn, params=(max_usable_year,))
-        except Exception:
-            annual_df = read_sql("""
-                SELECT ff.stock_code, ff.fiscal_year,
-                       ff.pbr, ff.roe, ff.roic,
-                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
-                       ff.net_debt, ff.interest_debt, ff.total_equity,
-                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
-                       ff.revenue, ff.operating_income, ff.net_income,
-                       ff.oi_margin, ff.div_yield, ff.pcf
-                FROM fnspace_finance ff
-                INNER JOIN (
-                    SELECT stock_code, MAX(fiscal_year) as max_year
-                    FROM fnspace_finance
-                    WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
-                    GROUP BY stock_code
-                ) latest ON ff.stock_code = latest.stock_code
-                    AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
-            """, conn, params=(max_usable_year,))
+        annual_df = read_sql(f"""
+            SELECT ff.stock_code, ff.fiscal_year,
+                   ff.pbr, ff.roe, ff.roic,
+                   ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                   ff.net_debt, ff.interest_debt, ff.total_equity,
+                   ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                   ff.revenue, ff.operating_income, ff.net_income,
+                   ff.oi_margin, ff.div_yield, ff.pcf{_fcf_sel}
+            FROM fnspace_finance ff
+            INNER JOIN (
+                SELECT stock_code, MAX(fiscal_year) as max_year
+                FROM fnspace_finance
+                WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
+                GROUP BY stock_code
+            ) latest ON ff.stock_code = latest.stock_code
+                AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
+        """, conn, params=(max_usable_year,))
 
         if not ttm_df.empty:
             fallback = annual_df[~annual_df["stock_code"].isin(ttm_df["stock_code"])] if not annual_df.empty else pd.DataFrame()
