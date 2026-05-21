@@ -171,15 +171,26 @@ def prefetch_all_data(conn, use_local_cache=False):
         print(f"[PREFETCH] Loaded from local cache in {time.time()-t0:.1f}s", flush=True)
         return
 
-    _prefetch_cache["finance"] = read_sql("""
-        SELECT stock_code, fiscal_year, fiscal_quarter,
-               pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
-               net_debt, interest_debt, total_equity,
-               eps, bps, per, psr, ev_ebitda,
-               revenue, operating_income, net_income,
-               oi_margin, div_yield, pcf
-        FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
-    """, conn)
+    try:
+        _prefetch_cache["finance"] = read_sql("""
+            SELECT stock_code, fiscal_year, fiscal_quarter,
+                   pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
+                   net_debt, interest_debt, total_equity,
+                   eps, bps, per, psr, ev_ebitda,
+                   revenue, operating_income, net_income,
+                   oi_margin, div_yield, pcf, fcf
+            FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
+        """, conn)
+    except Exception:
+        _prefetch_cache["finance"] = read_sql("""
+            SELECT stock_code, fiscal_year, fiscal_quarter,
+                   pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
+                   net_debt, interest_debt, total_equity,
+                   eps, bps, per, psr, ev_ebitda,
+                   revenue, operating_income, net_income,
+                   oi_margin, div_yield, pcf
+            FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
+        """, conn)
 
     _prefetch_cache["forward"] = read_sql("""
         SELECT stock_code, trade_date, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
@@ -489,36 +500,68 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
         _ttm_year, _ttm_qtr = _available_ttm_quarter(calc_date)
-        ttm_df = read_sql("""
-            SELECT ff.stock_code, ff.fiscal_year,
-                   ff.pbr, ff.roe, ff.roic,
-                   ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
-                   ff.net_debt, ff.interest_debt, ff.total_equity,
-                   ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
-                   ff.revenue, ff.operating_income, ff.net_income,
-                   ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
-            FROM fnspace_finance ff
-            WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
-        """, conn, params=(_ttm_qtr, _ttm_year))
+        try:
+            ttm_df = read_sql("""
+                SELECT ff.stock_code, ff.fiscal_year,
+                       ff.pbr, ff.roe, ff.roic,
+                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                       ff.net_debt, ff.interest_debt, ff.total_equity,
+                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                       ff.revenue, ff.operating_income, ff.net_income,
+                       ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
+                FROM fnspace_finance ff
+                WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
+            """, conn, params=(_ttm_qtr, _ttm_year))
+        except Exception:
+            ttm_df = read_sql("""
+                SELECT ff.stock_code, ff.fiscal_year,
+                       ff.pbr, ff.roe, ff.roic,
+                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                       ff.net_debt, ff.interest_debt, ff.total_equity,
+                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                       ff.revenue, ff.operating_income, ff.net_income,
+                       ff.oi_margin, ff.div_yield, ff.pcf
+                FROM fnspace_finance ff
+                WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
+            """, conn, params=(_ttm_qtr, _ttm_year))
 
         # Annual fallback (TTM 없는 종목)
-        annual_df = read_sql("""
-            SELECT ff.stock_code, ff.fiscal_year,
-                   ff.pbr, ff.roe, ff.roic,
-                   ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
-                   ff.net_debt, ff.interest_debt, ff.total_equity,
-                   ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
-                   ff.revenue, ff.operating_income, ff.net_income,
-                   ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
-            FROM fnspace_finance ff
-            INNER JOIN (
-                SELECT stock_code, MAX(fiscal_year) as max_year
-                FROM fnspace_finance
-                WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
-                GROUP BY stock_code
-            ) latest ON ff.stock_code = latest.stock_code
-                AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
-        """, conn, params=(max_usable_year,))
+        try:
+            annual_df = read_sql("""
+                SELECT ff.stock_code, ff.fiscal_year,
+                       ff.pbr, ff.roe, ff.roic,
+                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                       ff.net_debt, ff.interest_debt, ff.total_equity,
+                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                       ff.revenue, ff.operating_income, ff.net_income,
+                       ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
+                FROM fnspace_finance ff
+                INNER JOIN (
+                    SELECT stock_code, MAX(fiscal_year) as max_year
+                    FROM fnspace_finance
+                    WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
+                    GROUP BY stock_code
+                ) latest ON ff.stock_code = latest.stock_code
+                    AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
+            """, conn, params=(max_usable_year,))
+        except Exception:
+            annual_df = read_sql("""
+                SELECT ff.stock_code, ff.fiscal_year,
+                       ff.pbr, ff.roe, ff.roic,
+                       ff.ev, ff.ic, ff.ev_ebit, ff.ebit, ff.ebitda,
+                       ff.net_debt, ff.interest_debt, ff.total_equity,
+                       ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
+                       ff.revenue, ff.operating_income, ff.net_income,
+                       ff.oi_margin, ff.div_yield, ff.pcf
+                FROM fnspace_finance ff
+                INNER JOIN (
+                    SELECT stock_code, MAX(fiscal_year) as max_year
+                    FROM fnspace_finance
+                    WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND roe IS NOT NULL
+                    GROUP BY stock_code
+                ) latest ON ff.stock_code = latest.stock_code
+                    AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
+            """, conn, params=(max_usable_year,))
 
         if not ttm_df.empty:
             fallback = annual_df[~annual_df["stock_code"].isin(ttm_df["stock_code"])] if not annual_df.empty else pd.DataFrame()
@@ -1264,8 +1307,6 @@ WEIGHTS_LARGE = {
     "PRICE_MA_REV": 0,
     "OBV_SLOPE": 0,
     "MFI": 0,
-    "NDEBT_EBITDA": 0,
-    "CURRENT": 0,
     "FCF_YIELD": 0,
 }
 
