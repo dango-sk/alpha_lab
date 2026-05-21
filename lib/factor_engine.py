@@ -496,7 +496,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
                    ff.net_debt, ff.interest_debt, ff.total_equity,
                    ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
                    ff.revenue, ff.operating_income, ff.net_income,
-                   ff.oi_margin, ff.div_yield, ff.pcf
+                   ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
             FROM fnspace_finance ff
             WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
         """, conn, params=(_ttm_qtr, _ttm_year))
@@ -509,7 +509,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
                    ff.net_debt, ff.interest_debt, ff.total_equity,
                    ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
                    ff.revenue, ff.operating_income, ff.net_income,
-                   ff.oi_margin, ff.div_yield, ff.pcf
+                   ff.oi_margin, ff.div_yield, ff.pcf, ff.fcf
             FROM fnspace_finance ff
             INNER JOIN (
                 SELECT stock_code, MAX(fiscal_year) as max_year
@@ -643,7 +643,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
 
     # 단위 통일 (천원 -> 원)
     for c in ["ev", "ic", "ebit", "ebitda", "net_debt", "interest_debt",
-              "total_equity", "revenue", "operating_income", "net_income"]:
+              "total_equity", "revenue", "operating_income", "net_income", "fcf"]:
         if c in merged.columns:
             merged[c] = merged[c] * 1000
     for c in ["fwd_ebit", "fwd_ebitda", "fwd_revenue", "fwd_oi", "fwd_ni"]:
@@ -789,6 +789,13 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     merged["ndebt_ebitda"] = np.where(m, merged["net_debt"] / merged[ebitda_col], np.nan)
 
     merged["current_ratio"] = np.nan
+
+    # FCF_YIELD
+    if "fcf" in merged.columns:
+        m = merged["fcf"].notna() & (merged["market_cap"] > 0)
+        merged["fcf_yield"] = np.where(m, merged["fcf"] / merged["market_cap"], np.nan)
+    else:
+        merged["fcf_yield"] = np.nan
 
     # ─── 대형/중소형 분리 ───
     merged = merged.sort_values("market_cap", ascending=False).reset_index(drop=True)
@@ -1257,6 +1264,9 @@ WEIGHTS_LARGE = {
     "PRICE_MA_REV": 0,
     "OBV_SLOPE": 0,
     "MFI": 0,
+    "NDEBT_EBITDA": 0,
+    "CURRENT": 0,
+    "FCF_YIELD": 0,
 }
 
 WEIGHTS_SMALL = {}
@@ -1292,6 +1302,7 @@ SCORE_MAP = {
     "PRICE_MA_REV": "price_ma_rev_score",
     "OBV_SLOPE": "obv_slope_score",
     "MFI": "mfi_score",
+    "FCF_YIELD": "fcf_yield_score",
 }
 
 # ─── 스코어링 규칙 ───
@@ -1313,6 +1324,7 @@ SCORING_RULES = {
     "price_ma_rev": "rule2",
     "obv_slope": "rule2",
     "mfi": "rule2",
+    "fcf_yield": "rule2",
 }
 
 # ─── 운용 파라미터 ───

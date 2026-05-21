@@ -24,7 +24,7 @@ const FACTOR_CATEGORIES: Record<string, { factors: string[]; color: string }> = 
     color: '#4CAF50',
   },
   '차별화': {
-    factors: ['F_EPS_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'MFI', 'NDEBT_EBITDA', 'CURRENT'],
+    factors: ['F_EPS_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'MFI', 'NDEBT_EBITDA', 'CURRENT', 'FCF_YIELD'],
     color: '#f59e0b',
   },
 };
@@ -50,6 +50,7 @@ const FACTOR_LABELS: Record<string, string> = {
   MFI: 'MFI (자금 유입)',
   NDEBT_EBITDA: '순부채/EBITDA',
   CURRENT: '유동비율',
+  FCF_YIELD: 'FCF 수익률',
 };
 
 // ─── Parse weights from code ───
@@ -111,6 +112,7 @@ const EXTRA_FACTOR_META: Record<string, { scoreCol: string; rule: string }> = {
   PRICE_MA_REV: { scoreCol: 'price_ma_rev_score', rule: 'rule2' },
   OBV_SLOPE:    { scoreCol: 'obv_slope_score',    rule: 'rule2' },
   MFI:          { scoreCol: 'mfi_score',           rule: 'rule2' },
+  FCF_YIELD:    { scoreCol: 'fcf_yield_score',     rule: 'rule2' },
 };
 
 function updateWeightInCode(code: string, factor: string, newValue: number): string {
