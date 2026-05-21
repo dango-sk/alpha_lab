@@ -276,6 +276,22 @@ def _get_fin_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     fin_df = fin_df.drop(columns=["fiscal_quarter", "fiscal_year"], errors="ignore")
 
+    # FCF는 Annual 전용 → TTM 기반 종목의 fcf(=NaN)를 Annual FCF로 보완
+    if "fcf" in fin_all.columns and "fcf" in fin_df.columns:
+        ann_fcf = (
+            annual_all[annual_all["fiscal_year"] <= max_usable_year]
+            .dropna(subset=["fcf"])
+            .sort_values("fiscal_year")
+            .groupby("stock_code")
+            .last()[["fcf"]]
+            .reset_index()
+            .rename(columns={"fcf": "_fcf_ann"})
+        )
+        if not ann_fcf.empty:
+            fin_df = fin_df.merge(ann_fcf, on="stock_code", how="left")
+            fin_df["fcf"] = fin_df["fcf"].fillna(fin_df["_fcf_ann"])
+            fin_df = fin_df.drop(columns=["_fcf_ann"])
+
     # prev_revenue: 동일 TTM 분기 전년도
     prev_ttm = fin_all[
         (fin_all["fiscal_quarter"] == ttm_qtr) & (fin_all["fiscal_year"] == ttm_year - 1)
@@ -551,6 +567,24 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
 
         if fin_df.empty:
             return None
+
+        # FCF는 Annual 전용 → TTM 기반 종목의 fcf(=NaN)를 Annual FCF로 보완
+        if _check_fcf_column(conn) and "fcf" in fin_df.columns:
+            ann_fcf = read_sql(f"""
+                SELECT ff.stock_code, ff.fcf AS _fcf_ann
+                FROM fnspace_finance ff
+                INNER JOIN (
+                    SELECT stock_code, MAX(fiscal_year) as max_year
+                    FROM fnspace_finance
+                    WHERE fiscal_quarter = 'Annual' AND fiscal_year <= ? AND fcf IS NOT NULL
+                    GROUP BY stock_code
+                ) latest ON ff.stock_code = latest.stock_code
+                    AND ff.fiscal_year = latest.max_year AND ff.fiscal_quarter = 'Annual'
+            """, conn, params=(max_usable_year,))
+            if not ann_fcf.empty:
+                fin_df = fin_df.merge(ann_fcf, on="stock_code", how="left")
+                fin_df["fcf"] = fin_df["fcf"].fillna(fin_df["_fcf_ann"])
+                fin_df = fin_df.drop(columns=["_fcf_ann"])
 
         # prev_revenue: TTM 전년도 우선 (같은 분기 기준)
         prev_ttm = read_sql("""
