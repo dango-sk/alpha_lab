@@ -1422,7 +1422,8 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
                           weight_cap_pct_override: int = None, tx_cost_bp_override: int = None,
                           rebal_type: str = None,
                           stop_loss_enabled: bool = None, stop_loss_pct: int = None,
-                          stop_loss_mode: str = None, stop_loss_basis: str = None) -> dict | None:
+                          stop_loss_mode: str = None, stop_loss_basis: str = None,
+                          reuse_prefetch: bool = False) -> dict | None:
     """
     커스텀 전략 코드로 백테스트를 실행한다.
 
@@ -1634,7 +1635,8 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
 
         return _numpy_to_python(results)
     finally:
-        clear_prefetch_cache()
+        if not reuse_prefetch:
+            clear_prefetch_cache()
         BACKTEST_CONFIG["top_n_stocks"] = orig["top_n_stocks"]
         BACKTEST_CONFIG["transaction_cost_bp"] = orig["transaction_cost_bp"]
         BACKTEST_CONFIG["weight_cap_pct"] = orig["weight_cap_pct"]

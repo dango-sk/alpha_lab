@@ -256,11 +256,17 @@ def step_backtest(skip_combos=None):
             _BC["rebal_type"] = orig_r
 
 
-def step_custom_strategies():
-    """저장된 커스텀 전략들을 재계산하여 PG에 업데이트"""
+def step_custom_strategies(only_names: list[str] | None = None):
+    """저장된 커스텀 전략들을 재계산하여 PG에 업데이트.
+
+    prefetch 캐시를 step 시작 시 한 번만 로드하고 모든 전략에서 재사용한다
+    (이전: 전략당 ~2분 prefetch × N개 → 현재: 1회 ~2분 + 본 백테스트).
+    """
     os.environ["DATABASE_URL"] = PG_URL
     import psycopg2
     from lib.data import run_strategy_backtest, save_strategy
+    from lib.factor_engine import prefetch_all_data, clear_prefetch_cache
+    from step7_backtest import get_db
 
     conn = psycopg2.connect(PG_URL)
     conn.cursor().execute("SET search_path TO alpha_lab, public")
@@ -283,30 +289,46 @@ def step_custom_strategies():
 
     # 레짐조합 전략은 코드가 빈 문자열이므로 제외
     rows = [(n, c, u, r) for n, c, u, r in rows if c and c.strip() and not n.startswith("레짐조합_")]
-    print(f"  커스텀 전략 {len(rows)}개 재계산 시작")
-    for name, code, universe, rebal_type in rows:
-        try:
-            print(f"    ▶ {name} ({universe}/{rebal_type})")
-            result = run_strategy_backtest(
-                strategy_code=code,
-                universe=universe,
-                rebal_type=rebal_type,
-            )
-            if result and "error" not in result:
-                save_strategy(
-                    name=name,
-                    code=code,
-                    results=result,
+    if only_names:
+        rows = [(n, c, u, r) for n, c, u, r in rows if n in only_names]
+        if not rows:
+            print(f"  --strategies 필터에 매칭되는 전략 없음: {only_names}")
+            return
+
+    print(f"  커스텀 전략 {len(rows)}개 재계산 시작 (prefetch 캐시 공유)")
+
+    # prefetch 1회만 — 모든 전략이 이 캐시를 공유
+    _pf_conn = get_db()
+    prefetch_all_data(_pf_conn)
+    _pf_conn.close()
+
+    try:
+        for name, code, universe, rebal_type in rows:
+            try:
+                print(f"    ▶ {name} ({universe}/{rebal_type})")
+                result = run_strategy_backtest(
+                    strategy_code=code,
                     universe=universe,
                     rebal_type=rebal_type,
+                    reuse_prefetch=True,
                 )
-                tr = result.get("CUSTOM", result).get("total_return", 0)
-                print(f"      ✓ 완료 (총수익률: {tr:+.1%})")
-            else:
-                err = result.get("error", "no result") if result else "no result"
-                print(f"      ✗ 실패: {err}")
-        except Exception as e:
-            print(f"      ✗ 에러: {e}")
+                if result and "error" not in result:
+                    save_strategy(
+                        name=name,
+                        code=code,
+                        results=result,
+                        universe=universe,
+                        rebal_type=rebal_type,
+                    )
+                    tr = result.get("CUSTOM", result).get("total_return", 0)
+                    print(f"      ✓ 완료 (총수익률: {tr:+.1%})")
+                else:
+                    err = result.get("error", "no result") if result else "no result"
+                    print(f"      ✗ 실패: {err}")
+            except Exception as e:
+                print(f"      ✗ 에러: {e}")
+    finally:
+        clear_prefetch_cache()
 
 
 def step_regime_combo_strategies():
@@ -691,7 +713,14 @@ def main():
     parser.add_argument("--rebuild-universe", action="store_true",
                         help="유니버스 전체 재구축 (기존 DELETE 후 처음부터). 평소엔 incremental만 돈다")
     parser.add_argument("--skip-combos", type=str, default="", help="스킵할 콤보 (예: KOSPI_monthly,KOSPI_biweekly)")
-    parser.add_argument("--only-custom", action="store_true", help="커스텀 전략 재계산+강건성만 실행")
+    parser.add_argument("--only-custom", action="store_true", help="커스텀 전략 재계산만 실행")
+    parser.add_argument("--strategies", type=str, default="",
+                        help="특정 커스텀 전략만 실행 (콤마 구분, 예: 'A0,수정전략_코스피_cap30%_top30_tx30bp_월간')")
+    parser.add_argument("--skip-regime-combo", action="store_true", help="레짐조합 전략 재계산 스킵")
+    parser.add_argument("--with-robustness", action="store_true",
+                        help="강건성 검증 포함 (기본은 스킵). --skip-robustness보다 우선.")
+    parser.add_argument("--skip-robustness", action="store_true",
+                        help="(deprecated) 기본이 스킵이라 불필요. 호환성용.")
     parser.add_argument("--consensus-from", type=str, default="", help="Forward/Consensus 수집 시작일 (YYYYMMDD, 일회성 보충용)")
     parser.add_argument("--ai-filter", action="store_true", help="AI 종목 필터 실행 (30→10종목)")
     parser.add_argument("--only-ai-filter", action="store_true", help="AI 종목 필터만 실행")
@@ -723,22 +752,31 @@ def main():
 
     skip_combos = [s.strip() for s in args.skip_combos.split(",") if s.strip()] if args.skip_combos else []
     consensus_from = args.consensus_from or None
+    only_strategies = [s.strip() for s in args.strategies.split(",") if s.strip()] if args.strategies else None
+    # 강건성: 기본 스킵, --with-robustness가 있어야 실행
+    do_robustness = args.with_robustness
 
     if args.only_ai_filter:
         run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy, args.ai_date))
     elif args.only_custom:
-        # 커스텀 전략 재계산 + 강건성만
-        run("커스텀 전략 재계산", step_custom_strategies)
-        run("레짐조합 전략 재계산", step_regime_combo_strategies)
-        run("강건성 검증", step_robustness)
+        # 커스텀 전략 재계산만
+        run("커스텀 전략 재계산", lambda: step_custom_strategies(only_strategies))
+        if not args.skip_regime_combo:
+            run("레짐조합 전략 재계산", step_regime_combo_strategies)
+        if do_robustness:
+            run("강건성 검증", step_robustness)
     elif args.only_backtest:
         # 유니버스 + 백테스트 + 커스텀만 (수집 스킵)
         if not args.skip_universe:
             run("유니버스 재구축", lambda: step_build_universe(rebuild_all=args.rebuild_universe))
-        run("백테스트", lambda: step_backtest(skip_combos=skip_combos))
-        run("커스텀 전략 재계산", step_custom_strategies)
-        run("레짐조합 전략 재계산", step_regime_combo_strategies)
-        run("강건성 검증", step_robustness)
+        # A0는 only_strategies 필터에 'A0'가 포함될 때만 (또는 필터 미지정 시 항상)
+        if not only_strategies or "A0" in only_strategies:
+            run("백테스트", lambda: step_backtest(skip_combos=skip_combos))
+        run("커스텀 전략 재계산", lambda: step_custom_strategies(only_strategies))
+        if not args.skip_regime_combo:
+            run("레짐조합 전략 재계산", step_regime_combo_strategies)
+        if do_robustness:
+            run("강건성 검증", step_robustness)
     else:
         # ── 월초: 마스터 + 재무 + TTM ──
         if is_monthly:
@@ -755,10 +793,13 @@ def main():
         run("뉴스 수집", step_collect_news)
 
         if not args.skip_backtest:
-            run("백테스트", step_backtest)
-            run("커스텀 전략 재계산", step_custom_strategies)
-            run("레짐조합 전략 재계산", step_regime_combo_strategies)
-            run("강건성 검증", step_robustness)
+            if not only_strategies or "A0" in only_strategies:
+                run("백테스트", step_backtest)
+            run("커스텀 전략 재계산", lambda: step_custom_strategies(only_strategies))
+            if not args.skip_regime_combo:
+                run("레짐조합 전략 재계산", step_regime_combo_strategies)
+            if do_robustness:
+                run("강건성 검증", step_robustness)
 
         if args.ai_filter:
             run("AI 종목 필터", lambda: step_ai_filter(args.ai_strategy, args.ai_date))
