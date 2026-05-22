@@ -851,6 +851,35 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     else:
         merged["fcf_yield"] = np.nan
 
+    # FCF_YIELD 보완: 여전히 NaN인 종목을 prefetch_cache Annual FCF로 직접 채움
+    # (캐시 불일치·fill 누락 방지 — 단위: DB 천원 × 1000 = 원)
+    still_nan = merged["fcf_yield"].isna() & (merged["market_cap"] > 0)
+    if still_nan.any() and "finance" in _prefetch_cache:
+        _dt = datetime.strptime(calc_date, "%Y-%m-%d")
+        _max_yr = _dt.year - 1 if _dt.month >= 4 else _dt.year - 2
+        _fin_all = _prefetch_cache["finance"]
+        if "fcf" in _fin_all.columns:
+            _ann_fcf = (
+                _fin_all[(_fin_all["fiscal_quarter"] == "Annual") &
+                         (_fin_all["fiscal_year"] <= _max_yr)]
+                .dropna(subset=["fcf"])
+                .sort_values("fiscal_year")
+                .groupby("stock_code")
+                .last()[["fcf"]]
+                .reset_index()
+                .rename(columns={"fcf": "_fcf_fill"})
+            )
+            if not _ann_fcf.empty:
+                merged = merged.merge(_ann_fcf, on="stock_code", how="left")
+                _fill = (merged["fcf_yield"].isna() &
+                         (merged["market_cap"] > 0) &
+                         merged["_fcf_fill"].notna())
+                merged.loc[_fill, "fcf"] = merged.loc[_fill, "_fcf_fill"] * 1000
+                merged.loc[_fill, "fcf_yield"] = (
+                    merged.loc[_fill, "fcf"] / merged.loc[_fill, "market_cap"]
+                )
+                merged = merged.drop(columns=["_fcf_fill"])
+
     # ─── 대형/중소형 분리 ───
     merged = merged.sort_values("market_cap", ascending=False).reset_index(drop=True)
     cutoff = min(LARGE_CAP_CUTOFF, len(merged) // 3)
