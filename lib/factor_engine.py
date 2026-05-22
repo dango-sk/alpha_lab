@@ -223,7 +223,7 @@ def prefetch_all_data(conn, use_local_cache=False):
     if "forward" not in _prefetch_cache:
         print("[PREFETCH] Loading forward...", flush=True)
         _prefetch_cache["forward"] = read_sql("""
-            SELECT stock_code, trade_date, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
+            SELECT 'A' || stock_code AS stock_code, trade_date, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
                    fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
             FROM fnspace_forward
         """, conn)
@@ -644,7 +644,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         fwd_df = pd.DataFrame()
         if fwd_date:
             fwd_df = read_sql("""
-                SELECT stock_code, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
+                SELECT 'A' || stock_code AS stock_code, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
                        fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
                 FROM fnspace_forward WHERE trade_date = ?
             """, conn, params=(fwd_date,))
@@ -658,7 +658,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         fwd_3m_df = pd.DataFrame()
         if fwd_date_3m:
             fwd_3m_df = read_sql(
-                "SELECT stock_code, fwd_eps as fwd_eps_3m FROM fnspace_forward WHERE trade_date=?",
+                "SELECT 'A' || stock_code AS stock_code, fwd_eps as fwd_eps_3m FROM fnspace_forward WHERE trade_date=?",
                 conn, params=(fwd_date_3m,),
             )
 
