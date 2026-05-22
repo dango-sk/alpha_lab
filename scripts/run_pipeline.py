@@ -220,18 +220,28 @@ def step_collect_consensus(from_date_override=None):
 
 
 def step_backtest(skip_combos=None):
-    """step7_backtest 실행 + 캐시 저장 (PG 직접, 4 콤보)"""
+    """step7_backtest 실행 + 캐시 저장 (PG 직접).
+
+    prefetch 캐시를 시작 시 1회 로드하여 매 리밸마다 DB 왕복하는 비용을 제거한다.
+    이 step이 끝나도 prefetch 캐시는 유지되어 후속 step_custom_strategies가 재사용한다
+    (전체 파이프라인 prefetch 1회만 → 추가 ~3분 절감).
+    """
     os.environ["DATABASE_URL"] = PG_URL  # PG 직접 사용
     from step7_backtest import run_all_backtests, save_backtest_cache, \
-        save_portfolio_cache, show_comparison
+        save_portfolio_cache, show_comparison, get_db
     from config.settings import BACKTEST_CONFIG as _BC
-    from lib.factor_engine import clear_factor_cache
+    from lib.factor_engine import clear_factor_cache, prefetch_all_data
 
     skip_set = set(skip_combos or [])
 
     combos = [
         ("KOSPI", "monthly"),
     ]
+
+    # prefetch 1회 — run_all_backtests 내부 load_factor_data가 메모리 슬라이스 경로로 동작
+    _pf_conn = get_db()
+    prefetch_all_data(_pf_conn)
+    _pf_conn.close()
 
     for universe, rebal_type in combos:
         combo_key = f"{universe}_{rebal_type}"
@@ -254,6 +264,8 @@ def step_backtest(skip_combos=None):
         finally:
             _BC["universe"] = orig_u
             _BC["rebal_type"] = orig_r
+
+    # prefetch 캐시는 의도적으로 유지 — step_custom_strategies가 받아쓴다.
 
 
 def step_custom_strategies(only_names: list[str] | None = None):
