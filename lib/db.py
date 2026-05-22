@@ -79,16 +79,45 @@ class _PgConnWrapper:
 
     - execute(), cursor() 에서 SQL 자동 변환
     - pd.read_sql_query 호환 (cursor()를 통해 변환된 커서 반환)
+    - 연결 끊김 시 자동 재접속 (장시간 백테스트 대응)
     """
 
     def __init__(self, pg_conn):
         self._conn = pg_conn
 
-    def execute(self, sql, params=None):
-        sql = _translate_sql(sql)
+    def _reconnect(self):
+        import psycopg2
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+        self._conn = psycopg2.connect(
+            DATABASE_URL,
+            connect_timeout=30,
+            keepalives=1,
+            keepalives_idle=10,
+            keepalives_interval=5,
+            keepalives_count=20,
+            options="-c statement_timeout=0 -c idle_in_transaction_session_timeout=0",
+        )
         cur = self._conn.cursor()
-        cur.execute(sql, params or ())
-        return cur
+        cur.execute("SET search_path TO alpha_lab, public")
+        self._conn.commit()
+        cur.close()
+        print("[DB] Reconnected to PostgreSQL", flush=True)
+
+    def execute(self, sql, params=None):
+        import psycopg2
+        sql = _translate_sql(sql)
+        try:
+            cur = self._conn.cursor()
+            cur.execute(sql, params or ())
+            return cur
+        except psycopg2.OperationalError:
+            self._reconnect()
+            cur = self._conn.cursor()
+            cur.execute(sql, params or ())
+            return cur
 
     def commit(self):
         self._conn.commit()
@@ -130,14 +159,24 @@ def get_conn():
 
 def read_sql(sql: str, conn, params=None):
     """pd.read_sql_query의 래퍼. PostgreSQL일 때 SQL/placeholder 자동 변환."""
-    import warnings
     import pandas as pd
     if _is_pg:
+        import psycopg2
         sql = _translate_sql(sql)
-        raw_conn = conn._conn if isinstance(conn, _PgConnWrapper) else conn
-        cur = raw_conn.cursor()
-        cur.execute(sql, params or ())
-        cols = [desc[0] for desc in cur.description]
-        return pd.DataFrame(cur.fetchall(), columns=cols)
+
+        def _do():
+            raw_conn = conn._conn if isinstance(conn, _PgConnWrapper) else conn
+            cur = raw_conn.cursor()
+            cur.execute(sql, params or ())
+            cols = [desc[0] for desc in cur.description]
+            return pd.DataFrame(cur.fetchall(), columns=cols)
+
+        try:
+            return _do()
+        except psycopg2.OperationalError:
+            if isinstance(conn, _PgConnWrapper):
+                conn._reconnect()
+                return _do()
+            raise
     else:
         return pd.read_sql_query(sql, conn, params=params)

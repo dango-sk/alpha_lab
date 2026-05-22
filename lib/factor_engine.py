@@ -171,8 +171,10 @@ def _check_fcf_column(conn) -> bool:
 def prefetch_all_data(conn, use_local_cache=False):
     """백테스트 전에 대형 테이블을 한 번에 메모리로 로드.
     이후 load_factor_data가 DB 대신 이 캐시에서 읽음.
-    use_local_cache=True면 로컬 pickle 캐시를 우선 사용."""
+    use_local_cache=True면 로컬 pickle 캐시를 우선 사용.
+    각 테이블을 로드한 직후 즉시 pkl 저장 (중간 실패 시 재개 가능)."""
     global _prefetch_cache
+    import pickle
     import time
     from pathlib import Path
     t0 = time.time()
@@ -180,50 +182,70 @@ def prefetch_all_data(conn, use_local_cache=False):
     cache_dir = Path(__file__).parent.parent / "cache" / "prefetch"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    if use_local_cache and (cache_dir / "finance.pkl").exists():
-        import pickle
-        for key in ["finance", "forward", "price", "master"]:
-            pkl = cache_dir / f"{key}.pkl"
-            if pkl.exists():
+    tables = ["finance", "forward", "price", "master"]
+
+    # use_local_cache=True이면 이미 캐시된 테이블은 건너뜀
+    if use_local_cache:
+        all_cached = all((cache_dir / f"{k}.pkl").exists() for k in tables)
+        if all_cached:
+            for key in tables:
+                pkl = cache_dir / f"{key}.pkl"
                 _prefetch_cache[key] = pickle.loads(pkl.read_bytes())
-        print(f"[PREFETCH] Loaded from local cache in {time.time()-t0:.1f}s", flush=True)
-        return
+                print(f"[PREFETCH] {key} loaded from cache", flush=True)
+            print(f"[PREFETCH] All from local cache in {time.time()-t0:.1f}s", flush=True)
+            return
+        # 일부만 캐시된 경우 → 캐시된 건 로드, 없는 건 DB에서 가져옴
+        for key in tables:
+            pkl = cache_dir / f"{key}.pkl"
+            if pkl.exists() and key not in _prefetch_cache:
+                _prefetch_cache[key] = pickle.loads(pkl.read_bytes())
+                print(f"[PREFETCH] {key} loaded from cache (partial resume)", flush=True)
 
-    _fcf_sel = ", fcf" if _check_fcf_column(conn) else ""
-    _prefetch_cache["finance"] = read_sql(f"""
-        SELECT stock_code, fiscal_year, fiscal_quarter,
-               pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
-               net_debt, interest_debt, total_equity,
-               eps, bps, per, psr, ev_ebitda,
-               revenue, operating_income, net_income,
-               oi_margin, div_yield, pcf{_fcf_sel}
-        FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
-    """, conn)
+    def _save(key):
+        if use_local_cache:
+            (cache_dir / f"{key}.pkl").write_bytes(pickle.dumps(_prefetch_cache[key]))
+            print(f"[PREFETCH] {key} cached to disk", flush=True)
 
-    _prefetch_cache["forward"] = read_sql("""
-        SELECT stock_code, trade_date, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
-               fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
-        FROM fnspace_forward
-    """, conn)
+    if "finance" not in _prefetch_cache:
+        _fcf_sel = ", fcf" if _check_fcf_column(conn) else ""
+        print("[PREFETCH] Loading finance...", flush=True)
+        _prefetch_cache["finance"] = read_sql(f"""
+            SELECT stock_code, fiscal_year, fiscal_quarter,
+                   pbr, roe, roic, ev, ic, ev_ebit, ebit, ebitda,
+                   net_debt, interest_debt, total_equity,
+                   eps, bps, per, psr, ev_ebitda,
+                   revenue, operating_income, net_income,
+                   oi_margin, div_yield, pcf{_fcf_sel}
+            FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
+        """, conn)
+        _save("finance")
 
-    _prefetch_cache["price"] = read_sql("""
-        SELECT 'A' || stock_code as stock_code, trade_date, close, high, low, volume, market_cap, trade_amount
-        FROM daily_price
-    """, conn)
+    if "forward" not in _prefetch_cache:
+        print("[PREFETCH] Loading forward...", flush=True)
+        _prefetch_cache["forward"] = read_sql("""
+            SELECT stock_code, trade_date, fwd_eps, fwd_per, fwd_ebit, fwd_ebitda,
+                   fwd_ev_ebitda, fwd_revenue, fwd_oi, fwd_ni, fwd_roe, fwd_bps
+            FROM fnspace_forward
+        """, conn)
+        _save("forward")
 
-    _prefetch_cache["master"] = read_sql("""
-        SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ, snapshot_date
-        FROM fnspace_master
-    """, conn)
+    if "price" not in _prefetch_cache:
+        print("[PREFETCH] Loading price (large)...", flush=True)
+        _prefetch_cache["price"] = read_sql("""
+            SELECT 'A' || stock_code as stock_code, trade_date, close, high, low, volume, market_cap, trade_amount
+            FROM daily_price
+        """, conn)
+        _save("price")
+
+    if "master" not in _prefetch_cache:
+        print("[PREFETCH] Loading master...", flush=True)
+        _prefetch_cache["master"] = read_sql("""
+            SELECT stock_code, stock_name, market, sec_cd_nm, finacc_typ, snapshot_date
+            FROM fnspace_master
+        """, conn)
+        _save("master")
 
     print(f"[PREFETCH] Loaded all data in {time.time()-t0:.1f}s", flush=True)
-
-    # 로컬 캐시 저장
-    if use_local_cache:
-        import pickle
-        for key in ["finance", "forward", "price", "master"]:
-            (cache_dir / f"{key}.pkl").write_bytes(pickle.dumps(_prefetch_cache[key]))
-        print(f"[PREFETCH] Saved local cache to {cache_dir}", flush=True)
 
 
 def clear_prefetch_cache():
