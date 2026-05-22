@@ -564,7 +564,7 @@ def step_collect_finance():
     """)
     existing = {r[0]: r[1] for r in cur.fetchall()}
 
-    target_years = datetime.now().year - 2017 + 1
+    target_years = datetime.now().year - 2016 + 1
     target_codes = [c for c in all_codes if existing.get(c, 0) < target_years]
     print(f"  전체: {len(all_codes)}종목, 보충 대상: {len(target_codes)}종목")
 
@@ -591,7 +591,7 @@ def step_collect_finance():
                     "key": FNSPACE_API_KEY, "format": "json",
                     "code": codes_str, "item": items_str,
                     "consolgb": "M", "annualgb": "A",
-                    "fraccyear": "2017", "toaccyear": str(datetime.now().year),
+                    "fraccyear": "2016", "toaccyear": str(datetime.now().year),
                 }, timeout=30)
                 data = resp.json()
                 api_calls += 1

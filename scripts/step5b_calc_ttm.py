@@ -45,7 +45,7 @@ QTR_NUM = {"1Q": 1, "2Q": 2, "3Q": 3, "4Q": 4}
 QTR_LABEL = {1: "TTM_1Q", 2: "TTM_2Q", 3: "TTM_3Q", 4: "TTM_4Q"}
 # 분기 종료월
 QTR_END_MONTH = {1: 3, 2: 6, 3: 9, 4: 12}
-BASE_YEAR = 2017
+BASE_YEAR = 2016
 
 
 def qtr_index(year: int, qtr_num: int) -> int:
@@ -70,7 +70,7 @@ def load_mcap_map(conn) -> dict:
     mcap_map = {}
     for code, date_mc in by_code.items():
         sorted_dates = sorted(date_mc.keys())
-        for year in range(2017, 2027):
+        for year in range(2016, 2027):
             for qtr_num, end_month in QTR_END_MONTH.items():
                 end_day = calendar.monthrange(year, end_month)[1]
                 target = f"{year}-{end_month:02d}-{end_day}"
