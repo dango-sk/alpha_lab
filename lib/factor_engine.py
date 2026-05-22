@@ -230,11 +230,20 @@ def prefetch_all_data(conn, use_local_cache=False):
         _save("forward")
 
     if "price" not in _prefetch_cache:
-        print("[PREFETCH] Loading price (large)...", flush=True)
-        _prefetch_cache["price"] = read_sql("""
-            SELECT 'A' || stock_code as stock_code, trade_date, close, high, low, volume, market_cap, trade_amount
-            FROM daily_price
-        """, conn)
+        print("[PREFETCH] Loading price (chunked by year)...", flush=True)
+        import pandas as _pd
+        _chunks = []
+        _start_yr = 2013
+        _end_yr = datetime.now().year
+        for _yr in range(_start_yr, _end_yr + 1):
+            print(f"[PREFETCH] price {_yr}...", flush=True)
+            _chunk = read_sql(f"""
+                SELECT 'A' || stock_code as stock_code, trade_date, close, high, low, volume, market_cap, trade_amount
+                FROM daily_price
+                WHERE trade_date >= '{_yr}-01-01' AND trade_date < '{_yr + 1}-01-01'
+            """, conn)
+            _chunks.append(_chunk)
+        _prefetch_cache["price"] = _pd.concat(_chunks, ignore_index=True) if _chunks else _pd.DataFrame()
         _save("price")
 
     if "master" not in _prefetch_cache:
@@ -1151,7 +1160,7 @@ def apply_quality_filter(df, filter_config):
 # 6. 종합 파이프라인
 # ═══════════════════════════════════════════════════════
 
-def score_stocks_from_strategy(conn, calc_date, strategy) -> list[tuple[str, float]]:
+def score_stocks_from_strategy(conn, calc_date, strategy, return_df: bool = False):
     """
     전략 모듈/설정에 따라 팩터 데이터 -> 퀄리티 필터 -> 회귀분석 -> 채점 -> 가중합
     전체 파이프라인을 실행하고 (stock_code, score) 리스트를 반환.
@@ -1215,7 +1224,104 @@ def score_stocks_from_strategy(conn, calc_date, strategy) -> list[tuple[str, flo
             code = code[1:]
         result.append((code, float(row["value_score"])))
 
+    if return_df:
+        return result[:top_n * 2], df
+
     return result[:top_n * 2]  # 유동성 필터용으로 여유분 반환
+
+
+def get_score_breakdown(conn, calc_date: str, strategy_module, top_n: int = 10) -> dict:
+    """
+    전략 모듈로 스코어링 파이프라인 실행 → 상위 종목별 팩터 breakdown 반환.
+
+    Returns:
+        {
+            "calc_date": str,
+            "n_stocks": int,
+            "scoring_mode": str,
+            "max_raw": float,
+            "active_factors": [(factor_key, weight), ...],
+            "stocks": [
+                {
+                    "rank": int, "종목코드": str, "종목명": str, "최종점수": float,
+                    "팩터": [{"key", "원시값", "점수", "가중치", "기여도"}, ...]
+                }
+            ]
+        }
+    """
+    weights_large     = getattr(strategy_module, "WEIGHTS_LARGE", {})
+    weights_small     = getattr(strategy_module, "WEIGHTS_SMALL", {})
+    score_map         = getattr(strategy_module, "SCORE_MAP", {})
+    scoring_rules     = getattr(strategy_module, "SCORING_RULES", {})
+    scoring_mode      = getattr(strategy_module, "SCORING_MODE", {"large": "quartile", "small": "decile"})
+    quality_filter    = getattr(strategy_module, "QUALITY_FILTER", {
+        "exclude_spac_etf_reit": True,
+        "require_positive_oi": True,
+        "require_positive_roe": True,
+        "min_avg_volume": 500_000_000,
+    })
+    regression_models = getattr(strategy_module, "REGRESSION_MODELS", [])
+    outlier_filters   = getattr(strategy_module, "OUTLIER_FILTERS", {})
+    params            = getattr(strategy_module, "PARAMS", {})
+    ma_rev_win        = params.get("ma_reversion_window", None)
+
+    df = load_factor_data(conn, calc_date, ma_reversion_window=ma_rev_win)
+    if df is None or df.empty:
+        return {}
+
+    if not weights_small:
+        df = df[df["size_group"] == "large"].copy()
+
+    df = apply_quality_filter(df, quality_filter)
+    df = df[df["quality_pass"] == 1].copy()
+
+    if len(df) < 10:
+        return {}
+
+    df, _ = run_regressions(df, regression_models, outlier_filters)
+    df = apply_scoring(df, scoring_rules, scoring_mode)
+    df = calc_weighted_scores(df, weights_large, weights_small, score_map, scoring_mode)
+
+    mode_large = scoring_mode.get("large", "quartile")
+    max_raw    = 4.0 if mode_large == "quartile" else 10.0
+    active     = [(k, v) for k, v in weights_large.items() if v > 0]
+
+    stocks = []
+    for rank, (_, row) in enumerate(df.nlargest(top_n, "value_score").iterrows(), 1):
+        code  = str(row.get("stock_code", "")).lstrip("A")
+        name  = str(row.get("stock_name", ""))
+        score = float(row.get("value_score", 0))
+
+        factors = []
+        for fk, w in active:
+            sc_col  = score_map.get(fk, "")
+            sc_val  = float(row.get(sc_col, 0) or 0) if sc_col else 0.0
+            raw_col = sc_col.replace("_score", "") if sc_col else ""
+            raw_val = row.get(raw_col, float("nan"))
+            factors.append({
+                "key":   fk,
+                "원시값": raw_val,
+                "점수":  sc_val,
+                "가중치": w,
+                "기여도": sc_val * w,
+            })
+
+        stocks.append({
+            "rank":    rank,
+            "종목코드": code,
+            "종목명":  name,
+            "최종점수": score,
+            "팩터":    factors,
+        })
+
+    return {
+        "calc_date":      calc_date,
+        "n_stocks":       len(df),
+        "scoring_mode":   mode_large,
+        "max_raw":        max_raw,
+        "active_factors": active,
+        "stocks":         stocks,
+    }
 
 
 # ═══════════════════════════════════════════════════════

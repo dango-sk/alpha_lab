@@ -1291,36 +1291,38 @@ def save_strategy(
 
     results_json = None
     holdings_json = None
+    factor_scores_json = None
     if results is not None:
         from step7_backtest import _numpy_to_python
         clean = _numpy_to_python(results)
-        # Custom backtest results come as {"KOSPI": {...}, "CUSTOM": {...}}
-        # Extract the CUSTOM sub-result for storage
         if "CUSTOM" in clean and "rebalance_dates" not in clean:
             custom = clean["CUSTOM"]
             holdings_json = custom.pop("holdings", None)
+            factor_scores_json = custom.pop("factor_scores", None)
             results_json = custom
         else:
             holdings_json = clean.pop("holdings", None)
-            # 레짐 조합은 holdings_by_date 키를 사용
             if not holdings_json and "holdings_by_date" in clean:
                 holdings_json = clean.pop("holdings_by_date", None)
+            factor_scores_json = clean.pop("factor_scores", None)
             results_json = clean
 
     try:
         conn.execute("""
-            INSERT INTO backtest_cache (name, universe, rebal_type, strategy_code, description, results_json, holdings_json, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            INSERT INTO backtest_cache (name, universe, rebal_type, strategy_code, description, results_json, holdings_json, factor_scores_json, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
             ON CONFLICT (name, universe, rebal_type)
             DO UPDATE SET
                 strategy_code = EXCLUDED.strategy_code,
                 description = EXCLUDED.description,
                 results_json = COALESCE(EXCLUDED.results_json, backtest_cache.results_json),
                 holdings_json = COALESCE(EXCLUDED.holdings_json, backtest_cache.holdings_json),
+                factor_scores_json = COALESCE(EXCLUDED.factor_scores_json, backtest_cache.factor_scores_json),
                 updated_at = NOW()
         """, (name, _uni, _rt, code, description,
               _pg_json(results_json) if results_json else None,
-              _pg_json(holdings_json) if holdings_json else None))
+              _pg_json(holdings_json) if holdings_json else None,
+              _pg_json(factor_scores_json) if factor_scores_json else None))
         conn.commit()
     finally:
         conn.close()
@@ -1334,12 +1336,11 @@ def load_strategy(name: str, rebal_type: str = None, universe: str = None) -> di
     try:
         row = conn.execute("""
             SELECT name, strategy_code, description, results_json, holdings_json,
-                   universe, rebal_type, created_at
+                   universe, rebal_type, created_at, factor_scores_json
             FROM backtest_cache
             WHERE name = %s AND universe = %s AND rebal_type = %s
         """, (name, _uni, _rt)).fetchone()
         if not row:
-            # 사전 정의 전략 fallback
             if name in _BASE_STRATEGY_CODES:
                 return {"name": name, "code": _BASE_STRATEGY_CODES[name], "description": "", "results": {}, "holdings": None}
             return {}
@@ -1352,6 +1353,7 @@ def load_strategy(name: str, rebal_type: str = None, universe: str = None) -> di
             "universe": row[5],
             "rebal_type": row[6],
             "created_at": str(row[7]) if row[7] else "",
+            "factor_scores": row[8] or {},
         }
         # holdings를 results 안에 넣기 (get_holdings 호환)
         if result["holdings"] and isinstance(result["results"], dict):
@@ -1464,11 +1466,51 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
 
     # stock_selector 콜백 생성 (universe 테이블 기반)
     from step7_backtest import get_universe_stocks
+    from lib.factor_engine import score_stocks_from_strategy as _score_fn
+
+    _weights_large = getattr(strategy_module, "WEIGHTS_LARGE", {})
+    _score_map     = getattr(strategy_module, "SCORE_MAP", {})
+    _scoring_mode  = getattr(strategy_module, "SCORING_MODE", {"large": "quartile"})
+    _active_factors = [(k, v) for k, v in _weights_large.items() if v > 0]
+    _max_raw = 4.0 if _scoring_mode.get("large") == "quartile" else 10.0
+
+    _factor_scores_by_date: dict = {}
+
+    def _serialize_breakdown(df_scored, selected_codes_with_a: set) -> list:
+        """선택된 종목들의 팩터 원시값·점수·기여도를 직렬화."""
+        rows = []
+        sel = df_scored[df_scored["stock_code"].isin(selected_codes_with_a)].copy()
+        for _, row in sel.sort_values("value_score", ascending=False).iterrows():
+            factors = []
+            for fk, w in _active_factors:
+                sc_col  = _score_map.get(fk, "")
+                sc_val  = float(row.get(sc_col, 0) or 0) if sc_col else 0.0
+                raw_col = sc_col.replace("_score", "") if sc_col else ""
+                raw_val = row.get(raw_col, None)
+                raw_val = None if raw_val is not None and str(raw_val) == "nan" else (
+                    float(raw_val) if raw_val is not None else None
+                )
+                factors.append({
+                    "key":    fk,
+                    "raw":    raw_val,
+                    "score":  sc_val,
+                    "weight": w,
+                    "contrib": round(sc_val * w, 4),
+                })
+            rows.append({
+                "code":        str(row.get("stock_code", "")).lstrip("A"),
+                "name":        str(row.get("stock_name", "")),
+                "final_score": round(float(row.get("value_score", 0)), 1),
+                "factors":     factors,
+            })
+        return rows
 
     def stock_selector(conn, calc_date, _top_n):
         universe_set = get_universe_stocks(conn, calc_date)
-        candidates = score_stocks_from_strategy(conn, calc_date, strategy_module)
+        candidates, full_df = _score_fn(conn, calc_date, strategy_module, return_df=True)
         filtered = [(c, s) for c, s in candidates if c in universe_set][:_top_n]
+        selected_with_a = {"A" + c for c, _ in filtered}
+        _factor_scores_by_date[calc_date] = _serialize_breakdown(full_df, selected_with_a)
         return filtered
 
     # 4. BACKTEST_CONFIG 임시 변경 후 실행
@@ -1573,6 +1615,9 @@ def run_strategy_backtest(strategy_code: str, progress_callback=None, universe: 
                 conn2.close()
 
             result["strategy"] = "CUSTOM"
+            # 팩터 스코어 breakdown 첨부
+            if _factor_scores_by_date:
+                result["factor_scores"] = _factor_scores_by_date
             results["CUSTOM"] = result
 
         # 벤치마크
