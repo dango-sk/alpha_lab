@@ -820,6 +820,10 @@ def main():
         run("Forward/Consensus 수집", lambda: step_collect_consensus(consensus_from))
         run("뉴스 수집", step_collect_news)
 
+        # daily_price 갱신 후 stock_indicators (MA/MFI) 도 같이 적재 → 백테스트에서 사용
+        # incremental=True: 최근 200일치만 재계산 (rolling 120 lookback 안전 여유)
+        run("Stock Indicators 적재", lambda: step_build_stock_indicators(incremental=True))
+
         if not args.skip_backtest:
             if not only_strategies or "A0" in only_strategies:
                 run("백테스트", step_backtest)
