@@ -200,7 +200,7 @@ def prefetch_all_data(conn, use_local_cache=True):
     cache_is_fresh = False
     db_max_trade_date = None
 
-    if use_local_cache and not force_refresh:
+    if not force_refresh:
         try:
             row = conn.execute("SELECT MAX(trade_date) FROM daily_price").fetchone()
             db_max_trade_date = row[0] if row else None
@@ -208,7 +208,17 @@ def prefetch_all_data(conn, use_local_cache=True):
             print(f"[PREFETCH] stale 검증용 쿼리 실패: {_e}", flush=True)
             db_max_trade_date = None
 
-        if db_max_trade_date and meta_path.exists():
+        # ── 메모리 캐시도 stale check (A 옵션) ──
+        # 이전: 메모리 캐시가 있으면 stale check 안 함 → 데이터 갱신해도 자동 반영 X
+        # 변경: 메모리 캐시의 max_trade_date 비교 → 다르면 메모리 캐시 및 indicator 캐시 무효화
+        if _prefetch_cache and db_max_trade_date:
+            mem_max = _prefetch_cache.get("_max_trade_date")
+            if mem_max and mem_max != db_max_trade_date:
+                print(f"[PREFETCH] 메모리 캐시 stale 감지: mem={mem_max}, db={db_max_trade_date} → 무효화 + 재로드", flush=True)
+                _prefetch_cache.clear()
+                clear_indicator_cache()  # MA/MFI/OBV 캐시도 무효화
+
+        if use_local_cache and db_max_trade_date and meta_path.exists():
             try:
                 meta = json.loads(meta_path.read_text())
                 cached_max = meta.get("max_trade_date")
@@ -216,17 +226,22 @@ def prefetch_all_data(conn, use_local_cache=True):
                 if cached_max == db_max_trade_date and all_pkl_exist:
                     cache_is_fresh = True
                 elif cached_max != db_max_trade_date:
-                    print(f"[PREFETCH] stale 감지: cache={cached_max}, db={db_max_trade_date} → 재로드", flush=True)
+                    print(f"[PREFETCH] 디스크 캐시 stale 감지: cache={cached_max}, db={db_max_trade_date} → 재로드", flush=True)
             except Exception as _e:
                 print(f"[PREFETCH] 메타데이터 읽기 실패: {_e}", flush=True)
 
     # 캐시가 fresh이면 디스크에서 일괄 로드 후 즉시 리턴
-    if cache_is_fresh:
+    if cache_is_fresh and not _prefetch_cache:
         for key in tables:
             pkl = cache_dir / f"{key}.pkl"
             _prefetch_cache[key] = pickle.loads(pkl.read_bytes())
             print(f"[PREFETCH] {key} loaded from disk cache", flush=True)
+        if db_max_trade_date:
+            _prefetch_cache["_max_trade_date"] = db_max_trade_date
         print(f"[PREFETCH] All from disk cache in {time.time()-t0:.1f}s (max_trade_date={db_max_trade_date})", flush=True)
+        return
+    # 메모리 캐시가 이미 있고 stale 아닌 경우 → 그대로 사용
+    if _prefetch_cache and all(k in _prefetch_cache for k in tables):
         return
 
     # 강제 갱신 또는 stale → 디스크 pkl 제거하고 처음부터 DB에서 로드
@@ -307,6 +322,11 @@ def prefetch_all_data(conn, use_local_cache=True):
         except Exception:
             db_max_trade_date = None
     _save_meta()
+    # 메모리 캐시에도 max_trade_date 기록 (다음 prefetch_all_data 호출 시 stale check용)
+    if db_max_trade_date:
+        _prefetch_cache["_max_trade_date"] = db_max_trade_date
+    # MA/MFI/OBV 인디케이터 캐시도 무효화 (price 데이터가 새로 로드됐으므로)
+    clear_indicator_cache()
 
     print(f"[PREFETCH] Loaded all data in {time.time()-t0:.1f}s (max_trade_date={db_max_trade_date})", flush=True)
 
@@ -426,6 +446,145 @@ def _get_price_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         price_3m_df = price_all[price_all["trade_date"] == price_date_3m][["stock_code", "close"]].copy()
         price_3m_df = price_3m_df.rename(columns={"close": "close_3m"})
     return price_df, price_3m_df
+
+
+# ═══════════════════════════════════════════════════════
+# MA/MFI/OBV 인디케이터 메모리 캐시 (FE_USE_MA_CACHE=1 활성화)
+# 전체 price_all 에 대해 1회 indicator 컬럼 계산해두고,
+# 매 calc_date 호출 시 슬라이스만 → groupby/rolling 반복 제거.
+# ═══════════════════════════════════════════════════════
+_ma_indicator_cache: dict = {}   # ma_window → DataFrame
+_mfi_indicator_cache: dict = {}  # period → DataFrame
+_obv_indicator_cache: dict = {}  # (obv_ma, momentum_window) → DataFrame
+
+
+def _is_ma_cache_enabled() -> bool:
+    import os as _os
+    return _os.environ.get("FE_USE_MA_CACHE", "0").lower() in ("1", "true", "yes")
+
+
+def clear_indicator_cache():
+    """price prefetch 갱신 시 indicator 캐시도 무효화."""
+    global _ma_indicator_cache, _mfi_indicator_cache, _obv_indicator_cache
+    _ma_indicator_cache.clear()
+    _mfi_indicator_cache.clear()
+    _obv_indicator_cache.clear()
+
+
+def _ensure_ma_indicators(price_all: pd.DataFrame, ma_window: int):
+    if ma_window in _ma_indicator_cache:
+        return _ma_indicator_cache[ma_window]
+    df = price_all.sort_values(["stock_code", "trade_date"])[["stock_code", "trade_date", "close"]].copy()
+    df["ma"] = df.groupby("stock_code")["close"].transform(
+        lambda x: x.rolling(ma_window, min_periods=ma_window).mean()
+    )
+    df["deviation"] = (df["close"] - df["ma"]) / df["ma"] * 100
+    _ma_indicator_cache[ma_window] = df
+    return df
+
+
+def _calc_ma_reversion_cached(price_all: pd.DataFrame, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
+    """캐시 버전 — 동일 결과 보장."""
+    df = _ensure_ma_indicators(price_all, ma_window)
+    lookback_days = int((250 + ma_window) * 1.5) + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)]
+    valid = recent[recent["ma"].notna()]
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
+    last250 = valid.groupby("stock_code").tail(250)
+    result = last250.groupby("stock_code").agg(price_ma_rev=("deviation", "min")).reset_index()
+    result["price_ma_rev"] = result["price_ma_rev"].abs()
+    latest = valid.groupby("stock_code").last()[["deviation"]].reset_index()
+    latest["below_ma"] = (latest["deviation"] <= 0).astype(int)
+    result = result.merge(latest[["stock_code", "below_ma"]], on="stock_code", how="left")
+    result["below_ma"] = result["below_ma"].fillna(0).astype(int)
+    return result
+
+
+def _ensure_mfi_indicators(price_all: pd.DataFrame, period: int):
+    if period in _mfi_indicator_cache:
+        return _mfi_indicator_cache[period]
+    if "high" not in price_all.columns or "low" not in price_all.columns:
+        _mfi_indicator_cache[period] = None
+        return None
+    df = price_all.sort_values(["stock_code", "trade_date"])[
+        ["stock_code", "trade_date", "high", "low", "close", "volume"]
+    ].copy()
+    df["tp"] = (df["high"] + df["low"] + df["close"]) / 3
+    df["mf"] = df["tp"] * df["volume"]
+    tp_diff = df.groupby("stock_code")["tp"].transform(lambda x: x.diff())
+    df["pos_mf"] = np.where(tp_diff > 0, df["mf"], 0.0)
+    df["neg_mf"] = np.where(tp_diff < 0, df["mf"], 0.0)
+    df["pos_sum"] = df.groupby("stock_code")["pos_mf"].transform(
+        lambda x: x.rolling(period, min_periods=period).sum()
+    )
+    df["neg_sum"] = df.groupby("stock_code")["neg_mf"].transform(
+        lambda x: x.rolling(period, min_periods=period).sum()
+    )
+    mfr = df["pos_sum"] / df["neg_sum"].replace(0, np.nan)
+    df["mfi_val"] = 100 - (100 / (1 + mfr))
+    _mfi_indicator_cache[period] = df
+    return df
+
+
+def _calc_mfi_cached(price_all: pd.DataFrame, calc_date: str, period: int = 14, lookback: int = 20) -> pd.DataFrame:
+    df = _ensure_mfi_indicators(price_all, period)
+    if df is None:
+        return pd.DataFrame(columns=["stock_code", "mfi"])
+    lookback_days = (period + lookback) * 2 + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)]
+    valid = recent[recent["pos_sum"].notna() & recent["neg_sum"].notna()]
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "mfi"])
+    last = valid.groupby("stock_code").tail(lookback)
+    first_val = last.groupby("stock_code")["mfi_val"].first()
+    last_val = last.groupby("stock_code")["mfi_val"].last()
+    result = pd.DataFrame({
+        "stock_code": last_val.index,
+        "mfi_current": last_val.values,
+        "mfi_momentum": (last_val - first_val).values,
+    })
+    result["mfi"] = result["mfi_momentum"] + np.where(
+        result["mfi_current"] < 50, (50 - result["mfi_current"]) * 0.2, 0
+    )
+    return result[["stock_code", "mfi"]]
+
+
+def _ensure_obv_indicators(price_all: pd.DataFrame, obv_ma: int, momentum_window: int):
+    key = (obv_ma, momentum_window)
+    if key in _obv_indicator_cache:
+        return _obv_indicator_cache[key]
+    if "volume" not in price_all.columns:
+        _obv_indicator_cache[key] = None
+        return None
+    df = price_all.sort_values(["stock_code", "trade_date"])[["stock_code", "trade_date", "close", "volume"]].copy()
+    direction = df.groupby("stock_code")["close"].transform(lambda x: np.sign(x.diff().fillna(0)))
+    df["obv"] = (direction * df["volume"]).groupby(df["stock_code"]).cumsum()
+    df["obv_ma_v"] = df.groupby("stock_code")["obv"].transform(
+        lambda x: x.rolling(obv_ma, min_periods=obv_ma).mean()
+    )
+    df["obv_lag"] = df.groupby("stock_code")["obv"].transform(lambda x: x.shift(momentum_window))
+    _obv_indicator_cache[key] = df
+    return df
+
+
+def _calc_obv_slope_cached(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, momentum_window: int = 60) -> pd.DataFrame:
+    df = _ensure_obv_indicators(price_all, obv_ma, momentum_window)
+    if df is None:
+        return pd.DataFrame(columns=["stock_code", "obv_slope"])
+    lookback_days = int((momentum_window + obv_ma) * 1.5) + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)]
+    valid = recent[recent["obv_ma_v"].notna() & recent["obv_lag"].notna()]
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "obv_slope"])
+    latest = valid.groupby("stock_code").last()
+    momentum = (latest["obv"] - latest["obv_lag"]) / latest["obv_lag"].abs().replace(0, np.nan)
+    trend_dev = (latest["obv"] - latest["obv_ma_v"]) / latest["obv_ma_v"].abs().replace(0, np.nan)
+    result = pd.DataFrame({"stock_code": latest.index, "obv_slope": (momentum + trend_dev).values})
+    return result.fillna(0)
 
 
 def _calc_ma_reversion(price_all: pd.DataFrame, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
@@ -602,9 +761,15 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         price_df, price_3m_df = _get_price_for_date(calc_date)
         master_df = _get_master_for_date(calc_date)
         # _ma_window already set above
-        ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
-        mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
-        obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
+        # FE_USE_MA_CACHE=1 일 때 캐시 버전 사용 (전체 indicator 1회 계산 + 슬라이스 lookup)
+        if _is_ma_cache_enabled():
+            ma_rev_df = _calc_ma_reversion_cached(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
+            mfi_df = _calc_mfi_cached(_prefetch_cache["price"], calc_date)
+            obv_df = _calc_obv_slope_cached(_prefetch_cache["price"], calc_date)
+        else:
+            ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
+            mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
+            obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
     else:
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
