@@ -539,6 +539,12 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     # ── 단계별 누적 시간 측정 ──
     _t_phases = {"regime": 0.0, "selector": 0.0, "holdings": 0.0, "return": 0.0, "slip": 0.0}
     _t_loop_start = time.time()
+    # score_stocks_from_strategy 내부 timing 초기화
+    try:
+        from lib.factor_engine import reset_score_timing
+        reset_score_timing()
+    except ImportError:
+        pass
     for i in range(total_periods):
         start = rebalance_dates[i]
         end = rebalance_dates[i + 1]
@@ -667,6 +673,22 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     print(f"[TIMING]   slip(슬리피지 SQL):     {_t_phases['slip']:.2f}s  ({_t_phases['slip']/_t_loop_total*100:.0f}%)", flush=True)
     print(f"[TIMING]   regime(레짐 SQL):       {_t_phases['regime']:.2f}s  ({_t_phases['regime']/_t_loop_total*100:.0f}%)", flush=True)
     print(f"[TIMING]   other(기타/CPU):        {_t_other:.2f}s  ({_t_other/_t_loop_total*100:.0f}%)", flush=True)
+
+    # ── selector 내부 단계별 timing 출력 (selector가 큰 비중일 때 진짜 병목 식별용) ──
+    try:
+        from lib.factor_engine import report_score_timing
+        _st = report_score_timing()
+        _st_phases = _st["phases"]
+        _st_total = sum(_st_phases.values())
+        _st_calls = _st["calls"]
+        if _st_calls > 0 and _st_total > 0:
+            print(f"\n[TIMING-SELECTOR] score_stocks_from_strategy {_st_calls}회 호출, 누적 {_st_total:.2f}s", flush=True)
+            for _phase, _v in _st_phases.items():
+                _pct = _v / _st_total * 100
+                _per_call = _v / _st_calls
+                print(f"[TIMING-SELECTOR]   {_phase:18s}: {_v:7.2f}s  ({_pct:4.0f}%)  per call: {_per_call*1000:.1f}ms", flush=True)
+    except Exception as _e:
+        print(f"[TIMING-SELECTOR] 측정 실패: {_e}", flush=True)
 
     conn.close()
 

@@ -1214,6 +1214,28 @@ def apply_quality_filter(df, filter_config):
 # 6. 종합 파이프라인
 # ═══════════════════════════════════════════════════════
 
+_SCORE_TIMING_PHASES = {
+    "load_factor_data": 0.0,
+    "quality_filter": 0.0,
+    "regressions": 0.0,
+    "scoring": 0.0,
+    "weighted": 0.0,
+    "sort_result": 0.0,
+}
+_SCORE_TIMING_CALLS = 0
+
+
+def reset_score_timing():
+    global _SCORE_TIMING_PHASES, _SCORE_TIMING_CALLS
+    _SCORE_TIMING_PHASES = {k: 0.0 for k in _SCORE_TIMING_PHASES}
+    _SCORE_TIMING_CALLS = 0
+
+
+def report_score_timing() -> dict:
+    """누적 timing 반환 (run_backtest 끝나는 시점에서 호출)."""
+    return {"phases": dict(_SCORE_TIMING_PHASES), "calls": _SCORE_TIMING_CALLS}
+
+
 def score_stocks_from_strategy(conn, calc_date, strategy, return_df: bool = False):
     """
     전략 모듈/설정에 따라 팩터 데이터 -> 퀄리티 필터 -> 회귀분석 -> 채점 -> 가중합
@@ -1229,6 +1251,8 @@ def score_stocks_from_strategy(conn, calc_date, strategy, return_df: bool = Fals
 
     strategy: ModuleType 또는 dict-like (WEIGHTS_LARGE, WEIGHTS_SMALL, ...)
     """
+    import time as _t
+    global _SCORE_TIMING_CALLS
     # 전략 설정 읽기
     weights_large = getattr(strategy, "WEIGHTS_LARGE", {})
     weights_small = getattr(strategy, "WEIGHTS_SMALL", {})
@@ -1247,7 +1271,10 @@ def score_stocks_from_strategy(conn, calc_date, strategy, return_df: bool = Fals
     top_n = params.get("top_n", 30)
     ma_rev_window = params.get("ma_reversion_window", None)
 
+    _SCORE_TIMING_CALLS += 1
+    _t0 = _t.time()
     df = load_factor_data(conn, calc_date, ma_reversion_window=ma_rev_window)
+    _SCORE_TIMING_PHASES["load_factor_data"] += _t.time() - _t0
     if df is None or df.empty:
         return []
 
@@ -1256,19 +1283,31 @@ def score_stocks_from_strategy(conn, calc_date, strategy, return_df: bool = Fals
         df = df[df["size_group"] == "large"].copy()
 
     # 퀄리티 필터 먼저 → 투자 가능 유니버스에서만 스코어링
+    _t0 = _t.time()
     df = apply_quality_filter(df, quality_filter)
     df = df[df["quality_pass"] == 1].copy()
+    _SCORE_TIMING_PHASES["quality_filter"] += _t.time() - _t0
 
     if len(df) < 10:
         return []
 
     # 파이프라인 실행 (퀄리티 통과 종목만)
+    _t0 = _t.time()
     df, _reg_info = run_regressions(df, regression_models, outlier_filters)
+    _SCORE_TIMING_PHASES["regressions"] += _t.time() - _t0
+
+    _t0 = _t.time()
     df = apply_scoring(df, scoring_rules, scoring_mode)
+    _SCORE_TIMING_PHASES["scoring"] += _t.time() - _t0
+
+    _t0 = _t.time()
     df = calc_weighted_scores(df, weights_large, weights_small, score_map, scoring_mode)
+    _SCORE_TIMING_PHASES["weighted"] += _t.time() - _t0
 
     # 점수 순 정렬
+    _t0 = _t.time()
     passed = df.nlargest(top_n * 2, "value_score")
+    _SCORE_TIMING_PHASES["sort_result"] += _t.time() - _t0
 
     # stock_code에서 'A' 접두사 제거
     result = []
