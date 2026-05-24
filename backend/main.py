@@ -1196,8 +1196,25 @@ def health():
 
 @app.on_event("startup")
 def _warmup_cache():
-    """Pre-load results for all universe/rebal combos on startup."""
+    """Pre-load results + prefetch_all_data on startup (background)."""
     import threading
+
+    def _prefetch_warmup():
+        """prefetch_all_data 를 부팅 시 백그라운드로 실행.
+        디스크 pkl 캐시가 fresh면 ~5초, stale이면 ~30초.
+        끝나면 사용자 첫 백테스트 클릭 시 prefetch 0초로 즉시 시작."""
+        try:
+            from lib.factor_engine import prefetch_all_data
+            from step7_backtest import get_db
+            conn = get_db()
+            prefetch_all_data(conn)
+            try:
+                conn.close()
+            except Exception:
+                pass
+            print("  [warmup] prefetch_all_data 완료 — 첫 백테스트부터 빠른 응답 가능", flush=True)
+        except Exception as e:
+            print(f"  [warmup] prefetch_all_data 실패: {e}", flush=True)
 
     def _warm():
         combos = [
@@ -1214,6 +1231,8 @@ def _warmup_cache():
             except Exception as e:
                 print(f"  [warmup] {uni}/{rt} failed: {e}")
 
+    # 두 warmup을 백그라운드 스레드에서 병렬 실행
+    threading.Thread(target=_prefetch_warmup, daemon=True).start()
     threading.Thread(target=_warm, daemon=True).start()
 
 
