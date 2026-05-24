@@ -658,6 +658,22 @@ def step_calc_ttm():
     calc_ttm()
 
 
+def step_build_stock_indicators(incremental: bool = False):
+    """daily_price → MA/MFI indicator 미리 계산해서 alpha_lab.stock_indicators 적재.
+    이러면 backend가 매 calc_date에 rolling 계산 안 함 (DB SELECT만).
+
+    incremental=True 면 최근 60일치만 재계산 (rolling window 안전 여유 포함).
+    """
+    import subprocess
+    args = [sys.executable, str(Path(__file__).parent / "build_stock_indicators.py")]
+    if incremental:
+        # 최근 60영업일 재계산 (rolling 120 안전 여유)
+        from datetime import datetime as _dt, timedelta as _td
+        since = (_dt.now() - _td(days=200)).strftime("%Y-%m-%d")
+        args += ["--since", since]
+    subprocess.run(args, check=True)
+
+
 # ═══════════════════════════════════════════════════════════
 # 월초: 유니버스 재구축
 # ═══════════════════════════════════════════════════════════

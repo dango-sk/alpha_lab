@@ -457,10 +457,96 @@ _ma_indicator_cache: dict = {}   # ma_window → DataFrame
 _mfi_indicator_cache: dict = {}  # period → DataFrame
 _obv_indicator_cache: dict = {}  # (obv_ma, momentum_window) → DataFrame
 
+# DB indicator 캐시 (FE_USE_INDICATORS_DB=1)
+_indicators_db_cache: dict = {}  # "indicators" → DataFrame (전체 alpha_lab.stock_indicators)
+
 
 def _is_ma_cache_enabled() -> bool:
     import os as _os
     return _os.environ.get("FE_USE_MA_CACHE", "0").lower() in ("1", "true", "yes")
+
+
+def _is_indicators_db_enabled() -> bool:
+    """FE_USE_INDICATORS_DB=1 → alpha_lab.stock_indicators 테이블에서 SELECT 로 MA/MFI 가져옴."""
+    import os as _os
+    return _os.environ.get("FE_USE_INDICATORS_DB", "0").lower() in ("1", "true", "yes")
+
+
+def clear_indicators_db_cache():
+    _indicators_db_cache.clear()
+
+
+def _ensure_indicators_db_cache(conn):
+    """alpha_lab.stock_indicators 전체를 메모리에 한 번 로드 (~수십 MB).
+    이후 _calc_*_from_db 가 이 DataFrame 에서 슬라이스만.
+    """
+    if "indicators" in _indicators_db_cache:
+        return _indicators_db_cache["indicators"]
+    import time as _t
+    t0 = _t.time()
+    print("[INDICATORS_DB] Loading from alpha_lab.stock_indicators ...", flush=True)
+    df = read_sql("""
+        SELECT stock_code, trade_date, ma_120, deviation_120,
+               mfi_val, pos_sum_14, neg_sum_14
+        FROM alpha_lab.stock_indicators
+        ORDER BY stock_code, trade_date
+    """, conn)
+    _indicators_db_cache["indicators"] = df
+    print(f"[INDICATORS_DB] Loaded {len(df):,} rows in {_t.time()-t0:.1f}s", flush=True)
+    return df
+
+
+def _calc_ma_reversion_from_db(conn, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
+    """DB indicator 캐시 사용. 기존 _calc_ma_reversion 과 동일한 결과 보장."""
+    df = _ensure_indicators_db_cache(conn)
+    lookback_days = int((250 + ma_window) * 1.5) + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)].copy()
+    recent = recent.sort_values(["stock_code", "trade_date"])
+    recent["__row_idx"] = recent.groupby("stock_code").cumcount()
+    _mask = recent["__row_idx"] < (ma_window - 1)
+    recent.loc[_mask, "ma_120"] = np.nan
+    recent.loc[_mask, "deviation_120"] = np.nan
+    valid = recent[recent["ma_120"].notna()]
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
+    last250 = valid.groupby("stock_code").tail(250)
+    result = last250.groupby("stock_code").agg(price_ma_rev=("deviation_120", "min")).reset_index()
+    result["price_ma_rev"] = result["price_ma_rev"].abs()
+    latest = valid.groupby("stock_code").last()[["deviation_120"]].reset_index()
+    latest["below_ma"] = (latest["deviation_120"] <= 0).astype(int)
+    result = result.merge(latest[["stock_code", "below_ma"]], on="stock_code", how="left")
+    result["below_ma"] = result["below_ma"].fillna(0).astype(int)
+    return result
+
+
+def _calc_mfi_from_db(conn, calc_date: str, period: int = 14, lookback: int = 20) -> pd.DataFrame:
+    """DB indicator 캐시 사용. 기존 _calc_mfi 와 동일한 결과 보장."""
+    df = _ensure_indicators_db_cache(conn)
+    lookback_days = (period + lookback) * 2 + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)].copy()
+    recent = recent.sort_values(["stock_code", "trade_date"])
+    recent["__row_idx"] = recent.groupby("stock_code").cumcount()
+    _mask = recent["__row_idx"] < (period - 1)
+    recent.loc[_mask, "pos_sum_14"] = np.nan
+    recent.loc[_mask, "neg_sum_14"] = np.nan
+    recent.loc[_mask, "mfi_val"] = np.nan
+    valid = recent[recent["pos_sum_14"].notna() & recent["neg_sum_14"].notna()]
+    if valid.empty:
+        return pd.DataFrame(columns=["stock_code", "mfi"])
+    last = valid.groupby("stock_code").tail(lookback)
+    first_val = last.groupby("stock_code")["mfi_val"].first()
+    last_val = last.groupby("stock_code")["mfi_val"].last()
+    result = pd.DataFrame({
+        "stock_code": last_val.index,
+        "mfi_current": last_val.values,
+        "mfi_momentum": (last_val - first_val).values,
+    })
+    result["mfi"] = result["mfi_momentum"] + np.where(
+        result["mfi_current"] < 50, (50 - result["mfi_current"]) * 0.2, 0
+    )
+    return result[["stock_code", "mfi"]]
 
 
 def clear_indicator_cache():
@@ -788,9 +874,13 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
 
         _t0 = _t.time()
         # _ma_window already set above
-        # FE_USE_MA_CACHE=1 일 때 ma/mfi 캐시 사용 (슬라이스 후 cumcount NaN 마스킹으로 기존 동작 재현)
-        # OBV는 cumsum 시작점에 민감해서 캐시 시 결과 달라짐 → 기존 함수 그대로
-        if _is_ma_cache_enabled():
+        # 우선순위: DB indicator (FE_USE_INDICATORS_DB=1) > 메모리 캐시 (FE_USE_MA_CACHE=1) > 기존
+        # OBV는 cumsum 시작점에 민감해서 항상 기존 함수
+        if _is_indicators_db_enabled():
+            ma_rev_df = _calc_ma_reversion_from_db(conn, calc_date, ma_window=_ma_window)
+            mfi_df = _calc_mfi_from_db(conn, calc_date)
+            obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
+        elif _is_ma_cache_enabled():
             ma_rev_df = _calc_ma_reversion_cached(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi_cached(_prefetch_cache["price"], calc_date)
             obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)

@@ -1233,6 +1233,21 @@ def _warmup_cache():
                 _ensure_mfi_indicators(_prefetch_cache["price"], 14)
                 _ensure_obv_indicators(_prefetch_cache["price"], 20, 60)
                 print(f"  [warmup] MA/MFI/OBV indicator 캐시 빌드 완료 ({_t.time()-t0:.1f}s)", flush=True)
+
+            # FE_USE_INDICATORS_DB=1 일 때 stock_indicators 테이블도 미리 메모리에
+            from lib.factor_engine import _is_indicators_db_enabled, _ensure_indicators_db_cache
+            if _is_indicators_db_enabled():
+                from step7_backtest import get_db
+                conn2 = get_db()
+                try:
+                    _ensure_indicators_db_cache(conn2)
+                except Exception as _e:
+                    print(f"  [warmup] stock_indicators 로드 실패: {_e}", flush=True)
+                finally:
+                    try:
+                        conn2.close()
+                    except Exception:
+                        pass
         except Exception as e:
             print(f"  [warmup] prefetch_all_data 실패: {e}", flush=True)
 
