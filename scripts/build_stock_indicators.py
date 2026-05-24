@@ -114,30 +114,39 @@ def compute_indicators(price: pd.DataFrame, ma_window: int = 120, mfi_period: in
                "mfi_val", "pos_sum_14", "neg_sum_14"]]
 
 
-def upsert(conn, df: pd.DataFrame, batch_size: int = 5000):
-    """UPSERT (INSERT ... ON CONFLICT DO UPDATE)."""
+def upsert(conn, df: pd.DataFrame, batch_size: int = 50000):
+    """UPSERT (INSERT ... ON CONFLICT DO UPDATE) using execute_values for speed.
+
+    psycopg2.extras.execute_values 는 한 쿼리에 batch_size 행을 다중 VALUES 로
+    묶어서 보냄. executemany 보다 10~50배 빠름. 외부 proxy 통해도 합리적 속도.
+    """
+    from psycopg2.extras import execute_values
     raw = conn._conn.cursor()
     cols = ["stock_code", "trade_date", "ma_120", "deviation_120",
             "mfi_val", "pos_sum_14", "neg_sum_14"]
-    placeholders = ", ".join(["%s"] * len(cols))
     update_cols = ", ".join(f"{c}=EXCLUDED.{c}" for c in cols if c not in ("stock_code", "trade_date"))
     sql = f"""
         INSERT INTO alpha_lab.stock_indicators ({", ".join(cols)})
-        VALUES ({placeholders})
+        VALUES %s
         ON CONFLICT (stock_code, trade_date)
         DO UPDATE SET {update_cols}, updated_at = NOW()
     """
     total = len(df)
+    t_start = time.time()
     for i in range(0, total, batch_size):
         chunk = df.iloc[i:i+batch_size]
         rows = [
             tuple(None if pd.isna(v) else v for v in row)
             for row in chunk[cols].itertuples(index=False, name=None)
         ]
-        raw.executemany(sql, rows)
+        execute_values(raw, sql, rows, page_size=batch_size)
         conn.commit()
-        print(f"  ... upserted {min(i+batch_size, total)}/{total}", flush=True)
-    print(f"✓ upserted {total} rows")
+        elapsed = time.time() - t_start
+        done = min(i + batch_size, total)
+        rate = done / elapsed if elapsed > 0 else 0
+        eta = (total - done) / rate if rate > 0 else 0
+        print(f"  ... upserted {done:,}/{total:,}  ({elapsed:.0f}s, {rate:.0f} rows/s, ETA {eta:.0f}s)", flush=True)
+    print(f"✓ upserted {total:,} rows in {time.time()-t_start:.0f}s")
 
 
 def main():
