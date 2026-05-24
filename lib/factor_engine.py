@@ -458,7 +458,7 @@ _mfi_indicator_cache: dict = {}  # period → DataFrame
 _obv_indicator_cache: dict = {}  # (obv_ma, momentum_window) → DataFrame
 
 # DB indicator 캐시 (FE_USE_INDICATORS_DB=1)
-_indicators_db_cache: dict = {}  # loaded(bool), stock_ranges, trade_date_arr, ma_120, deviation_120, mfi_val, pos_sum_14, neg_sum_14
+_indicators_db_cache: dict = {}  # "indicators" → DataFrame (전체 alpha_lab.stock_indicators)
 
 
 def _is_ma_cache_enabled() -> bool:
@@ -477,13 +477,11 @@ def clear_indicators_db_cache():
 
 
 def _ensure_indicators_db_cache(conn):
-    """alpha_lab.stock_indicators 전체를 메모리에 한 번 로드.
-
-    최적화: pandas DataFrame 대신 종목별 numpy 배열로 저장.
-    매 calc_date 호출에서 종목별 binary-search (searchsorted) 로 슬라이스 → 1M-row groupby 제거.
+    """alpha_lab.stock_indicators 전체를 메모리에 한 번 로드 (~수십 MB).
+    이후 _calc_*_from_db 가 이 DataFrame 에서 슬라이스만.
     """
-    if _indicators_db_cache.get("loaded"):
-        return
+    if "indicators" in _indicators_db_cache:
+        return _indicators_db_cache["indicators"]
     import time as _t
     t0 = _t.time()
     print("[INDICATORS_DB] Loading from alpha_lab.stock_indicators ...", flush=True)
@@ -493,134 +491,62 @@ def _ensure_indicators_db_cache(conn):
         FROM alpha_lab.stock_indicators
         ORDER BY stock_code, trade_date
     """, conn)
-    df = df.reset_index(drop=True)
-
-    # 종목별 (start, end) 인덱스 범위 — stock_code 로 정렬돼 있으므로 boundary 찾기
-    stock_code_arr = df["stock_code"].values
-    boundaries = np.where(stock_code_arr[1:] != stock_code_arr[:-1])[0] + 1
-    starts = np.concatenate(([0], boundaries))
-    ends = np.concatenate((boundaries, [len(df)]))
-    unique_stocks = stock_code_arr[starts]
-    stock_ranges = {s: (int(s0), int(e0)) for s, s0, e0 in zip(unique_stocks, starts, ends)}
-
-    _indicators_db_cache["loaded"] = True
-    _indicators_db_cache["stock_ranges"] = stock_ranges
-    _indicators_db_cache["trade_date_arr"] = df["trade_date"].values
-    _indicators_db_cache["ma_120"] = df["ma_120"].to_numpy(dtype=np.float64)
-    _indicators_db_cache["deviation_120"] = df["deviation_120"].to_numpy(dtype=np.float64)
-    _indicators_db_cache["mfi_val"] = df["mfi_val"].to_numpy(dtype=np.float64)
-    _indicators_db_cache["pos_sum_14"] = df["pos_sum_14"].to_numpy(dtype=np.float64)
-    _indicators_db_cache["neg_sum_14"] = df["neg_sum_14"].to_numpy(dtype=np.float64)
-
+    _indicators_db_cache["indicators"] = df
     print(f"[INDICATORS_DB] Loaded {len(df):,} rows in {_t.time()-t0:.1f}s", flush=True)
+    return df
 
 
 def _calc_ma_reversion_from_db(conn, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
-    """DB indicator 캐시 사용. 기존 _calc_ma_reversion 과 동일한 결과 보장.
-
-    종목 루프 + searchsorted 로 매 호출 1M-row groupby 제거 (~2200ms → ~50ms).
-    """
-    _ensure_indicators_db_cache(conn)
-    stock_ranges = _indicators_db_cache["stock_ranges"]
-    td_arr = _indicators_db_cache["trade_date_arr"]
-    ma_arr = _indicators_db_cache["ma_120"]
-    dev_arr = _indicators_db_cache["deviation_120"]
-
+    """DB indicator 캐시 사용. 기존 _calc_ma_reversion 과 동일한 결과 보장."""
+    df = _ensure_indicators_db_cache(conn)
     lookback_days = int((250 + ma_window) * 1.5) + 30
     cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
-
-    stock_codes: list = []
-    price_ma_rev: list = []
-    below_ma: list = []
-
-    for stock, (start, end) in stock_ranges.items():
-        td_sub = td_arr[start:end]
-        j0 = td_sub.searchsorted(cutoff, side="left")
-        j1 = td_sub.searchsorted(calc_date, side="left")
-        if j0 >= j1:
-            continue
-        # Slice-mask: 슬라이스 내 종목별 첫 (ma_window-1) 행 NaN 처리
-        j_valid_start = j0 + ma_window - 1
-        if j_valid_start >= j1:
-            continue
-        s = start + j_valid_start
-        e = start + j1
-        ma_slice = ma_arr[s:e]
-        dev_slice = dev_arr[s:e]
-        not_nan = ~np.isnan(ma_slice)
-        if not not_nan.any():
-            continue
-        valid_dev = dev_slice[not_nan]
-        # 최근 250 valid 행만 사용
-        if len(valid_dev) > 250:
-            valid_dev = valid_dev[-250:]
-        stock_codes.append(stock)
-        price_ma_rev.append(abs(float(valid_dev.min())))
-        # 최신 valid deviation_120 → below_ma
-        last_dev = float(dev_slice[not_nan][-1])
-        below_ma.append(1 if last_dev <= 0 else 0)
-
-    if not stock_codes:
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)].copy()
+    recent = recent.sort_values(["stock_code", "trade_date"])
+    recent["__row_idx"] = recent.groupby("stock_code").cumcount()
+    _mask = recent["__row_idx"] < (ma_window - 1)
+    recent.loc[_mask, "ma_120"] = np.nan
+    recent.loc[_mask, "deviation_120"] = np.nan
+    valid = recent[recent["ma_120"].notna()]
+    if valid.empty:
         return pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
-
-    return pd.DataFrame({
-        "stock_code": stock_codes,
-        "price_ma_rev": price_ma_rev,
-        "below_ma": below_ma,
-    })
+    last250 = valid.groupby("stock_code").tail(250)
+    result = last250.groupby("stock_code").agg(price_ma_rev=("deviation_120", "min")).reset_index()
+    result["price_ma_rev"] = result["price_ma_rev"].abs()
+    latest = valid.groupby("stock_code").last()[["deviation_120"]].reset_index()
+    latest["below_ma"] = (latest["deviation_120"] <= 0).astype(int)
+    result = result.merge(latest[["stock_code", "below_ma"]], on="stock_code", how="left")
+    result["below_ma"] = result["below_ma"].fillna(0).astype(int)
+    return result
 
 
 def _calc_mfi_from_db(conn, calc_date: str, period: int = 14, lookback: int = 20) -> pd.DataFrame:
     """DB indicator 캐시 사용. 기존 _calc_mfi 와 동일한 결과 보장."""
-    _ensure_indicators_db_cache(conn)
-    stock_ranges = _indicators_db_cache["stock_ranges"]
-    td_arr = _indicators_db_cache["trade_date_arr"]
-    mfi_arr = _indicators_db_cache["mfi_val"]
-    pos_arr = _indicators_db_cache["pos_sum_14"]
-    neg_arr = _indicators_db_cache["neg_sum_14"]
-
+    df = _ensure_indicators_db_cache(conn)
     lookback_days = (period + lookback) * 2 + 30
     cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
-
-    stock_codes: list = []
-    mfi_results: list = []
-
-    for stock, (start, end) in stock_ranges.items():
-        td_sub = td_arr[start:end]
-        j0 = td_sub.searchsorted(cutoff, side="left")
-        j1 = td_sub.searchsorted(calc_date, side="left")
-        if j0 >= j1:
-            continue
-        # Slice-mask: 슬라이스 내 종목별 첫 (period-1) 행 NaN 처리
-        j_valid_start = j0 + period - 1
-        if j_valid_start >= j1:
-            continue
-        s = start + j_valid_start
-        e = start + j1
-        mfi_slice = mfi_arr[s:e]
-        pos_slice = pos_arr[s:e]
-        neg_slice = neg_arr[s:e]
-        valid_mask = ~np.isnan(pos_slice) & ~np.isnan(neg_slice)
-        if not valid_mask.any():
-            continue
-        mfi_valid = mfi_slice[valid_mask]
-        # 최근 lookback 행만 사용
-        if len(mfi_valid) > lookback:
-            mfi_valid = mfi_valid[-lookback:]
-        mfi_current = float(mfi_valid[-1])
-        mfi_first = float(mfi_valid[0])
-        momentum = mfi_current - mfi_first
-        adj = (50.0 - mfi_current) * 0.2 if mfi_current < 50 else 0.0
-        stock_codes.append(stock)
-        mfi_results.append(momentum + adj)
-
-    if not stock_codes:
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)].copy()
+    recent = recent.sort_values(["stock_code", "trade_date"])
+    recent["__row_idx"] = recent.groupby("stock_code").cumcount()
+    _mask = recent["__row_idx"] < (period - 1)
+    recent.loc[_mask, "pos_sum_14"] = np.nan
+    recent.loc[_mask, "neg_sum_14"] = np.nan
+    recent.loc[_mask, "mfi_val"] = np.nan
+    valid = recent[recent["pos_sum_14"].notna() & recent["neg_sum_14"].notna()]
+    if valid.empty:
         return pd.DataFrame(columns=["stock_code", "mfi"])
-
-    return pd.DataFrame({
-        "stock_code": stock_codes,
-        "mfi": mfi_results,
+    last = valid.groupby("stock_code").tail(lookback)
+    first_val = last.groupby("stock_code")["mfi_val"].first()
+    last_val = last.groupby("stock_code")["mfi_val"].last()
+    result = pd.DataFrame({
+        "stock_code": last_val.index,
+        "mfi_current": last_val.values,
+        "mfi_momentum": (last_val - first_val).values,
     })
+    result["mfi"] = result["mfi_momentum"] + np.where(
+        result["mfi_current"] < 50, (50 - result["mfi_current"]) * 0.2, 0
+    )
+    return result[["stock_code", "mfi"]]
 
 
 def clear_indicator_cache():
