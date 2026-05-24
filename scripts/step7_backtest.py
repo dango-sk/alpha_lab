@@ -11,6 +11,7 @@ Step 7: 백테스트
 """
 import json
 import sys
+import time
 import numpy as np
 from datetime import datetime
 from pathlib import Path
@@ -22,7 +23,20 @@ from lib.factor_engine import (
     score_stocks_from_strategy, code_to_module,
     DEFAULT_STRATEGY_CODE, clear_factor_cache,
 )
+import lib.factor_engine as _fe  # _prefetch_cache 접근용
 from lib.db import get_conn
+
+
+def _get_price_cache():
+    """prefetch_cache의 price DataFrame 반환. 없으면 None."""
+    cache = getattr(_fe, "_prefetch_cache", None) or {}
+    return cache.get("price")
+
+
+def _get_universe_cache():
+    """prefetch_cache의 universe DataFrame 반환. 없으면 None."""
+    cache = getattr(_fe, "_prefetch_cache", None) or {}
+    return cache.get("universe")
 
 
 def get_db():
@@ -522,22 +536,29 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
     sl_carry_state = {}  # 연속 보유 종목 추적 (first_entry/first_peak 모드용)
 
     total_periods = len(rebalance_dates) - 1
+    # ── 단계별 누적 시간 측정 ──
+    _t_phases = {"regime": 0.0, "selector": 0.0, "holdings": 0.0, "return": 0.0, "slip": 0.0}
+    _t_loop_start = time.time()
     for i in range(total_periods):
         start = rebalance_dates[i]
         end = rebalance_dates[i + 1]
 
         # 레짐별 cap 동적 적용
         if regime_enabled:
+            _t0 = time.time()
             regime = _get_regime(start)
             BACKTEST_CONFIG["weight_cap_pct"] = regime_bull_cap if regime == "Bull" else regime_bear_cap
+            _t_phases["regime"] += time.time() - _t0
 
         if progress_callback:
             progress_callback(i, total_periods)
 
+        _t0 = time.time()
         if stock_selector:
             stocks = stock_selector(conn, start, top_n)
         else:
             stocks = []
+        _t_phases["selector"] += time.time() - _t0
         if not stocks and prev_stocks_list:
             stocks = prev_stocks_list
         prev_stocks_list = stocks
@@ -546,6 +567,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         portfolio_sizes.append(len(stocks))
 
         # holdings 수집 (비중 계산용 시총 조회)
+        _t0 = time.time()
         if stocks:
             _h_codes = [c for c, _ in stocks]
             _h_ph = ",".join(["?"] * len(_h_codes))
@@ -566,6 +588,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
                 (code, score, _h_weights[j], _h_raw[j])
                 for j, (code, score) in enumerate(stocks)
             ]
+        _t_phases["holdings"] += time.time() - _t0
 
         # 턴오버 (비중 기준)
         current_weight_map = {}
@@ -587,6 +610,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         sl_mode = BACKTEST_CONFIG.get("stop_loss_mode", "sell")
         sl_basis = BACKTEST_CONFIG.get("stop_loss_basis", "entry")
 
+        _t0 = time.time()
         if sl_enabled:
             raw_return, sl_events, sl_carry_over = calc_portfolio_return_with_stoploss(
                 conn, stocks, start, end, stop_loss_pct=sl_pct, stop_loss_mode=sl_mode,
@@ -597,7 +621,9 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         else:
             raw_return = calc_portfolio_return(conn, stocks, start, end)
             sl_events = []
+        _t_phases["return"] += time.time() - _t0
 
+        _t0 = time.time()
         if stocks:
             slip_codes = [c for c, _ in stocks]
             slip_ph = ",".join(["?"] * len(slip_codes))
@@ -615,6 +641,7 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
             avg_slippage = np.mean([_calc_slippage(slip_mcap_map.get(c, 0)) for c, _ in stocks])
         else:
             avg_slippage = 0
+        _t_phases["slip"] += time.time() - _t0
 
         # 리밸런싱 턴오버 비용 (양방향)
         net_return = raw_return - (turnover * (tx_cost + avg_slippage) * 2)
@@ -629,6 +656,17 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         monthly_returns.append(net_return)
         cumulative *= (1 + net_return)
         portfolio_values.append(cumulative)
+
+    # ── 단계별 성능 측정 결과 출력 ──
+    _t_loop_total = time.time() - _t_loop_start
+    _t_other = _t_loop_total - sum(_t_phases.values())
+    print(f"\n[TIMING] run_backtest('{strategy_name}') 총 {_t_loop_total:.2f}s ({total_periods} 리밸)", flush=True)
+    print(f"[TIMING]   selector(score+filter): {_t_phases['selector']:.2f}s  ({_t_phases['selector']/_t_loop_total*100:.0f}%)", flush=True)
+    print(f"[TIMING]   holdings(시총 SQL):     {_t_phases['holdings']:.2f}s  ({_t_phases['holdings']/_t_loop_total*100:.0f}%)", flush=True)
+    print(f"[TIMING]   return(수익률 SQL):     {_t_phases['return']:.2f}s  ({_t_phases['return']/_t_loop_total*100:.0f}%)", flush=True)
+    print(f"[TIMING]   slip(슬리피지 SQL):     {_t_phases['slip']:.2f}s  ({_t_phases['slip']/_t_loop_total*100:.0f}%)", flush=True)
+    print(f"[TIMING]   regime(레짐 SQL):       {_t_phases['regime']:.2f}s  ({_t_phases['regime']/_t_loop_total*100:.0f}%)", flush=True)
+    print(f"[TIMING]   other(기타/CPU):        {_t_other:.2f}s  ({_t_other/_t_loop_total*100:.0f}%)", flush=True)
 
     conn.close()
 
