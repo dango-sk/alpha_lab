@@ -168,12 +168,20 @@ def _check_fcf_column(conn) -> bool:
     return _has_fcf_col
 
 
-def prefetch_all_data(conn, use_local_cache=False):
+def prefetch_all_data(conn, use_local_cache=True):
     """백테스트 전에 대형 테이블을 한 번에 메모리로 로드.
     이후 load_factor_data가 DB 대신 이 캐시에서 읽음.
-    use_local_cache=True면 로컬 pickle 캐시를 우선 사용.
+
+    use_local_cache=True (기본): cache/prefetch/*.pkl 디스크 캐시를 우선 사용.
+    stale 검증: daily_price.MAX(trade_date)와 캐시 메타데이터를 비교.
+    DB의 latest trade_date가 캐시보다 새로우면 자동으로 무효화 후 DB에서 재로드.
+
+    강제 무효화: 환경변수 PREFETCH_FORCE_REFRESH=1 설정 시 디스크 캐시 무시.
+
     각 테이블을 로드한 직후 즉시 pkl 저장 (중간 실패 시 재개 가능)."""
     global _prefetch_cache
+    import json
+    import os as _os
     import pickle
     import time
     from pathlib import Path
@@ -181,30 +189,67 @@ def prefetch_all_data(conn, use_local_cache=False):
 
     cache_dir = Path(__file__).parent.parent / "cache" / "prefetch"
     cache_dir.mkdir(parents=True, exist_ok=True)
+    meta_path = cache_dir / "_meta.json"
 
     tables = ["finance", "forward", "price", "master"]
 
-    # use_local_cache=True이면 이미 캐시된 테이블은 건너뜀
-    if use_local_cache:
-        all_cached = all((cache_dir / f"{k}.pkl").exists() for k in tables)
-        if all_cached:
-            for key in tables:
-                pkl = cache_dir / f"{key}.pkl"
-                _prefetch_cache[key] = pickle.loads(pkl.read_bytes())
-                print(f"[PREFETCH] {key} loaded from cache", flush=True)
-            print(f"[PREFETCH] All from local cache in {time.time()-t0:.1f}s", flush=True)
-            return
-        # 일부만 캐시된 경우 → 캐시된 건 로드, 없는 건 DB에서 가져옴
+    # ── stale 검증 ──
+    # DB의 daily_price 최신 trade_date를 메타데이터와 비교하여 캐시 유효성 판정.
+    # 메타데이터 없거나 trade_date가 더 새로우면 캐시를 무효화.
+    force_refresh = _os.environ.get("PREFETCH_FORCE_REFRESH", "").lower() in ("1", "true", "yes")
+    cache_is_fresh = False
+    db_max_trade_date = None
+
+    if use_local_cache and not force_refresh:
+        try:
+            row = conn.execute("SELECT MAX(trade_date) FROM daily_price").fetchone()
+            db_max_trade_date = row[0] if row else None
+        except Exception as _e:
+            print(f"[PREFETCH] stale 검증용 쿼리 실패: {_e}", flush=True)
+            db_max_trade_date = None
+
+        if db_max_trade_date and meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+                cached_max = meta.get("max_trade_date")
+                all_pkl_exist = all((cache_dir / f"{k}.pkl").exists() for k in tables)
+                if cached_max == db_max_trade_date and all_pkl_exist:
+                    cache_is_fresh = True
+                elif cached_max != db_max_trade_date:
+                    print(f"[PREFETCH] stale 감지: cache={cached_max}, db={db_max_trade_date} → 재로드", flush=True)
+            except Exception as _e:
+                print(f"[PREFETCH] 메타데이터 읽기 실패: {_e}", flush=True)
+
+    # 캐시가 fresh이면 디스크에서 일괄 로드 후 즉시 리턴
+    if cache_is_fresh:
         for key in tables:
             pkl = cache_dir / f"{key}.pkl"
-            if pkl.exists() and key not in _prefetch_cache:
-                _prefetch_cache[key] = pickle.loads(pkl.read_bytes())
-                print(f"[PREFETCH] {key} loaded from cache (partial resume)", flush=True)
+            _prefetch_cache[key] = pickle.loads(pkl.read_bytes())
+            print(f"[PREFETCH] {key} loaded from disk cache", flush=True)
+        print(f"[PREFETCH] All from disk cache in {time.time()-t0:.1f}s (max_trade_date={db_max_trade_date})", flush=True)
+        return
+
+    # 강제 갱신 또는 stale → 디스크 pkl 제거하고 처음부터 DB에서 로드
+    if use_local_cache and (force_refresh or not cache_is_fresh):
+        for key in tables:
+            pkl = cache_dir / f"{key}.pkl"
+            if pkl.exists():
+                pkl.unlink()
+        if meta_path.exists():
+            meta_path.unlink()
 
     def _save(key):
         if use_local_cache:
             (cache_dir / f"{key}.pkl").write_bytes(pickle.dumps(_prefetch_cache[key]))
             print(f"[PREFETCH] {key} cached to disk", flush=True)
+
+    def _save_meta():
+        if use_local_cache and db_max_trade_date:
+            from datetime import datetime as _dt
+            meta_path.write_text(json.dumps({
+                "max_trade_date": db_max_trade_date,
+                "loaded_at": _dt.utcnow().isoformat() + "Z",
+            }))
 
     if "finance" not in _prefetch_cache:
         _fcf_sel = ", fcf" if _check_fcf_column(conn) else ""
@@ -254,7 +299,16 @@ def prefetch_all_data(conn, use_local_cache=False):
         """, conn)
         _save("master")
 
-    print(f"[PREFETCH] Loaded all data in {time.time()-t0:.1f}s", flush=True)
+    # 메타데이터 저장 (stale 검증용 max_trade_date)
+    if db_max_trade_date is None:
+        try:
+            row = conn.execute("SELECT MAX(trade_date) FROM daily_price").fetchone()
+            db_max_trade_date = row[0] if row else None
+        except Exception:
+            db_max_trade_date = None
+    _save_meta()
+
+    print(f"[PREFETCH] Loaded all data in {time.time()-t0:.1f}s (max_trade_date={db_max_trade_date})", flush=True)
 
 
 def clear_prefetch_cache():
