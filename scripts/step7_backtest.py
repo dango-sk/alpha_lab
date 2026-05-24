@@ -687,6 +687,17 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
                 _pct = _v / _st_total * 100
                 _per_call = _v / _st_calls
                 print(f"[TIMING-SELECTOR]   {_phase:18s}: {_v:7.2f}s  ({_pct:4.0f}%)  per call: {_per_call*1000:.1f}ms", flush=True)
+
+        # load_factor_data 내부 세부 timing
+        _ld_phases = _st.get("load_phases", {})
+        _ld_calls = _st.get("load_calls", 0)
+        _ld_total = sum(_ld_phases.values())
+        if _ld_calls > 0 and _ld_total > 0:
+            print(f"\n[TIMING-LOAD] load_factor_data 내부 {_ld_calls}회, 누적 {_ld_total:.2f}s", flush=True)
+            for _phase, _v in _ld_phases.items():
+                _pct = _v / _ld_total * 100
+                _per_call = _v / _ld_calls
+                print(f"[TIMING-LOAD]   {_phase:12s}: {_v:7.2f}s  ({_pct:4.0f}%)  per call: {_per_call*1000:.1f}ms", flush=True)
     except Exception as _e:
         print(f"[TIMING-SELECTOR] 측정 실패: {_e}", flush=True)
 
