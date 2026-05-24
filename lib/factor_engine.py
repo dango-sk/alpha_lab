@@ -484,11 +484,23 @@ def _ensure_ma_indicators(price_all: pd.DataFrame, ma_window: int):
 
 
 def _calc_ma_reversion_cached(price_all: pd.DataFrame, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
-    """캐시 버전 — 동일 결과 보장."""
+    """캐시 버전 — 동일 결과 보장.
+
+    기존 함수가 슬라이스 후 rolling 시작이라 슬라이스 내 첫 (ma_window-1)개가
+    NaN. 캐시 버전은 전체 데이터로 rolling이라 NaN 없음 → valid 윈도우가
+    달라져 tail(250) 결과가 달라짐. 슬라이스 후 종목별 cumcount 기준
+    첫 (ma_window-1)개를 NaN으로 강제하여 기존과 동일한 valid 윈도우 재현.
+    """
     df = _ensure_ma_indicators(price_all, ma_window)
     lookback_days = int((250 + ma_window) * 1.5) + 30
     cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
-    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)]
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)].copy()
+    # 기존 동작 재현: 슬라이스 내 종목별 첫 (ma_window-1)개 행은 NaN
+    recent = recent.sort_values(["stock_code", "trade_date"])
+    recent["__row_idx"] = recent.groupby("stock_code").cumcount()
+    _mask = recent["__row_idx"] < (ma_window - 1)
+    recent.loc[_mask, "ma"] = np.nan
+    recent.loc[_mask, "deviation"] = np.nan
     valid = recent[recent["ma"].notna()]
     if valid.empty:
         return pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
@@ -529,12 +541,20 @@ def _ensure_mfi_indicators(price_all: pd.DataFrame, period: int):
 
 
 def _calc_mfi_cached(price_all: pd.DataFrame, calc_date: str, period: int = 14, lookback: int = 20) -> pd.DataFrame:
+    """캐시 버전. 슬라이스 후 종목별 첫 (period-1)개 NaN 마스킹으로 기존 동작 재현."""
     df = _ensure_mfi_indicators(price_all, period)
     if df is None:
         return pd.DataFrame(columns=["stock_code", "mfi"])
     lookback_days = (period + lookback) * 2 + 30
     cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
-    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)]
+    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)].copy()
+    # 슬라이스 외 데이터가 pos_sum/neg_sum 계산에 들어간 첫 (period-1)개를 NaN으로
+    recent = recent.sort_values(["stock_code", "trade_date"])
+    recent["__row_idx"] = recent.groupby("stock_code").cumcount()
+    _mask = recent["__row_idx"] < (period - 1)
+    recent.loc[_mask, "pos_sum"] = np.nan
+    recent.loc[_mask, "neg_sum"] = np.nan
+    recent.loc[_mask, "mfi_val"] = np.nan
     valid = recent[recent["pos_sum"].notna() & recent["neg_sum"].notna()]
     if valid.empty:
         return pd.DataFrame(columns=["stock_code", "mfi"])
@@ -761,11 +781,12 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         price_df, price_3m_df = _get_price_for_date(calc_date)
         master_df = _get_master_for_date(calc_date)
         # _ma_window already set above
-        # FE_USE_MA_CACHE=1 일 때 캐시 버전 사용 (전체 indicator 1회 계산 + 슬라이스 lookup)
+        # FE_USE_MA_CACHE=1 일 때 ma/mfi 캐시 사용 (슬라이스 후 cumcount NaN 마스킹으로 기존 동작 재현)
+        # OBV는 cumsum 시작점에 민감해서 캐시 시 결과 달라짐 → 기존 함수 그대로
         if _is_ma_cache_enabled():
             ma_rev_df = _calc_ma_reversion_cached(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi_cached(_prefetch_cache["price"], calc_date)
-            obv_df = _calc_obv_slope_cached(_prefetch_cache["price"], calc_date)
+            obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
         else:
             ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)

@@ -91,11 +91,14 @@ def _load_price_cache():
 
 
 def step1_function_unit():
-    """1단계: 함수 단위 결과 동일성."""
+    """1단계: 함수 단위 결과 동일성.
+
+    OBV는 cumsum 시작점에 민감해서 캐시 안 함 → load_factor_data에서 항상
+    기존 _calc_obv_slope 호출. 따라서 검증 대상은 ma_reversion / mfi 만.
+    """
     from lib.factor_engine import (
         _calc_ma_reversion, _calc_ma_reversion_cached,
         _calc_mfi, _calc_mfi_cached,
-        _calc_obv_slope, _calc_obv_slope_cached,
     )
 
     price = _load_price_cache()
@@ -123,15 +126,7 @@ def step1_function_unit():
             if not mfi_ok:
                 all_ok = False
                 _diff_report(old, new, calc_date, "mfi")
-
-            # OBV
-            old = _calc_obv_slope(price, calc_date).sort_values("stock_code").reset_index(drop=True)
-            new = _calc_obv_slope_cached(price, calc_date).sort_values("stock_code").reset_index(drop=True)
-            obv_ok = _compare_df(old, new, ["obv_slope"])
-            print(f"  {calc_date} obv_slope    : {'✅' if obv_ok else '❌'} (rows old={len(old)} new={len(new)})")
-            if not obv_ok:
-                all_ok = False
-                _diff_report(old, new, calc_date, "obv_slope")
+            # OBV는 캐시 안 함 (기존 함수 그대로) — 검증 생략
         except Exception as e:
             print(f"  {calc_date} ❌ 오류: {e}")
             all_ok = False
