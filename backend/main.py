@@ -1202,9 +1202,20 @@ def _warmup_cache():
     def _prefetch_warmup():
         """prefetch_all_data 를 부팅 시 백그라운드로 실행.
         디스크 pkl 캐시가 fresh면 ~5초, stale이면 ~30초.
-        끝나면 사용자 첫 백테스트 클릭 시 prefetch 0초로 즉시 시작."""
+        끝나면 사용자 첫 백테스트 클릭 시 prefetch 0초로 즉시 시작.
+
+        FE_USE_MA_CACHE=1 환경변수가 있으면 MA/MFI/OBV indicator 캐시도
+        startup 시 미리 빌드 (~5초). 사용자 첫 백테스트의 selector도 빠름.
+        """
         try:
-            from lib.factor_engine import prefetch_all_data
+            from lib.factor_engine import (
+                prefetch_all_data,
+                _is_ma_cache_enabled,
+                _ensure_ma_indicators,
+                _ensure_mfi_indicators,
+                _ensure_obv_indicators,
+                _prefetch_cache,
+            )
             from step7_backtest import get_db
             conn = get_db()
             prefetch_all_data(conn)
@@ -1213,6 +1224,15 @@ def _warmup_cache():
             except Exception:
                 pass
             print("  [warmup] prefetch_all_data 완료 — 첫 백테스트부터 빠른 응답 가능", flush=True)
+
+            # FE_USE_MA_CACHE=1 일 때 indicator 캐시도 미리 빌드 (eager)
+            if _is_ma_cache_enabled() and "price" in _prefetch_cache:
+                import time as _t
+                t0 = _t.time()
+                _ensure_ma_indicators(_prefetch_cache["price"], 120)
+                _ensure_mfi_indicators(_prefetch_cache["price"], 14)
+                _ensure_obv_indicators(_prefetch_cache["price"], 20, 60)
+                print(f"  [warmup] MA/MFI/OBV indicator 캐시 빌드 완료 ({_t.time()-t0:.1f}s)", flush=True)
         except Exception as e:
             print(f"  [warmup] prefetch_all_data 실패: {e}", flush=True)
 
