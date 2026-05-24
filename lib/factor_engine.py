@@ -774,12 +774,19 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
 
     # ── 프리페치 캐시가 있으면 메모리에서 처리 ──
     if _prefetch_cache:
+        import time as _t
+        global _LOAD_TIMING_CALLS
+        _LOAD_TIMING_CALLS += 1
+        _t0 = _t.time()
         fin_df, prev_rev_df = _get_fin_for_date(calc_date)
         if fin_df.empty:
             return None
         fwd_df, fwd_3m_df = _get_fwd_for_date(calc_date)
         price_df, price_3m_df = _get_price_for_date(calc_date)
         master_df = _get_master_for_date(calc_date)
+        _LOAD_TIMING_PHASES["slice"] += _t.time() - _t0
+
+        _t0 = _t.time()
         # _ma_window already set above
         # FE_USE_MA_CACHE=1 일 때 ma/mfi 캐시 사용 (슬라이스 후 cumcount NaN 마스킹으로 기존 동작 재현)
         # OBV는 cumsum 시작점에 민감해서 캐시 시 결과 달라짐 → 기존 함수 그대로
@@ -791,6 +798,8 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
             ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
             obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
+        _LOAD_TIMING_PHASES["indicators"] += _t.time() - _t0
+        _load_derived_t0 = _t.time()  # 이후 derived phase 측정용 (함수 끝에서 합산)
     else:
         # ── DB 쿼리 로직: TTM 우선, Annual fallback ──
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
@@ -1159,6 +1168,13 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
 
     # 캐시 저장 (날짜+유니버스 조합)
     _factor_data_cache[_cache_key] = merged.copy()
+    # derived phase timing 합산 (prefetch 경로일 때만)
+    try:
+        if '_load_derived_t0' in locals():
+            import time as _t
+            _LOAD_TIMING_PHASES["derived"] += _t.time() - _load_derived_t0
+    except Exception:
+        pass
     return merged
 
 
@@ -1410,16 +1426,31 @@ _SCORE_TIMING_PHASES = {
 }
 _SCORE_TIMING_CALLS = 0
 
+# load_factor_data 내부 세부 timing (병목 한 단계 더 측정)
+_LOAD_TIMING_PHASES = {
+    "slice": 0.0,         # _get_fin/fwd/price/master_for_date (메모리 슬라이스)
+    "indicators": 0.0,    # _calc_ma_reversion + _calc_mfi + _calc_obv_slope
+    "derived": 0.0,       # merge + 파생 변수 (f_per, ATT_*, etc.)
+}
+_LOAD_TIMING_CALLS = 0
+
 
 def reset_score_timing():
-    global _SCORE_TIMING_PHASES, _SCORE_TIMING_CALLS
+    global _SCORE_TIMING_PHASES, _SCORE_TIMING_CALLS, _LOAD_TIMING_PHASES, _LOAD_TIMING_CALLS
     _SCORE_TIMING_PHASES = {k: 0.0 for k in _SCORE_TIMING_PHASES}
     _SCORE_TIMING_CALLS = 0
+    _LOAD_TIMING_PHASES = {k: 0.0 for k in _LOAD_TIMING_PHASES}
+    _LOAD_TIMING_CALLS = 0
 
 
 def report_score_timing() -> dict:
     """누적 timing 반환 (run_backtest 끝나는 시점에서 호출)."""
-    return {"phases": dict(_SCORE_TIMING_PHASES), "calls": _SCORE_TIMING_CALLS}
+    return {
+        "phases": dict(_SCORE_TIMING_PHASES),
+        "calls": _SCORE_TIMING_CALLS,
+        "load_phases": dict(_LOAD_TIMING_PHASES),
+        "load_calls": _LOAD_TIMING_CALLS,
+    }
 
 
 def score_stocks_from_strategy(conn, calc_date, strategy, return_df: bool = False):
