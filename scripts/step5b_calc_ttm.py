@@ -110,6 +110,21 @@ def calc_ttm():
     df["qtr_idx"] = df.apply(lambda r: qtr_index(r["fiscal_year"], r["qtr_num"]), axis=1)
     df = df.sort_values(["stock_code", "qtr_idx"]).reset_index(drop=True)
 
+    # Annual BS fallback 맵 — fnspace 가 4Q 분기보고서에 BS 안 보내는 케이스 보정
+    # (2025 4Q 의 70% 종목이 BS NaN, Annual 에는 정상)
+    print("  Annual BS fallback 데이터 로드 중...")
+    ann_rows = conn.execute("""
+        SELECT stock_code, fiscal_year, bps, net_debt, interest_debt, total_equity, ic, div_yield, pcf
+        FROM fnspace_finance
+        WHERE fiscal_quarter = 'Annual'
+    """).fetchall()
+    annual_fallback_cols = STOCK_COLS + EXTRA_COLS  # bps, net_debt, interest_debt, total_equity, ic, div_yield, pcf
+    annual_bs_map = {}
+    for r in ann_rows:
+        sc, fy = r[0], int(r[1])
+        annual_bs_map[(sc, fy)] = dict(zip(annual_fallback_cols, r[2:]))
+    print(f"  Annual BS map: {len(annual_bs_map):,}건")
+
     # 시가총액 로드
     mcap_map = load_mcap_map(conn)
 
@@ -135,9 +150,20 @@ def calc_ttm():
             for c in FLOW_COLS:
                 s = window[c].dropna()
                 values[c] = float(s.sum()) if len(s) > 0 else None
+            # BS/extra 항목: 마지막 분기 값 → NaN 이면 같은 연도 Annual 에서 fallback
+            ann = annual_bs_map.get((code, end_year))
             for c in STOCK_COLS + EXTRA_COLS:
                 v = last[c]
-                values[c] = None if (v is None or (isinstance(v, float) and np.isnan(v))) else float(v)
+                if v is None or (isinstance(v, float) and np.isnan(v)):
+                    # Fallback: Annual row 의 같은 컬럼
+                    if ann is not None:
+                        av = ann.get(c)
+                        if av is not None and not (isinstance(av, float) and np.isnan(av)):
+                            values[c] = float(av)
+                            continue
+                    values[c] = None
+                else:
+                    values[c] = float(v)
 
             te = values.get("total_equity")
             ni = values.get("net_income")
