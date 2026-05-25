@@ -110,20 +110,53 @@ def calc_ttm():
     df["qtr_idx"] = df.apply(lambda r: qtr_index(r["fiscal_year"], r["qtr_num"]), axis=1)
     df = df.sort_values(["stock_code", "qtr_idx"]).reset_index(drop=True)
 
-    # Annual BS fallback 맵 — fnspace 가 4Q 분기보고서에 BS 안 보내는 케이스 보정
-    # (2025 4Q 의 70% 종목이 BS NaN, Annual 에는 정상)
-    print("  Annual BS fallback 데이터 로드 중...")
-    ann_rows = conn.execute("""
-        SELECT stock_code, fiscal_year, bps, net_debt, interest_debt, total_equity, ic, div_yield, pcf
+    # Annual fallback 맵 — fnspace 가 4Q 분기보고서에 derived/snapshot 항목을 안 채우는 케이스 보정
+    # (BS: 2025 4Q 의 70% NaN / EBIT·EBITDA: 70% NaN / EPS: 52% NaN — Annual 에는 정상)
+    # FLOW 는 Annual = 4분기 합산이므로 TTM_4Q (calendar year 와 align) 에만 적용
+    print("  Annual fallback 데이터 로드 중...")
+    annual_fallback_cols = FLOW_COLS + STOCK_COLS + EXTRA_COLS
+    _flow_sel = ", ".join(FLOW_COLS)
+    _stock_sel = ", ".join(STOCK_COLS + EXTRA_COLS)
+    ann_rows = conn.execute(f"""
+        SELECT stock_code, fiscal_year, {_flow_sel}, {_stock_sel}
         FROM fnspace_finance
         WHERE fiscal_quarter = 'Annual'
     """).fetchall()
-    annual_fallback_cols = STOCK_COLS + EXTRA_COLS  # bps, net_debt, interest_debt, total_equity, ic, div_yield, pcf
-    annual_bs_map = {}
+    annual_fallback_map = {}
     for r in ann_rows:
         sc, fy = r[0], int(r[1])
-        annual_bs_map[(sc, fy)] = dict(zip(annual_fallback_cols, r[2:]))
-    print(f"  Annual BS map: {len(annual_bs_map):,}건")
+        annual_fallback_map[(sc, fy)] = dict(zip(annual_fallback_cols, r[2:]))
+    print(f"  Annual fallback map: {len(annual_fallback_map):,}건")
+
+    # ─── FLOW pre-fill ──────────────────────────────────────────────────────
+    # fnspace 가 4Q 분기 row 에 derived FLOW (ebit/ebitda/eps) 안 채우는 케이스 보정.
+    # 한 분기만 NaN 이고 Annual + 나머지 3분기 모두 있으면
+    # `그 분기 값 = Annual − sum(known 3)` 으로 derive 해서 df 의 해당 row 에 직접 채움.
+    # 효과: TTM_4Q 뿐 아니라 TTM_1Q/2Q/3Q rolling window 가 (직전 연도의 4Q) 를 포함할 때도
+    # silent under-estimate (3분기 합을 4분기인 척) 방지.
+    print("  FLOW 분기 누락치 Annual fallback 보정 중...")
+    fill_counts = {c: 0 for c in FLOW_COLS}
+    for (sc, fy), group in df.groupby(["stock_code", "fiscal_year"], sort=False):
+        if len(group) != 4:
+            continue
+        ann = annual_fallback_map.get((sc, fy))
+        if not ann:
+            continue
+        for c in FLOW_COLS:
+            av = ann.get(c)
+            if av is None or (isinstance(av, float) and np.isnan(av)):
+                continue
+            col_vals = group[c]
+            nan_mask = col_vals.isna()
+            if nan_mask.sum() != 1:
+                continue
+            known_sum = col_vals.dropna().sum()
+            derived = float(av) - known_sum
+            idx_to_fill = group.index[nan_mask][0]
+            df.at[idx_to_fill, c] = derived
+            fill_counts[c] += 1
+    fill_summary = ", ".join(f"{c}:{n:,}" for c, n in fill_counts.items() if n > 0)
+    print(f"    derive 건수: {fill_summary or '0건'}")
 
     # 시가총액 로드
     mcap_map = load_mcap_map(conn)
@@ -147,11 +180,14 @@ def calc_ttm():
             ttm_qtr = QTR_LABEL[qtr_num]
 
             values = {}
+            ann = annual_fallback_map.get((code, end_year))
+            # FLOW 항목: 4분기 합산. 분기 누락은 위의 pre-fill 단계에서 보정됨.
+            # 그래도 4개가 안 모이면 (Annual NaN 이거나 다중 분기 누락) None 으로 emit
+            # — 3분기 합을 4분기인 척 (silent under-estimate) 방지.
             for c in FLOW_COLS:
                 s = window[c].dropna()
-                values[c] = float(s.sum()) if len(s) > 0 else None
+                values[c] = float(s.sum()) if len(s) == 4 else None
             # BS/extra 항목: 마지막 분기 값 → NaN 이면 같은 연도 Annual 에서 fallback
-            ann = annual_bs_map.get((code, end_year))
             for c in STOCK_COLS + EXTRA_COLS:
                 v = last[c]
                 if v is None or (isinstance(v, float) and np.isnan(v)):
