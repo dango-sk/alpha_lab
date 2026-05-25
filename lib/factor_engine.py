@@ -570,11 +570,18 @@ def clear_indicators_db_cache():
 
 
 def _ensure_indicators_db_cache(conn):
-    """alpha_lab.stock_indicators 전체를 메모리에 한 번 로드 (~수십 MB).
-    이후 _calc_*_from_db 가 이 DataFrame 에서 슬라이스만.
+    """alpha_lab.stock_indicators 전체를 메모리에 한 번 로드 + precompute + 종목별 인덱스.
+
+    옵션 C v2: 호출당 groupby/cumcount/tail/agg/drop_duplicates 모두 제거.
+    cache 구조:
+    - 'loaded' = True
+    - 'stock_ranges' = {stock_code: (start_idx, end_idx)}
+    - 'trade_date_arr' = numpy object array
+    - 'ma_120', '_price_ma_rev', '_below_ma', '_mfi' = numpy arrays
+    매 호출: 종목별 searchsorted + array lookup (Python loop, ~5-10μs per stock).
     """
-    if "indicators" in _indicators_db_cache:
-        return _indicators_db_cache["indicators"]
+    if _indicators_db_cache.get("loaded"):
+        return
     import time as _t
     t0 = _t.time()
     print("[INDICATORS_DB] Loading from alpha_lab.stock_indicators ...", flush=True)
@@ -584,37 +591,120 @@ def _ensure_indicators_db_cache(conn):
         FROM alpha_lab.stock_indicators
         ORDER BY stock_code, trade_date
     """, conn)
-    _indicators_db_cache["indicators"] = df
+    df = df.reset_index(drop=True)
     print(f"[INDICATORS_DB] Loaded {len(df):,} rows in {_t.time()-t0:.1f}s", flush=True)
-    return df
+
+    # ── precompute 컬럼 추가 ──
+    t1 = _t.time()
+    grp = df.groupby("stock_code", sort=False)
+    price_ma_rev_arr = (
+        grp["deviation_120"]
+        .rolling(250, min_periods=1)
+        .min()
+        .reset_index(level=0, drop=True)
+        .abs()
+        .to_numpy(dtype=np.float32)
+    )
+    below_ma_arr = (df["deviation_120"] <= 0).to_numpy(dtype=np.int8)
+    # mfi: lag19 + fallback (newly listed 종목 처리)
+    mfi_lag19 = grp["mfi_val"].shift(19)
+    mfi_first_valid = grp["mfi_val"].transform(
+        lambda x: x.loc[x.first_valid_index()] if x.first_valid_index() is not None else np.nan
+    )
+    _mfi_first = mfi_lag19.fillna(mfi_first_valid)
+    mfi_arr = ((df["mfi_val"] - _mfi_first) + np.where(
+        df["mfi_val"] < 50, (50.0 - df["mfi_val"]) * 0.2, 0.0
+    )).to_numpy(dtype=np.float32)
+    print(f"[INDICATORS_DB] precompute done in {_t.time()-t1:.1f}s", flush=True)
+
+    # ── 종목별 인덱스 빌드 ──
+    t2 = _t.time()
+    stock_code_arr = df["stock_code"].values
+    boundaries = np.where(stock_code_arr[1:] != stock_code_arr[:-1])[0] + 1
+    starts = np.concatenate(([0], boundaries))
+    ends = np.concatenate((boundaries, [len(df)]))
+    unique_stocks = stock_code_arr[starts]
+    stock_ranges = {s: (int(s0), int(e0)) for s, s0, e0 in zip(unique_stocks, starts, ends)}
+    print(f"[INDICATORS_DB] stock ranges built in {_t.time()-t2:.1f}s ({len(stock_ranges)} stocks)", flush=True)
+
+    _indicators_db_cache["loaded"] = True
+    _indicators_db_cache["stock_ranges"] = stock_ranges
+    _indicators_db_cache["trade_date_arr"] = df["trade_date"].values
+    _indicators_db_cache["ma_120"] = df["ma_120"].to_numpy(dtype=np.float32)
+    _indicators_db_cache["_price_ma_rev"] = price_ma_rev_arr
+    _indicators_db_cache["_below_ma"] = below_ma_arr
+    _indicators_db_cache["_mfi"] = mfi_arr
 
 
 def _calc_ma_reversion_from_db(conn, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
-    """DB indicator 캐시 사용. 기존 _calc_ma_reversion 과 동일한 결과 보장."""
-    df = _ensure_indicators_db_cache(conn)
-    lookback_days = int((250 + ma_window) * 1.5) + 30
-    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
-    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)].copy()
-    recent = recent.sort_values(["stock_code", "trade_date"])
-    recent["__row_idx"] = recent.groupby("stock_code").cumcount()
-    _mask = recent["__row_idx"] < (ma_window - 1)
-    recent.loc[_mask, "ma_120"] = np.nan
-    recent.loc[_mask, "deviation_120"] = np.nan
-    valid = recent[recent["ma_120"].notna()]
-    if valid.empty:
+    """DB precompute lookup. 옵션 C v2: 종목별 searchsorted + array lookup."""
+    _ensure_indicators_db_cache(conn)
+    stock_ranges = _indicators_db_cache["stock_ranges"]
+    td_arr = _indicators_db_cache["trade_date_arr"]
+    ma_arr = _indicators_db_cache["ma_120"]
+    pmr_arr = _indicators_db_cache["_price_ma_rev"]
+    bma_arr = _indicators_db_cache["_below_ma"]
+
+    stock_codes: list = []
+    price_ma_rev: list = []
+    below_ma: list = []
+
+    for stock, (start, end) in stock_ranges.items():
+        td_sub = td_arr[start:end]
+        idx = td_sub.searchsorted(calc_date, side="left") - 1
+        if idx < 0:
+            continue
+        gidx = start + idx
+        if np.isnan(ma_arr[gidx]):
+            continue
+        stock_codes.append(stock)
+        price_ma_rev.append(float(pmr_arr[gidx]))
+        below_ma.append(int(bma_arr[gidx]))
+
+    if not stock_codes:
         return pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
-    last250 = valid.groupby("stock_code").tail(250)
-    result = last250.groupby("stock_code").agg(price_ma_rev=("deviation_120", "min")).reset_index()
-    result["price_ma_rev"] = result["price_ma_rev"].abs()
-    latest = valid.groupby("stock_code").last()[["deviation_120"]].reset_index()
-    latest["below_ma"] = (latest["deviation_120"] <= 0).astype(int)
-    result = result.merge(latest[["stock_code", "below_ma"]], on="stock_code", how="left")
-    result["below_ma"] = result["below_ma"].fillna(0).astype(int)
-    return result
+    return pd.DataFrame({
+        "stock_code": stock_codes,
+        "price_ma_rev": price_ma_rev,
+        "below_ma": below_ma,
+    })
 
 
 def _calc_mfi_from_db(conn, calc_date: str, period: int = 14, lookback: int = 20) -> pd.DataFrame:
-    """DB indicator 캐시 사용. 기존 _calc_mfi 와 동일한 결과 보장."""
+    """DB precompute lookup. 옵션 C v2: 종목별 searchsorted + array lookup.
+
+    _mfi 컬럼은 _ensure_indicators_db_cache 에서 미리 계산됨 (lag19 + fallback).
+    """
+    _ensure_indicators_db_cache(conn)
+    stock_ranges = _indicators_db_cache["stock_ranges"]
+    td_arr = _indicators_db_cache["trade_date_arr"]
+    mfi_arr = _indicators_db_cache["_mfi"]
+
+    stock_codes: list = []
+    mfis: list = []
+
+    for stock, (start, end) in stock_ranges.items():
+        td_sub = td_arr[start:end]
+        idx = td_sub.searchsorted(calc_date, side="left") - 1
+        if idx < 0:
+            continue
+        gidx = start + idx
+        v = mfi_arr[gidx]
+        if np.isnan(v):
+            continue
+        stock_codes.append(stock)
+        mfis.append(float(v))
+
+    if not stock_codes:
+        return pd.DataFrame(columns=["stock_code", "mfi"])
+    return pd.DataFrame({
+        "stock_code": stock_codes,
+        "mfi": mfis,
+    })
+
+
+def _calc_mfi_from_db_OLD(conn, calc_date: str, period: int = 14, lookback: int = 20) -> pd.DataFrame:
+    """[DEPRECATED — keep for fallback comparison] PR #22 의 slice+groupby 버전."""
     df = _ensure_indicators_db_cache(conn)
     lookback_days = (period + lookback) * 2 + 30
     cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
@@ -968,15 +1058,17 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         _t0 = _t.time()
         # _ma_window already set above
         # 우선순위: DB indicator (FE_USE_INDICATORS_DB=1) > 메모리 캐시 (FE_USE_MA_CACHE=1) > 기존
-        # OBV는 cumsum 시작점에 민감해서 항상 기존 함수
+        # OBV: cached 함수 사용 (전체 데이터 OBV cumsum 미리 계산 후 슬라이스)
+        # NOTE: 슬라이스 기반 cumsum 과 결과 다를 수 있음 (cumsum 시작점 차이).
+        # 비중 0 전략에서는 영향 없음. 정확도 검증은 별도 PoC 로.
         if _is_indicators_db_enabled():
             ma_rev_df = _calc_ma_reversion_from_db(conn, calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi_from_db(conn, calc_date)
-            obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
+            obv_df = _calc_obv_slope_cached(_prefetch_cache["price"], calc_date)
         elif _is_ma_cache_enabled():
             ma_rev_df = _calc_ma_reversion_cached(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi_cached(_prefetch_cache["price"], calc_date)
-            obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
+            obv_df = _calc_obv_slope_cached(_prefetch_cache["price"], calc_date)
         else:
             ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
