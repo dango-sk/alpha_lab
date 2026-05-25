@@ -217,6 +217,7 @@ def prefetch_all_data(conn, use_local_cache=True):
                 print(f"[PREFETCH] 메모리 캐시 stale 감지: mem={mem_max}, db={db_max_trade_date} → 무효화 + 재로드", flush=True)
                 _prefetch_cache.clear()
                 clear_indicator_cache()  # MA/MFI/OBV 캐시도 무효화
+                clear_indicators_db_cache()  # alpha_lab.stock_indicators DB 캐시 (PR #22+#27) 도 무효화
 
         if use_local_cache and db_max_trade_date and meta_path.exists():
             try:
@@ -332,6 +333,7 @@ def prefetch_all_data(conn, use_local_cache=True):
         _prefetch_cache["_max_trade_date"] = db_max_trade_date
     # MA/MFI/OBV 인디케이터 캐시도 무효화 (price 데이터가 새로 로드됐으므로)
     clear_indicator_cache()
+    clear_indicators_db_cache()  # alpha_lab.stock_indicators DB 캐시 (PR #22+#27) 도 무효화
 
     # ── slice 최적화: trade_date / snapshot_date 별 슬라이스 인덱스 미리 계산 ──
     # 매 _get_*_for_date 호출에서 unique() + sort + boolean indexing on 6M rows 반복 제거.
