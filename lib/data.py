@@ -1747,6 +1747,8 @@ def run_regime_combo_backtest(
     bear_sl_pct = bear_params.get("stop_loss_pct", 15)
     bull_sl_mode = bull_params.get("stop_loss_mode", "sell")
     bear_sl_mode = bear_params.get("stop_loss_mode", "sell")
+    bull_sl_basis = bull_params.get("stop_loss_basis", "entry")
+    bear_sl_basis = bear_params.get("stop_loss_basis", "entry")
     _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
     _universe = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
 
@@ -2203,10 +2205,12 @@ def run_regime_combo_backtest(
             BACKTEST_CONFIG["stop_loss_enabled"] = bull_sl
             BACKTEST_CONFIG["stop_loss_pct"] = bull_sl_pct
             BACKTEST_CONFIG["stop_loss_mode"] = bull_sl_mode
+            BACKTEST_CONFIG["stop_loss_basis"] = bull_sl_basis
         else:
             BACKTEST_CONFIG["stop_loss_enabled"] = bear_sl
             BACKTEST_CONFIG["stop_loss_pct"] = bear_sl_pct
             BACKTEST_CONFIG["stop_loss_mode"] = bear_sl_mode
+            BACKTEST_CONFIG["stop_loss_basis"] = bear_sl_basis
         universe_set = get_universe_stocks(conn, calc_date)
         candidates = score_stocks_from_strategy(conn, calc_date, module)
         return [(c, s) for c, s in candidates if c in universe_set][:_top_n]
@@ -2220,6 +2224,7 @@ def run_regime_combo_backtest(
         "stop_loss_enabled": BACKTEST_CONFIG.get("stop_loss_enabled", False),
         "stop_loss_pct": BACKTEST_CONFIG.get("stop_loss_pct", 15),
         "stop_loss_mode": BACKTEST_CONFIG.get("stop_loss_mode", "sell"),
+        "stop_loss_basis": BACKTEST_CONFIG.get("stop_loss_basis", "entry"),
     }
     try:
         BACKTEST_CONFIG["top_n_stocks"] = top_n
@@ -2228,6 +2233,7 @@ def run_regime_combo_backtest(
         BACKTEST_CONFIG["stop_loss_enabled"] = bull_sl  # 초기값은 bull
         BACKTEST_CONFIG["stop_loss_pct"] = bull_sl_pct
         BACKTEST_CONFIG["stop_loss_mode"] = bull_sl_mode
+        BACKTEST_CONFIG["stop_loss_basis"] = bull_sl_basis
         BACKTEST_CONFIG["rebal_type"] = _rebal
         BACKTEST_CONFIG["universe"] = _universe
 
