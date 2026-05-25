@@ -842,38 +842,88 @@ def _calc_mfi_cached(price_all: pd.DataFrame, calc_date: str, period: int = 14, 
 
 
 def _ensure_obv_indicators(price_all: pd.DataFrame, obv_ma: int, momentum_window: int):
+    """OBV indicators 캐시 + per-row _obv_slope precompute + 종목별 인덱스.
+
+    OBV v2: 호출당 boolean indexing + groupby last 제거.
+    캐시 구조 (dict, key=(obv_ma, momentum_window)):
+      - 'stock_ranges': {stock_code: (start, end)}
+      - 'trade_date_arr': numpy str array
+      - 'obv_slope_arr': numpy float32 (per-row 계산된 obv_slope, invalid 는 NaN)
+    매 호출: 종목별 searchsorted + array lookup.
+    """
     key = (obv_ma, momentum_window)
     if key in _obv_indicator_cache:
         return _obv_indicator_cache[key]
     if "volume" not in price_all.columns:
         _obv_indicator_cache[key] = None
         return None
-    df = price_all.sort_values(["stock_code", "trade_date"])[["stock_code", "trade_date", "close", "volume"]].copy()
+    import time as _t
+    t0 = _t.time()
+    df = price_all.sort_values(["stock_code", "trade_date"])[
+        ["stock_code", "trade_date", "close", "volume"]
+    ].copy()
     direction = df.groupby("stock_code")["close"].transform(lambda x: np.sign(x.diff().fillna(0)))
     df["obv"] = (direction * df["volume"]).groupby(df["stock_code"]).cumsum()
     df["obv_ma_v"] = df.groupby("stock_code")["obv"].transform(
         lambda x: x.rolling(obv_ma, min_periods=obv_ma).mean()
     )
     df["obv_lag"] = df.groupby("stock_code")["obv"].transform(lambda x: x.shift(momentum_window))
-    _obv_indicator_cache[key] = df
-    return df
+    df = df.reset_index(drop=True)
+
+    # ── per-row _obv_slope precompute ──
+    # momentum + trend_dev (옛 코드와 동일 공식). invalid (obv_ma_v / obv_lag 중 NaN) 은 NaN.
+    momentum = (df["obv"] - df["obv_lag"]) / df["obv_lag"].abs().replace(0, np.nan)
+    trend_dev = (df["obv"] - df["obv_ma_v"]) / df["obv_ma_v"].abs().replace(0, np.nan)
+    slope = momentum.fillna(0) + trend_dev.fillna(0)
+    mask_valid = df["obv_lag"].notna() & df["obv_ma_v"].notna()
+    obv_slope_arr = np.where(mask_valid, slope.values, np.nan).astype(np.float32)
+
+    # ── 종목별 인덱스 빌드 ──
+    stock_code_arr = df["stock_code"].values
+    boundaries = np.where(stock_code_arr[1:] != stock_code_arr[:-1])[0] + 1
+    starts = np.concatenate(([0], boundaries))
+    ends = np.concatenate((boundaries, [len(df)]))
+    unique_stocks = stock_code_arr[starts]
+    stock_ranges = {s: (int(s0), int(e0)) for s, s0, e0 in zip(unique_stocks, starts, ends)}
+
+    print(f"[OBV] cache built in {_t.time()-t0:.1f}s ({len(stock_ranges)} stocks)", flush=True)
+    _obv_indicator_cache[key] = {
+        "stock_ranges": stock_ranges,
+        "trade_date_arr": df["trade_date"].values,
+        "obv_slope_arr": obv_slope_arr,
+    }
+    return _obv_indicator_cache[key]
 
 
 def _calc_obv_slope_cached(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, momentum_window: int = 60) -> pd.DataFrame:
-    df = _ensure_obv_indicators(price_all, obv_ma, momentum_window)
-    if df is None:
+    """OBV v2: 종목별 searchsorted + per-row precomputed lookup."""
+    cache = _ensure_obv_indicators(price_all, obv_ma, momentum_window)
+    if cache is None:
         return pd.DataFrame(columns=["stock_code", "obv_slope"])
-    lookback_days = int((momentum_window + obv_ma) * 1.5) + 30
-    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
-    recent = df[(df["trade_date"] >= cutoff) & (df["trade_date"] < calc_date)]
-    valid = recent[recent["obv_ma_v"].notna() & recent["obv_lag"].notna()]
-    if valid.empty:
+    stock_ranges = cache["stock_ranges"]
+    td_arr = cache["trade_date_arr"]
+    slope_arr = cache["obv_slope_arr"]
+
+    stock_codes: list = []
+    slopes: list = []
+    for stock, (start, end) in stock_ranges.items():
+        td_sub = td_arr[start:end]
+        idx = td_sub.searchsorted(calc_date, side="left") - 1
+        if idx < 0:
+            continue
+        gidx = start + idx
+        v = slope_arr[gidx]
+        if np.isnan(v):
+            continue
+        stock_codes.append(stock)
+        slopes.append(float(v))
+
+    if not stock_codes:
         return pd.DataFrame(columns=["stock_code", "obv_slope"])
-    latest = valid.groupby("stock_code").last()
-    momentum = (latest["obv"] - latest["obv_lag"]) / latest["obv_lag"].abs().replace(0, np.nan)
-    trend_dev = (latest["obv"] - latest["obv_ma_v"]) / latest["obv_ma_v"].abs().replace(0, np.nan)
-    result = pd.DataFrame({"stock_code": latest.index, "obv_slope": (momentum + trend_dev).values})
-    return result.fillna(0)
+    return pd.DataFrame({
+        "stock_code": stock_codes,
+        "obv_slope": slopes,
+    })
 
 
 def _calc_ma_reversion(price_all: pd.DataFrame, calc_date: str, ma_window: int = 120) -> pd.DataFrame:
