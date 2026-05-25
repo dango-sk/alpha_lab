@@ -238,10 +238,15 @@ def prefetch_all_data(conn, use_local_cache=True):
             print(f"[PREFETCH] {key} loaded from disk cache", flush=True)
         if db_max_trade_date:
             _prefetch_cache["_max_trade_date"] = db_max_trade_date
+        # slice 최적화: disk cache 경로에서도 date 인덱스 빌드
+        _build_date_indices()
         print(f"[PREFETCH] All from disk cache in {time.time()-t0:.1f}s (max_trade_date={db_max_trade_date})", flush=True)
         return
     # 메모리 캐시가 이미 있고 stale 아닌 경우 → 그대로 사용
     if _prefetch_cache and all(k in _prefetch_cache for k in tables):
+        # 인덱스만 누락된 경우 (이전 버전 메모리 캐시) 빌드
+        if "_price_unique_dates" not in _prefetch_cache:
+            _build_date_indices()
         return
 
     # 강제 갱신 또는 stale → 디스크 pkl 제거하고 처음부터 DB에서 로드
@@ -328,7 +333,54 @@ def prefetch_all_data(conn, use_local_cache=True):
     # MA/MFI/OBV 인디케이터 캐시도 무효화 (price 데이터가 새로 로드됐으므로)
     clear_indicator_cache()
 
+    # ── slice 최적화: trade_date / snapshot_date 별 슬라이스 인덱스 미리 계산 ──
+    # 매 _get_*_for_date 호출에서 unique() + sort + boolean indexing on 6M rows 반복 제거.
+    # 대신 unique dates(searchsorted) + iloc(O(1) range) 으로 lookup.
+    _build_date_indices()
+
     print(f"[PREFETCH] Loaded all data in {time.time()-t0:.1f}s (max_trade_date={db_max_trade_date})", flush=True)
+
+
+def _build_date_indices():
+    """price/forward/master 의 date 컬럼별 (start, end) 인덱스 dict 미리 계산.
+    이후 _get_*_for_date 가 boolean indexing 대신 iloc 슬라이스로 처리.
+    """
+    import time as _t
+    _t0 = _t.time()
+
+    # (cache key, dataframe key, date column) 조합
+    _specs = [
+        ("price", "price", "trade_date"),
+        ("forward", "forward", "trade_date"),
+        ("master", "master", "snapshot_date"),
+    ]
+    for _name, _df_key, _date_col in _specs:
+        if _df_key not in _prefetch_cache:
+            continue
+        _df = _prefetch_cache[_df_key]
+        if _date_col not in _df.columns or len(_df) == 0:
+            continue
+        # 정렬 (이미 정렬돼 있으면 변경 없음)
+        _df = _df.sort_values(_date_col, kind="stable").reset_index(drop=True)
+        _prefetch_cache[_df_key] = _df
+        _dates_arr = _df[_date_col].values
+        # date 경계 (변경 지점) 찾기
+        if len(_dates_arr) <= 1:
+            _unique_dates = _dates_arr.copy()
+            _date_ranges = {d: (0, len(_dates_arr)) for d in _unique_dates}
+        else:
+            _boundaries = np.where(_dates_arr[1:] != _dates_arr[:-1])[0] + 1
+            _starts = np.concatenate(([0], _boundaries))
+            _ends = np.concatenate((_boundaries, [len(_dates_arr)]))
+            _unique_dates = _dates_arr[_starts]
+            _date_ranges = {
+                d: (int(s), int(e))
+                for d, s, e in zip(_unique_dates, _starts, _ends)
+            }
+        _prefetch_cache[f"_{_name}_unique_dates"] = _unique_dates
+        _prefetch_cache[f"_{_name}_date_ranges"] = _date_ranges
+
+    print(f"[PREFETCH] date indices built in {_t.time()-_t0:.1f}s", flush=True)
 
 
 def clear_prefetch_cache():
@@ -412,38 +464,79 @@ def _get_fin_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     return fin_df, prev_rev
 
 
+def _fast_slice_by_date(name: str, df_key: str, target_date: str,
+                        strict_less: bool, fallback_first: bool = False):
+    """date 인덱스 캐시를 사용해 iloc 으로 빠른 슬라이싱.
+
+    Args:
+        name: cache 접두사 (price/forward/master)
+        df_key: _prefetch_cache 의 DataFrame 키
+        target_date: 기준 날짜 문자열
+        strict_less: True 면 target_date 미만, False 면 이하
+        fallback_first: 후보 없을 때 첫 번째 날짜로 fallback (forward 만 사용)
+
+    Returns:
+        (df_slice, picked_date) — 데이터 없으면 (None, None)
+    """
+    df = _prefetch_cache.get(df_key)
+    if df is None or len(df) == 0:
+        return None, None
+    unique_dates = _prefetch_cache.get(f"_{name}_unique_dates")
+    date_ranges = _prefetch_cache.get(f"_{name}_date_ranges")
+    if unique_dates is None or date_ranges is None:
+        # Fallback: 캐시 미빌드 시 옛 방식
+        all_dates = sorted(df[df.columns[df.columns.get_loc("trade_date" if "trade_date" in df.columns else "snapshot_date")]].unique())
+        if strict_less:
+            cand = [d for d in all_dates if d < target_date]
+        else:
+            cand = [d for d in all_dates if d <= target_date]
+        picked = cand[-1] if cand else (all_dates[0] if fallback_first and all_dates else None)
+        if picked is None:
+            return None, None
+        _date_col = "trade_date" if "trade_date" in df.columns else "snapshot_date"
+        return df[df[_date_col] == picked], picked
+    # Fast path: searchsorted 로 후보 찾기
+    side = "left" if strict_less else "right"
+    idx = unique_dates.searchsorted(target_date, side=side) - 1
+    if idx < 0:
+        if fallback_first and len(unique_dates) > 0:
+            picked = unique_dates[0]
+        else:
+            return None, None
+    else:
+        picked = unique_dates[idx]
+    i_start, i_end = date_ranges[picked]
+    return df.iloc[i_start:i_end], picked
+
+
 def _get_fwd_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     """프리페치 캐시에서 포워드 데이터 추출."""
-    fwd_all = _prefetch_cache["forward"]
-    dates = fwd_all["trade_date"].unique()
-    dates_before = sorted(d for d in dates if d < calc_date)
-    fwd_date = dates_before[-1] if dates_before else (sorted(dates)[0] if len(dates) else None)
-    fwd_df = fwd_all[fwd_all["trade_date"] == fwd_date].drop(columns=["trade_date"]) if fwd_date else pd.DataFrame()
+    fwd_slice, fwd_date = _fast_slice_by_date("forward", "forward", calc_date,
+                                              strict_less=True, fallback_first=True)
+    fwd_df = fwd_slice.drop(columns=["trade_date"]) if fwd_slice is not None else pd.DataFrame()
 
     three_m_ago = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=90)).strftime("%Y-%m-%d")
-    dates_3m = sorted(d for d in dates if d <= three_m_ago)
-    fwd_date_3m = dates_3m[-1] if dates_3m else None
+    fwd_3m_slice, _ = _fast_slice_by_date("forward", "forward", three_m_ago, strict_less=False)
     fwd_3m_df = pd.DataFrame()
-    if fwd_date_3m:
-        fwd_3m_df = fwd_all[fwd_all["trade_date"] == fwd_date_3m][["stock_code", "fwd_eps"]].copy()
+    if fwd_3m_slice is not None:
+        fwd_3m_df = fwd_3m_slice[["stock_code", "fwd_eps"]].copy()
         fwd_3m_df = fwd_3m_df.rename(columns={"fwd_eps": "fwd_eps_3m"})
     return fwd_df, fwd_3m_df
 
 
 def _get_price_for_date(calc_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     """프리페치 캐시에서 주가 데이터 추출."""
-    price_all = _prefetch_cache["price"]
-    dates = price_all["trade_date"].unique()
-    dates_before = sorted(d for d in dates if d < calc_date)
-    price_date = dates_before[-1] if dates_before else None
-    price_df = price_all[price_all["trade_date"] == price_date][["stock_code", "close", "market_cap", "trade_amount"]] if price_date else pd.DataFrame()
+    price_slice, price_date = _fast_slice_by_date("price", "price", calc_date, strict_less=True)
+    if price_slice is not None:
+        price_df = price_slice[["stock_code", "close", "market_cap", "trade_amount"]]
+    else:
+        price_df = pd.DataFrame()
 
     three_m_ago = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=90)).strftime("%Y-%m-%d")
-    dates_3m = sorted(d for d in dates if d <= three_m_ago)
-    price_date_3m = dates_3m[-1] if dates_3m else None
+    price_3m_slice, _ = _fast_slice_by_date("price", "price", three_m_ago, strict_less=False)
     price_3m_df = pd.DataFrame()
-    if price_date_3m:
-        price_3m_df = price_all[price_all["trade_date"] == price_date_3m][["stock_code", "close"]].copy()
+    if price_3m_slice is not None:
+        price_3m_df = price_3m_slice[["stock_code", "close"]].copy()
         price_3m_df = price_3m_df.rename(columns={"close": "close_3m"})
     return price_df, price_3m_df
 
@@ -834,12 +927,12 @@ def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, m
 
 def _get_master_for_date(calc_date: str) -> pd.DataFrame:
     """프리페치 캐시에서 마스터 데이터 추출."""
-    master_all = _prefetch_cache["master"]
     snap_month = calc_date[:7]
-    snaps = sorted(master_all["snapshot_date"].unique())
-    valid_snaps = [s for s in snaps if s <= snap_month]
-    snap = valid_snaps[-1] if valid_snaps else (snaps[0] if snaps else snap_month)
-    return master_all[master_all["snapshot_date"] == snap][["stock_code", "stock_name", "market", "sec_cd_nm", "finacc_typ"]]
+    master_slice, _ = _fast_slice_by_date("master", "master", snap_month,
+                                          strict_less=False, fallback_first=True)
+    if master_slice is None:
+        return pd.DataFrame(columns=["stock_code", "stock_name", "market", "sec_cd_nm", "finacc_typ"])
+    return master_slice[["stock_code", "stock_name", "market", "sec_cd_nm", "finacc_typ"]]
 
 
 def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = None) -> pd.DataFrame | None:
