@@ -662,14 +662,18 @@ def step_build_stock_indicators(incremental: bool = False):
     """daily_price → MA/MFI indicator 미리 계산해서 alpha_lab.stock_indicators 적재.
     이러면 backend가 매 calc_date에 rolling 계산 안 함 (DB SELECT만).
 
-    incremental=True 면 최근 60일치만 재계산 (rolling window 안전 여유 포함).
+    incremental=True 면 최근 400일치 fetch 해서 rolling(120) 계산 후 UPSERT.
     """
     import subprocess
     args = [sys.executable, str(Path(__file__).parent / "build_stock_indicators.py")]
     if incremental:
-        # 최근 60영업일 재계산 (rolling 120 안전 여유)
+        # 400일 fetch — rolling(120) lookback 안전 확보.
+        # 이전 200일 fetch 는 fetch 의 첫 120일이 NaN 으로 UPSERT 되어
+        # 매번 실행마다 같은 6개월 구간이 NaN 으로 덮어씌워지는 자기파괴 버그.
+        # 400일이면 첫 120일 NaN 이라도 그 이전 데이터에 영향 없고
+        # 마지막 280일은 정상 MA 로 UPSERT 됨.
         from datetime import datetime as _dt, timedelta as _td
-        since = (_dt.now() - _td(days=200)).strftime("%Y-%m-%d")
+        since = (_dt.now() - _td(days=400)).strftime("%Y-%m-%d")
         args += ["--since", since]
     subprocess.run(args, check=True)
 
