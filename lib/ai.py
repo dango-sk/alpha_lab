@@ -77,7 +77,7 @@ DB에서 로딩되는 재무/주가/Forward 데이터:
 - 밸류: t_per (trailing PER), f_per (forward PER), t_ev_ebitda, f_ev_ebitda, f_ev_ebit, ev_ic, f_pbr, t_pcf
 - 성장: f_epsg (forward EPS 성장률), f_ebitg (forward EBIT 성장률), t_spsg (trailing 매출성장률), f_spsg (forward 매출성장률)
 - 모멘텀: f_eps_m (forward EPS 3개월 변화율), price_m (3개월 주가 모멘텀)
-- 재무건전성: ndebt_ebitda (순차입/EBITDA), current_ratio (유동비율)
+- 재무건전성: ndebt_ebitda (순차입/EBITDA)
 
 ## 회귀 모델 formula_type
 - "ratio": fitted / actual - 1 (예: PBR-ROE, Forward PER-이익성장)
@@ -147,14 +147,13 @@ FACTOR_LABELS = {
     "F_EPS_M": "Forward EPS 모멘텀",
     "PRICE_M": "3개월 주가모멘텀",
     "NDEBT_EBITDA": "순차입/EBITDA",
-    "CURRENT": "유동비율",
 }
 
 FACTOR_CATEGORIES = {
     "밸류에이션": ["T_PER", "F_PER", "T_EVEBITDA", "F_EVEBITDA", "T_PBR", "F_PBR", "T_PCF"],
     "회귀 매력도": ["ATT_PBR", "ATT_EVIC", "ATT_PER", "ATT_EVEBIT"],
     "성장성": ["T_SPSG", "F_SPSG"],
-    "차별화": ["F_EPS_M", "PRICE_M", "NDEBT_EBITDA", "CURRENT"],
+    "차별화": ["F_EPS_M", "PRICE_M", "NDEBT_EBITDA"],
 }
 
 # 채팅 예시 (UI에서 사용)
