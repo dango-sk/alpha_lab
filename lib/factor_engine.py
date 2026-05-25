@@ -57,7 +57,7 @@ def decile_rule1(series):
 
 
 def decile_rule2(series):
-    """높을수록 좋음 (회귀/성장/CURRENT). P90이상->10 ... P10이하->1, NaN->0"""
+    """높을수록 좋음 (회귀/성장). P90이상->10 ... P10이하->1, NaN->0"""
     P = _pcts(series)
     if P is None:
         return pd.Series(0, index=series.index)
@@ -1449,8 +1449,6 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     m = merged[ebitda_col].notna() & (merged[ebitda_col] > 0) & merged["net_debt"].notna()
     merged["ndebt_ebitda"] = np.where(m, merged["net_debt"] / merged[ebitda_col], np.nan)
 
-    merged["current_ratio"] = np.nan
-
     # FCF_YIELD
     if "fcf" in merged.columns:
         m = merged["fcf"].notna() & (merged["market_cap"] > 0)
@@ -1525,7 +1523,8 @@ def _run_single_regression(df, x_col, y_col, model_name, formula_type, outlier_f
     y_max = outlier_filter.get("y_max", 9999)
 
     if x_col not in df.columns or y_col not in df.columns:
-        df[col_attr] = 0.0
+        # 결측은 NaN 유지 → 사분위 점수 0, 분포 오염 없음
+        df[col_attr] = np.nan
         return df, {"model": model_name, "n": 0, "r2": 0, "status": "missing_column"}
 
     vm = (df[x_col].notna() & df[y_col].notna() &
@@ -1534,12 +1533,12 @@ def _run_single_regression(df, x_col, y_col, model_name, formula_type, outlier_f
     valid = df[vm].copy()
 
     if len(valid) < 20:
-        df[col_attr] = 0.0
+        df[col_attr] = np.nan
         return df, {"model": model_name, "n": len(valid), "r2": 0, "status": "insufficient"}
 
     # x값이 전부 같으면 회귀 불가
     if valid[x_col].nunique() < 2:
-        df[col_attr] = 0.0
+        df[col_attr] = np.nan
         return df, {"model": model_name, "n": len(valid), "r2": 0, "status": "constant_x"}
 
     slope, intercept, r_value, _, _ = stats.linregress(valid[x_col].values, valid[y_col].values)
@@ -1577,7 +1576,8 @@ def _run_single_regression(df, x_col, y_col, model_name, formula_type, outlier_f
         mask = has_x & df[y_col].notna() & (df[y_col].abs() > 0)
         df.loc[mask, col_attr] = (fitted[mask] - df.loc[mask, y_col]) / df.loc[mask, y_col].abs()
 
-    df[col_attr] = df[col_attr].clip(-1.0, 5.0).fillna(0.0)
+    # NaN 은 유지 → 결측 종목이 분포에 끼지 않게 (사분위 점수 0)
+    df[col_attr] = df[col_attr].clip(-1.0, 5.0)
     return df, {
         "model": model_name, "n": len(valid), "r2": round(r2, 4),
         "slope": round(slope, 4), "intercept": round(intercept, 4), "status": "ok",
@@ -2144,7 +2144,6 @@ SCORE_MAP = {
     "T_SPSG": "t_spsg_score", "F_SPSG": "f_spsg_score",
     "F_EPS_M": "f_eps_m_score",
     "PRICE_M": "price_m_score", "NDEBT_EBITDA": "ndebt_ebitda_score",
-    "CURRENT": "current_ratio_score",
     "PRICE_MA_REV": "price_ma_rev_score",
     "OBV_SLOPE": "obv_slope_score",
     "MFI": "mfi_score",
@@ -2153,7 +2152,7 @@ SCORE_MAP = {
 
 # ─── 스코어링 규칙 ───
 # "rule1": 낮을수록 좋음 (밸류 멀티플: PER, PBR, EV/EBITDA, PCF)
-# "rule2": 높을수록 좋음 (회귀 매력도, 성장률, EPS 모멘텀, 유동비율)
+# "rule2": 높을수록 좋음 (회귀 매력도, 성장률, EPS 모멘텀)
 # "rule3": 낮을수록 좋음 (주가 모멘텀 역방향, 부채비율)
 SCORING_RULES = {
     "t_per": "rule1", "f_per": "rule1",
@@ -2166,7 +2165,6 @@ SCORING_RULES = {
     "t_spsg": "rule2", "f_spsg": "rule2",
     "f_eps_m": "rule2",
     "price_m": "rule3", "ndebt_ebitda": "rule3",
-    "current_ratio": "rule2",
     "price_ma_rev": "rule2",
     "obv_slope": "rule2",
     "mfi": "rule2",
