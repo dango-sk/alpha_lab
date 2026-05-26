@@ -1703,36 +1703,7 @@ def run_regime_combo_backtest(
             return {"error": f"{label} 전략 오류: {err}"}
 
     bull_module = code_to_module(bull_data["code"])
-
-    # Bear 모듈: FCF_YIELD WEIGHTS_LARGE 추가 + SCORE_MAP·SCORING_RULES 주입
-    import re as _re
-    _bear_code = bear_data["code"]
-    # F_PBR .05 → .03 (FCF_YIELD .02 추가를 위한 가중치 조정)
-    _bear_code = _bear_code.replace('"F_PBR": .05,', '"F_PBR": .03,')
-    # WEIGHTS_LARGE에 FCF_YIELD 추가 (없으면 추가, weight=0이면 .02로 변경)
-    if '"FCF_YIELD"' not in _bear_code:
-        _bear_code = _re.sub(
-            r'(WEIGHTS_LARGE\s*=\s*\{[^}]*)\}',
-            r'\1    "FCF_YIELD": .02,\n}',
-            _bear_code, count=1, flags=_re.DOTALL,
-        )
-    else:
-        _bear_code = _bear_code.replace('"FCF_YIELD": 0,', '"FCF_YIELD": .02,')
-    # SCORE_MAP에 FCF_YIELD → fcf_yield_score 매핑 추가
-    if '"fcf_yield_score"' not in _bear_code:
-        _bear_code = _re.sub(
-            r'(SCORE_MAP\s*=\s*\{[^}]*)\}',
-            r'\1    "FCF_YIELD": "fcf_yield_score",\n}',
-            _bear_code, count=1, flags=_re.DOTALL,
-        )
-    # SCORING_RULES에 fcf_yield → rule2 추가 (높을수록 좋음)
-    if '"fcf_yield"' not in _bear_code:
-        _bear_code = _re.sub(
-            r'(SCORING_RULES\s*=\s*\{[^}]*)\}',
-            r'\1    "fcf_yield": "rule2",\n}',
-            _bear_code, count=1, flags=_re.DOTALL,
-        )
-    bear_module = code_to_module(_bear_code)
+    bear_module = code_to_module(bear_data["code"])
 
     # 3. 파라미터 (tx_cost는 두 전략 평균, cap은 레짐별 분리)
     bull_params = getattr(bull_module, "PARAMS", {})

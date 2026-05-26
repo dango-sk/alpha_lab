@@ -1,3 +1,4 @@
+
 """
 LLM 기술적 분석 자체지식 검증 (OpenAI 버전)
   방식 A (baseline): calc_all_indicators() 30+ 지표 텍스트 → LLM

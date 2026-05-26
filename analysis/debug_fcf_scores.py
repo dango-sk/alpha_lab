@@ -72,6 +72,22 @@ def _build_bear_module():
     else:
         code = code.replace('"FCF_YIELD": 0,', '"FCF_YIELD": .02,')
 
+    # SCORE_MAP에 FCF_YIELD → fcf_yield_score 매핑 추가
+    if '"fcf_yield_score"' not in code:
+        code = re.sub(
+            r'(SCORE_MAP\s*=\s*\{[^}]*)\}',
+            r'\1    "FCF_YIELD": "fcf_yield_score",\n}',
+            code, count=1, flags=re.DOTALL,
+        )
+
+    # SCORING_RULES에 fcf_yield 점수화 규칙 추가 (높을수록 좋음 → rule2)
+    if '"fcf_yield"' not in code:
+        code = re.sub(
+            r'(SCORING_RULES\s*=\s*\{[^}]*)\}',
+            r'\1    "fcf_yield": "rule2",\n}',
+            code, count=1, flags=re.DOTALL,
+        )
+
     mod = code_to_module(code)
 
     # 실제 WEIGHTS_LARGE 확인
@@ -264,11 +280,12 @@ def _do_prefetch(conn, fwd_start: str, fwd_end: str):
         FROM fnspace_forward
         WHERE trade_date BETWEEN '{fwd_start}' AND '{fwd_end}'
     """, conn)
-    print("[PREFETCH] price 로드 중...", flush=True)
-    _prefetch_cache["price"] = read_sql("""
+    print(f"[PREFETCH] price 로드 중 ({fwd_start} ~ {fwd_end})...", flush=True)
+    _prefetch_cache["price"] = read_sql(f"""
         SELECT 'A' || stock_code as stock_code, trade_date,
                close, high, low, volume, market_cap, trade_amount
         FROM daily_price
+        WHERE trade_date BETWEEN '{fwd_start}' AND '{fwd_end}'
     """, conn)
     print("[PREFETCH] master 로드 중...", flush=True)
     _prefetch_cache["master"] = read_sql("""
