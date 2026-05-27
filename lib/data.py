@@ -1670,7 +1670,7 @@ def run_regime_combo_backtest(
     universe: str = None,
     rebal_type: str = None,
     ma_window: int = 50,
-    regime_mode: str = "ma",  # "ma" | "cycle" | "ai" | "inertia"
+    regime_mode: str = "ma",  # "ma" | "cycle" | "ai" | "ai_v2" | "inertia"
 ) -> dict | None:
     print(f"[REGIME COMBO BACKTEST] regime_mode={regime_mode}, bull={bull_key}, bear={bear_key}", flush=True)
     """
@@ -1960,6 +1960,39 @@ def run_regime_combo_backtest(
                 _prev_regime = _ai_regime_map[_ym]
             print(f"[AI REGIME] loaded {len(_ai_regime_map)} months (threshold: Bear<=-2%, Bull>=+1%)", flush=True)
 
+    # AI_V2: Gemini 5-class judgment + 변동성 sticky (regime hysteresis)
+    if regime_mode == "ai_v2":
+        import json as _json_v2
+        import os as _os_v2
+        from pathlib import Path as _Path_v2
+        _v2_path = _Path_v2(_os_v2.environ['AI_REGIME_V2_PATH']) if 'AI_REGIME_V2_PATH' in _os_v2.environ else _Path_v2(__file__).parent.parent / "analysis" / "regime_agent_multimodel_results_gemini.json"
+        if not _v2_path.exists():
+            _v2_path = ALPHA_LAB_DIR / "analysis" / "regime_agent_multimodel_results_gemini.json"
+        print(f"[AI REGIME v2] path={_v2_path}, exists={_v2_path.exists()}", flush=True)
+        if _v2_path.exists():
+            _v2_judgments = {}
+            with open(_v2_path, encoding="utf-8") as _f_v2:
+                for _r in _json_v2.load(_f_v2):
+                    _ym = _r.get("as_of", "")[:7]
+                    _v2_judgments[_ym] = _r.get("judgment")
+            # 시간순 정렬 후 변동성은 직전 regime 유지 (sticky)
+            _prev = "Bull"
+            for _ym in sorted(_v2_judgments):
+                _j = _v2_judgments[_ym]
+                if _j == "약세":
+                    _cur = "Bear"
+                elif _j == "강세":
+                    _cur = "Bull"
+                else:  # 변동성 / None / 누락 → sticky
+                    _cur = _prev
+                _ai_regime_map[_ym] = _cur
+                _prev = _cur
+            _bull_cnt = sum(1 for v in _ai_regime_map.values() if v == "Bull")
+            _bear_cnt = sum(1 for v in _ai_regime_map.values() if v == "Bear")
+            print(f"[AI REGIME v2] loaded {len(_ai_regime_map)} months (judgment + sticky), Bull={_bull_cnt}, Bear={_bear_cnt}", flush=True)
+        else:
+            print(f"[AI REGIME v2] WARNING: {_v2_path} not found, defaulting to Bull for all months", flush=True)
+
     # JM walk-forward for combo modes (ai_jm_accel, ai_jm_hmm)
     _jm_combo_map = {}  # ym -> "Bull"/"Bear"
     if regime_mode in ("ai_jm_accel", "ai_jm_hmm"):
@@ -2134,6 +2167,9 @@ def run_regime_combo_backtest(
             ym = calc_date[:7]
             result_regime = _rf_regime_map.get(ym, "Bull")
         elif regime_mode == "ai":
+            ym = calc_date[:7]
+            result_regime = _ai_regime_map.get(ym, "Bull")
+        elif regime_mode == "ai_v2":
             ym = calc_date[:7]
             result_regime = _ai_regime_map.get(ym, "Bull")
         elif regime_mode == "ai_jm_accel":
