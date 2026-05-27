@@ -29,6 +29,7 @@ COPY cache/ ./cache/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY analysis/regime_agent_results.json ./analysis/
+COPY analysis/regime_agent_multimodel_results_gemini.json ./analysis/
 
 # Next.js build
 COPY --from=frontend-build /app/frontend/.next ./.next
