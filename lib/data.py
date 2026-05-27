@@ -2218,7 +2218,10 @@ def run_regime_combo_backtest(
             BACKTEST_CONFIG["stop_loss_pct"] = bear_sl_pct
             BACKTEST_CONFIG["stop_loss_mode"] = bear_sl_mode
             BACKTEST_CONFIG["stop_loss_basis"] = bear_sl_basis
-        universe_set = get_universe_stocks(conn, calc_date)
+        universe_set = get_universe_stocks(
+            conn, calc_date, _rebal,
+            min_market_cap=BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000),
+        )
         candidates = score_stocks_from_strategy(conn, calc_date, module)
         return [(c, s) for c, s in candidates if c in universe_set][:_top_n]
 
