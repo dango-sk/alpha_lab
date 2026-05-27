@@ -227,7 +227,7 @@ export default function LabPage() {
   const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
   const [regimeMaWindow, setRegimeMaWindow] = useState(50);
   const [regimeMaWindowInput, setRegimeMaWindowInput] = useState('50');
-  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai' | 'inertia'>('ma');
+  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai' | 'inertia'>('cycle');
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
@@ -1203,10 +1203,6 @@ export default function LabPage() {
                   <span className="text-xs text-muted font-medium">레짐 기준</span>
                   <div className="flex rounded-lg border border-border overflow-hidden text-xs">
                     <button
-                      onClick={() => setRegimeMode('ma')}
-                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'ma' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
-                    >MA 기준</button>
-                    <button
                       onClick={() => setRegimeMode('cycle')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'cycle' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >사이클 기준</button>
@@ -1214,10 +1210,6 @@ export default function LabPage() {
                       onClick={() => setRegimeMode('ai')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >AI 기준</button>
-                    <button
-                      onClick={() => setRegimeMode('inertia')}
-                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'inertia' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
-                    >Inertia 기준</button>
                   </div>
                 </div>
                 {regimeMode === 'ma' && (
