@@ -214,6 +214,11 @@ export default function LabPage() {
   // ─── Tab ───
   const [activeTab, setActiveTab] = useState<'single' | 'regime'>('single');
 
+  // ─── Comparison strategies (multi-select) ───
+  const [singleSelections, setSingleSelections] = useState<string[]>([]);
+  const [regimeSelections, setRegimeSelections] = useState<string[]>([]);
+  const [comparisonResults, setComparisonResults] = useState<Record<string, StrategyResult>>({});
+
   // ─── Regime Combo ───
   const [regimeBullKey, setRegimeBullKey] = useState('');
   const [regimeBearKey, setRegimeBearKey] = useState('');
@@ -275,9 +280,67 @@ export default function LabPage() {
       .then(([results, strats]) => {
         setBaseResults(results);
         setSavedStrategies(strats || []);
+        // universe/rebalType changes invalidate fetched comparison results (different cache key)
+        setComparisonResults({});
       })
       .catch(console.error);
   }, [universe, rebalType, initialLoading]);
+
+  // ─── Fetch comparison strategy results when selections change ───
+  useEffect(() => {
+    const all = new Set<string>([...singleSelections, ...regimeSelections]);
+    // A0 comes from baseResults — no fetch needed
+    const needed = [...all].filter((n) => n !== 'A0' && !comparisonResults[n]);
+    if (needed.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      needed.map(async (name) => {
+        try {
+          const data = await getStrategy(name, universe, rebalType);
+          const r = (data?.results ?? {}) as Record<string, unknown>;
+          // results_json may be a StrategyResult directly, or wrap a CUSTOM key
+          if (r && typeof r === 'object' && 'rebalance_dates' in r) {
+            return [name, r as unknown as StrategyResult] as const;
+          }
+          const custom = r['CUSTOM'] as Record<string, unknown> | undefined;
+          if (custom && 'rebalance_dates' in custom) {
+            return [name, custom as unknown as StrategyResult] as const;
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      })
+    ).then((pairs) => {
+      if (cancelled) return;
+      const updates = Object.fromEntries(
+        pairs.filter((p): p is readonly [string, StrategyResult] => p !== null)
+      );
+      if (Object.keys(updates).length > 0) {
+        setComparisonResults((prev) => ({ ...prev, ...updates }));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [singleSelections, regimeSelections, universe, rebalType, comparisonResults]);
+
+  // ─── Comparison helpers ───
+  const COMPARISON_COLORS = useMemo(
+    () => ['#E91E63', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#3b82f6', '#ec4899'],
+    []
+  );
+  const getComparisonResult = useCallback(
+    (name: string): StrategyResult | null => {
+      if (name === 'A0') return (baseResults?.['A0'] as StrategyResult) ?? null;
+      return comparisonResults[name] ?? null;
+    },
+    [baseResults, comparisonResults]
+  );
+  const displayName = useCallback(
+    (name: string): string => (name === 'A0' ? '기존전략' : name),
+    []
+  );
 
   // ─── Load strategy ───
   const loadStrategy = useCallback(async (name: string) => {
@@ -444,41 +507,27 @@ export default function LabPage() {
   // ─── Build results table data ───
   const tableData = useMemo(() => {
     const rows: Record<string, unknown>[] = [];
-    // Base A0
-    if (baseResults?.['A0']) {
-      const r = baseResults['A0'];
+    const pushRow = (label: string, r: StrategyResult | null | undefined) => {
+      if (!r) return;
       rows.push({
-        strategy: '기존전략',
+        strategy: label,
         total_return: r.total_return,
         cagr: r.cagr,
         mdd: r.mdd,
         sharpe: r.sharpe,
       });
+    };
+    // Auto: CUSTOM (current edit)
+    if (backtestResults?.['CUSTOM']) pushRow('수정전략 (CUSTOM)', backtestResults['CUSTOM']);
+    // User selected comparison strategies
+    for (const name of singleSelections) {
+      pushRow(displayName(name), getComparisonResult(name));
     }
-    // Custom
-    if (backtestResults?.['CUSTOM']) {
-      const r = backtestResults['CUSTOM'];
-      rows.push({
-        strategy: '수정전략 (CUSTOM)',
-        total_return: r.total_return,
-        cagr: r.cagr,
-        mdd: r.mdd,
-        sharpe: r.sharpe,
-      });
-    }
-    // BM
+    // Auto: BM
     const bm = backtestResults?.['KOSPI'] || baseResults?.['KOSPI'];
-    if (bm) {
-      rows.push({
-        strategy: 'BM (KOSPI)',
-        total_return: bm.total_return,
-        cagr: bm.cagr,
-        mdd: bm.mdd,
-        sharpe: bm.sharpe,
-      });
-    }
+    pushRow('BM (KOSPI)', bm);
     return rows;
-  }, [baseResults, backtestResults]);
+  }, [baseResults, backtestResults, singleSelections, getComparisonResult, displayName]);
 
   const tableColumns = [
     { key: 'strategy', label: '전략', align: 'left' as const },
@@ -519,19 +568,7 @@ export default function LabPage() {
   // ─── Chart data ───
   const chartData = useMemo(() => {
     const traces: Plotly.Data[] = [];
-    // A0 from base results
-    if (baseResults?.['A0']) {
-      const r = baseResults['A0'];
-      traces.push({
-        x: r.rebalance_dates,
-        y: r.portfolio_values,
-        name: '기존전략',
-        type: 'scatter',
-        mode: 'lines',
-        line: { color: '#6366f1', width: 2 },
-      });
-    }
-    // CUSTOM from backtest
+    // Auto: CUSTOM
     if (backtestResults?.['CUSTOM']) {
       const r = backtestResults['CUSTOM'];
       traces.push({
@@ -540,10 +577,23 @@ export default function LabPage() {
         name: '수정전략 (CUSTOM)',
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#22c55e', width: 2 },
+        line: { color: '#22c55e', width: 2.5 },
       });
     }
-    // BM
+    // User-selected comparison strategies
+    singleSelections.forEach((name, idx) => {
+      const r = getComparisonResult(name);
+      if (!r) return;
+      traces.push({
+        x: r.rebalance_dates,
+        y: r.portfolio_values,
+        name: displayName(name),
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: COMPARISON_COLORS[idx % COMPARISON_COLORS.length], width: 2 },
+      });
+    });
+    // Auto: BM
     const bm = backtestResults?.['KOSPI'] || baseResults?.['KOSPI'];
     if (bm) {
       traces.push({
@@ -556,7 +606,7 @@ export default function LabPage() {
       });
     }
     return traces;
-  }, [baseResults, backtestResults]);
+  }, [baseResults, backtestResults, singleSelections, getComparisonResult, displayName, COMPARISON_COLORS]);
 
   // ─── Render ───
 
@@ -972,6 +1022,51 @@ export default function LabPage() {
               </p>
             )}
 
+            {/* ─── Comparison strategy multi-select ─── */}
+            {(backtestResults?.['CUSTOM'] || (baseResults && Object.keys(baseResults).length > 0)) && (
+              <div className="glass-card p-3">
+                <div className="flex items-start gap-2 flex-wrap">
+                  <span className="text-xs text-muted font-medium mt-1.5">비교 추가</span>
+                  {(() => {
+                    const candidates: { key: string; label: string }[] = [];
+                    if (baseResults?.['A0']) candidates.push({ key: 'A0', label: '기존전략' });
+                    for (const s of savedStrategies) candidates.push({ key: s.name, label: s.name });
+                    if (candidates.length === 0) {
+                      return <span className="text-xs text-muted mt-1.5">비교할 전략이 없습니다</span>;
+                    }
+                    return candidates.map((c) => {
+                      const selected = singleSelections.includes(c.key);
+                      return (
+                        <button
+                          key={c.key}
+                          onClick={() =>
+                            setSingleSelections((prev) =>
+                              prev.includes(c.key) ? prev.filter((n) => n !== c.key) : [...prev, c.key]
+                            )
+                          }
+                          className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                            selected
+                              ? 'bg-primary/15 border-primary text-primary'
+                              : 'bg-surface border-border text-muted hover:text-foreground'
+                          }`}
+                        >
+                          {selected ? '✓ ' : ''}{c.label}
+                        </button>
+                      );
+                    });
+                  })()}
+                  {singleSelections.length > 0 && (
+                    <button
+                      onClick={() => setSingleSelections([])}
+                      className="px-2 py-1 text-xs rounded-md text-muted hover:text-accent-red transition-colors ml-auto"
+                    >
+                      모두 해제
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* ─── Results ─── */}
             {tableData.length > 0 ? (
               <div className="space-y-4">
@@ -1219,10 +1314,35 @@ export default function LabPage() {
                 const combo = allRes['REGIME_COMBO'] as Record<string, unknown> | undefined;
                 if (!combo) return null;
 
-                // 원전략 결과: 새 백테스트 결과 우선, 없으면 캐시
-                const bullRes = (allRes[regimeBullKey] as Record<string, unknown>) || baseResults?.[regimeBullKey];
-                const bearRes = (allRes[regimeBearKey] as Record<string, unknown>) || baseResults?.[regimeBearKey];
                 const bmRes = (allRes['KOSPI'] as Record<string, unknown>) || baseResults?.['KOSPI'];
+
+                // Resolve a comparison key to its result — prefer fresh allRes, then baseResults, then fetched savedStrategy
+                const resolveResult = (key: string): Record<string, unknown> | undefined => {
+                  const fresh = allRes[key] as Record<string, unknown> | undefined;
+                  if (fresh && 'rebalance_dates' in fresh) return fresh;
+                  const base = baseResults?.[key] as Record<string, unknown> | undefined;
+                  if (base && 'rebalance_dates' in base) return base;
+                  const fetched = comparisonResults[key] as unknown as Record<string, unknown> | undefined;
+                  if (fetched && 'rebalance_dates' in fetched) return fetched;
+                  return undefined;
+                };
+                const resolveLabel = (key: string): string => {
+                  if (key === 'A0') return '기존전략';
+                  return labels[key] || key;
+                };
+
+                // Candidate keys for multi-select: A0, current Bull/Bear, saved strategies
+                const candidateKeysOrdered: string[] = [];
+                const seen = new Set<string>();
+                const addCandidate = (k: string) => {
+                  if (!k || seen.has(k)) return;
+                  seen.add(k);
+                  candidateKeysOrdered.push(k);
+                };
+                if (baseResults?.['A0']) addCandidate('A0');
+                if (regimeBullKey) addCandidate(regimeBullKey);
+                if (regimeBearKey) addCandidate(regimeBearKey);
+                for (const s of savedStrategies) addCandidate(s.name);
 
                 const statsRow = (res: Record<string, unknown> | undefined, name: string) => ({
                   전략: name,
@@ -1233,9 +1353,14 @@ export default function LabPage() {
                 });
 
                 const tableData = [
-                  statsRow(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey),
-                  statsRow(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey),
                   statsRow(combo, '레짐 조합 (실제 재백테스트)'),
+                  ...regimeSelections
+                    .map((k) => {
+                      const r = resolveResult(k);
+                      if (!r) return null;
+                      return statsRow(r, resolveLabel(k));
+                    })
+                    .filter((row): row is NonNullable<typeof row> => row !== null),
                   statsRow(bmRes as Record<string, unknown>, 'BM (KOSPI)'),
                 ];
 
@@ -1250,9 +1375,11 @@ export default function LabPage() {
                 };
 
                 const comboChartData = [
-                  makeTrace(bullRes as Record<string, unknown>, labels[regimeBullKey] || regimeBullKey, '#6366f1', 'dot'),
-                  ...(regimeBearKey !== regimeBullKey ? [makeTrace(bearRes as Record<string, unknown>, labels[regimeBearKey] || regimeBearKey, '#E91E63', 'dot')] : []),
                   makeTrace(combo, '레짐 조합', '#43A047'),
+                  ...regimeSelections.map((k, idx) => {
+                    const r = resolveResult(k);
+                    return makeTrace(r, resolveLabel(k), COMPARISON_COLORS[idx % COMPARISON_COLORS.length], 'dot');
+                  }),
                   makeTrace(bmRes as Record<string, unknown>, 'BM (KOSPI)', '#9E9E9E', 'dot'),
                 ].filter((x): x is NonNullable<typeof x> => x !== null);
 
@@ -1305,6 +1432,45 @@ export default function LabPage() {
                 return (
                   <div className="space-y-4">
                     <p className="text-xs text-muted">실제 종목 선택 기반 완전 재백테스트 — 레짐 전환 시 거래비용 자동 반영</p>
+
+                    {/* ─── Comparison multi-select ─── */}
+                    <div className="rounded-lg border border-border bg-surface/50 px-3 py-2">
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <span className="text-xs text-muted font-medium mt-1.5">비교 추가</span>
+                        {candidateKeysOrdered.length === 0 ? (
+                          <span className="text-xs text-muted mt-1.5">비교할 전략이 없습니다</span>
+                        ) : (
+                          candidateKeysOrdered.map((k) => {
+                            const selected = regimeSelections.includes(k);
+                            return (
+                              <button
+                                key={k}
+                                onClick={() =>
+                                  setRegimeSelections((prev) =>
+                                    prev.includes(k) ? prev.filter((n) => n !== k) : [...prev, k]
+                                  )
+                                }
+                                className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                                  selected
+                                    ? 'bg-primary/15 border-primary text-primary'
+                                    : 'bg-surface border-border text-muted hover:text-foreground'
+                                }`}
+                              >
+                                {selected ? '✓ ' : ''}{resolveLabel(k)}
+                              </button>
+                            );
+                          })
+                        )}
+                        {regimeSelections.length > 0 && (
+                          <button
+                            onClick={() => setRegimeSelections([])}
+                            className="px-2 py-1 text-xs rounded-md text-muted hover:text-accent-red transition-colors ml-auto"
+                          >
+                            모두 해제
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
                     <DataTable
                       columns={[
