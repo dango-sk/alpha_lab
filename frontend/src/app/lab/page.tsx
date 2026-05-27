@@ -298,13 +298,15 @@ export default function LabPage() {
         try {
           const data = await getStrategy(name, universe, rebalType);
           const r = (data?.results ?? {}) as Record<string, unknown>;
-          // results_json may be a StrategyResult directly, or wrap a CUSTOM key
+          // results_json may be a StrategyResult directly, or wrap a CUSTOM / REGIME_COMBO key
           if (r && typeof r === 'object' && 'rebalance_dates' in r) {
             return [name, r as unknown as StrategyResult] as const;
           }
-          const custom = r['CUSTOM'] as Record<string, unknown> | undefined;
-          if (custom && 'rebalance_dates' in custom) {
-            return [name, custom as unknown as StrategyResult] as const;
+          for (const key of ['CUSTOM', 'REGIME_COMBO']) {
+            const inner = r[key] as Record<string, unknown> | undefined;
+            if (inner && 'rebalance_dates' in inner) {
+              return [name, inner as unknown as StrategyResult] as const;
+            }
           }
           return null;
         } catch {

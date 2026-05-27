@@ -681,7 +681,7 @@ def api_get_strategy(name: str, universe: Optional[str] = None, rebal_type: Opti
         ]
     for u, r in combos:
         data = load_strategy(name, rebal_type=r, universe=u)
-        if data and data.get("code"):
+        if data and (data.get("code") or data.get("results")):
             return _convert_for_json(data)
     raise HTTPException(status_code=404, detail="전략을 찾을 수 없습니다.")
 
