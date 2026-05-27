@@ -227,7 +227,7 @@ export default function LabPage() {
   const [regimeSaveMsg, setRegimeSaveMsg] = useState('');
   const [regimeMaWindow, setRegimeMaWindow] = useState(50);
   const [regimeMaWindowInput, setRegimeMaWindowInput] = useState('50');
-  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai' | 'inertia'>('cycle');
+  const [regimeMode, setRegimeMode] = useState<'ma' | 'cycle' | 'ai' | 'ai_v2' | 'inertia'>('cycle');
 
   // ─── Auto-generate strategy name ───
   const autoName = useMemo(() => {
@@ -1210,6 +1210,10 @@ export default function LabPage() {
                       onClick={() => setRegimeMode('ai')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >AI 기준</button>
+                    <button
+                      onClick={() => setRegimeMode('ai_v2')}
+                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai_v2' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
+                    >AI v2</button>
                   </div>
                 </div>
                 {regimeMode === 'ma' && (
@@ -1242,6 +1246,9 @@ export default function LabPage() {
                 )}
                 {regimeMode === 'ai' && (
                   <span className="text-xs text-muted">GPT-4o 멀티에이전트 월간 방향 예측</span>
+                )}
+                {regimeMode === 'ai_v2' && (
+                  <span className="text-xs text-muted">Gemini 5-class regime + 변동성 sticky (Bear Recall 69%)</span>
                 )}
                 {regimeMode === 'inertia' && (
                   <span className="text-xs text-muted">JM(jp=3.0) OR MA200 + Crash Overlay (10일 &lt; -5%)</span>
