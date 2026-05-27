@@ -541,6 +541,7 @@ def step_collect_finance():
         "M123200": "ebitda", "M121000": "revenue", "M121500": "operating_income",
         "M122700": "net_income", "M211000": "oi_margin",
         "M431800": "div_yield", "M385110": "pcf", "M124155": "fcf",
+        "M221100": "debt_ratio", "M121200": "gross_profit", "M111000": "total_assets",
     }
     COL_NAMES = list(FINANCE_ITEMS.values())
     MAX_CODES = 10
@@ -549,8 +550,11 @@ def step_collect_finance():
     conn = get_pg()
     cur = conn.cursor()
 
-    # fcf 컬럼 없으면 추가 (최초 1회)
+    # 신규 컬럼 없으면 추가 (최초 1회)
     cur.execute("ALTER TABLE alpha_lab.fnspace_finance ADD COLUMN IF NOT EXISTS fcf FLOAT")
+    cur.execute("ALTER TABLE alpha_lab.fnspace_finance ADD COLUMN IF NOT EXISTS debt_ratio FLOAT")
+    cur.execute("ALTER TABLE alpha_lab.fnspace_finance ADD COLUMN IF NOT EXISTS gross_profit FLOAT")
+    cur.execute("ALTER TABLE alpha_lab.fnspace_finance ADD COLUMN IF NOT EXISTS total_assets FLOAT")
     conn.commit()
 
     # 전체 종목
