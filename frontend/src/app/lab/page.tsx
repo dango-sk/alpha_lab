@@ -1210,10 +1210,7 @@ export default function LabPage() {
                       onClick={() => setRegimeMode('ai')}
                       className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
                     >AI 기준</button>
-                    <button
-                      onClick={() => setRegimeMode('ai_v2')}
-                      className={`px-3 py-1.5 transition-colors ${regimeMode === 'ai_v2' ? 'bg-primary text-white' : 'bg-surface text-muted hover:text-foreground'}`}
-                    >AI v2</button>
+                    {/* AI v2 (Gemini 5-class) — 강세장 false alarm으로 BM 못 이김. 백엔드 코드는 archive 상태로 유지 */}
                   </div>
                 </div>
                 {regimeMode === 'ma' && (
