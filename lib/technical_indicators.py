@@ -291,7 +291,7 @@ def calc_all_indicators(df: pd.DataFrame) -> dict[str, float]:
     Parameters
     ----------
     df : DataFrame
-        columns: ['close', 'high', 'low', 'volume'] (+ optional 'open')
+        columns: ['close', 'high', 'low', 'volume'] (+ optional 'open', 'trade_amount')
         index: DatetimeIndex 또는 trade_date 정렬 상태
 
     Returns
@@ -333,6 +333,17 @@ def calc_all_indicators(df: pd.DataFrame) -> dict[str, float]:
     result["mfi_14"] = mfi(h, l, c, v, 14).iloc[-1]
     result["cmf_20"] = cmf(h, l, c, v, 20).iloc[-1]
 
+    # 거래대금 60일 평균 대비 배율
+    if "trade_amount" in df.columns:
+        ta = df["trade_amount"].dropna()
+        if len(ta) >= 61:
+            avg_60 = ta.iloc[-61:-1].mean()
+            result["trade_amount_ratio_60d"] = round(ta.iloc[-1] / avg_60, 4) if avg_60 > 0 else None
+        else:
+            result["trade_amount_ratio_60d"] = None
+    else:
+        result["trade_amount_ratio_60d"] = None
+
     # 가격 위치
     result["week52_high_ratio"] = week52_high_ratio(c).iloc[-1]
     result["week52_low_ratio"] = week52_low_ratio(c).iloc[-1]
@@ -343,6 +354,11 @@ def calc_all_indicators(df: pd.DataFrame) -> dict[str, float]:
     for key, val in cross_signals(c).items():
         # 최근 5일 내 시그널 있으면 반환
         result[key] = val.iloc[-5:].sum()
+
+    # 5일선 > 20일선 상태 유지 여부 (골든크로스 상태)
+    ma5  = c.rolling(5).mean()
+    ma20 = c.rolling(20).mean()
+    result["golden_state_5_20"] = int(ma5.iloc[-1] > ma20.iloc[-1]) if pd.notna(ma5.iloc[-1]) and pd.notna(ma20.iloc[-1]) else None
     nh_nl = new_high_low(c)
     result["new_high"] = nh_nl["new_high"].iloc[-1]
     result["new_low"] = nh_nl["new_low"].iloc[-1]

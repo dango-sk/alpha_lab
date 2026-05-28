@@ -151,6 +151,7 @@ _prefetch_cache: dict[str, pd.DataFrame] = {}
 
 # ── fcf 컬럼 존재 여부 캐시 (프로세스당 1회 확인) ──
 _has_fcf_col: bool | None = None
+_has_debt_ratio_col: bool | None = None
 
 
 def _check_fcf_column(conn) -> bool:
@@ -166,6 +167,39 @@ def _check_fcf_column(conn) -> bool:
         except Exception:
             _has_fcf_col = False
     return _has_fcf_col
+
+
+def _check_debt_ratio_column(conn) -> bool:
+    global _has_debt_ratio_col
+    if _has_debt_ratio_col is None:
+        try:
+            result = read_sql(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='fnspace_finance' AND column_name='debt_ratio' LIMIT 1",
+                conn
+            )
+            _has_debt_ratio_col = len(result) > 0
+        except Exception:
+            _has_debt_ratio_col = False
+    return _has_debt_ratio_col
+
+
+_has_gpa_cols: bool | None = None
+
+
+def _check_gpa_columns(conn) -> bool:
+    global _has_gpa_cols
+    if _has_gpa_cols is None:
+        try:
+            result = read_sql(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='fnspace_finance' AND column_name='gross_profit' LIMIT 1",
+                conn
+            )
+            _has_gpa_cols = len(result) > 0
+        except Exception:
+            _has_gpa_cols = False
+    return _has_gpa_cols
 
 
 def prefetch_all_data(conn, use_local_cache=True):
@@ -274,6 +308,8 @@ def prefetch_all_data(conn, use_local_cache=True):
 
     if "finance" not in _prefetch_cache:
         _fcf_sel = ", fcf" if _check_fcf_column(conn) else ""
+        _dr_sel = ", debt_ratio" if _check_debt_ratio_column(conn) else ""
+        _gpa_sel = ", gross_profit, total_assets" if _check_gpa_columns(conn) else ""
         print("[PREFETCH] Loading finance...", flush=True)
         _prefetch_cache["finance"] = read_sql(f"""
             SELECT stock_code, fiscal_year, fiscal_quarter,
@@ -281,7 +317,7 @@ def prefetch_all_data(conn, use_local_cache=True):
                    net_debt, interest_debt, total_equity,
                    eps, bps, per, psr, ev_ebitda,
                    revenue, operating_income, net_income,
-                   oi_margin, div_yield, pcf{_fcf_sel}
+                   oi_margin, div_yield, pcf{_fcf_sel}{_dr_sel}{_gpa_sel}
             FROM fnspace_finance WHERE fiscal_quarter IN ('Annual', 'TTM_1Q', 'TTM_2Q', 'TTM_3Q', 'TTM_4Q')
         """, conn)
         _save("finance")
@@ -1067,6 +1103,46 @@ def _calc_obv_slope(price_all: pd.DataFrame, calc_date: str, obv_ma: int = 20, m
     return latest[["stock_code", "obv_slope"]]
 
 
+def _calc_beta_cached(price_all: pd.DataFrame, calc_date: str, window: int = 250) -> pd.DataFrame:
+    """KOSPI200(A069500) 대비 Beta 계산 (최근 window 거래일)."""
+    BM_CODE = "A069500"
+    lookback_days = int(window * 1.5) + 30
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+
+    df = price_all[
+        (price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)
+    ][["stock_code", "trade_date", "close"]].copy()
+
+    if df.empty or BM_CODE not in df["stock_code"].values:
+        return pd.DataFrame(columns=["stock_code", "beta"])
+
+    pivot = df.pivot_table(index="trade_date", columns="stock_code", values="close", aggfunc="last")
+    pivot = pivot.sort_index().tail(window + 1)
+    returns = pivot.pct_change()
+
+    if BM_CODE not in returns.columns:
+        return pd.DataFrame(columns=["stock_code", "beta"])
+
+    bm_ret = returns[BM_CODE]
+    bm_var = bm_ret.var()
+    if len(bm_ret.dropna()) < window // 2 or bm_var == 0 or np.isnan(bm_var):
+        return pd.DataFrame(columns=["stock_code", "beta"])
+
+    results = []
+    for code in returns.columns:
+        if code == BM_CODE:
+            continue
+        s = returns[code]
+        mask = s.notna() & bm_ret.notna()
+        if mask.sum() < window // 2:
+            continue
+        beta = s[mask].cov(bm_ret[mask]) / bm_ret[mask].var()
+        if not np.isnan(beta):
+            results.append({"stock_code": code, "beta": beta})
+
+    return pd.DataFrame(results) if results else pd.DataFrame(columns=["stock_code", "beta"])
+
+
 def _get_master_for_date(calc_date: str) -> pd.DataFrame:
     """프리페치 캐시에서 마스터 데이터 추출."""
     snap_month = calc_date[:7]
@@ -1125,6 +1201,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
             ma_rev_df = _calc_ma_reversion(_prefetch_cache["price"], calc_date, ma_window=_ma_window)
             mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
             obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
+        beta_df = _calc_beta_cached(_prefetch_cache["price"], calc_date)
         _LOAD_TIMING_PHASES["indicators"] += _t.time() - _t0
         _load_derived_t0 = _t.time()  # 이후 derived phase 측정용 (함수 끝에서 합산)
     else:
@@ -1132,6 +1209,8 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         # TTM 데이터 조회 — calc_date 기준 적절한 TTM_XQ 하나만 선택
         _ttm_year, _ttm_qtr = _available_ttm_quarter(calc_date)
         _fcf_sel = ", ff.fcf" if _check_fcf_column(conn) else ""
+        _dr_sel = ", ff.debt_ratio" if _check_debt_ratio_column(conn) else ""
+        _gpa_sel = ", ff.gross_profit, ff.total_assets" if _check_gpa_columns(conn) else ""
         ttm_df = read_sql(f"""
             SELECT ff.stock_code, ff.fiscal_year,
                    ff.pbr, ff.roe, ff.roic,
@@ -1139,7 +1218,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
                    ff.net_debt, ff.interest_debt, ff.total_equity,
                    ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
                    ff.revenue, ff.operating_income, ff.net_income,
-                   ff.oi_margin, ff.div_yield, ff.pcf{_fcf_sel}
+                   ff.oi_margin, ff.div_yield, ff.pcf{_fcf_sel}{_dr_sel}{_gpa_sel}
             FROM fnspace_finance ff
             WHERE ff.fiscal_quarter = ? AND ff.fiscal_year = ?
         """, conn, params=(_ttm_qtr, _ttm_year))
@@ -1152,7 +1231,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
                    ff.net_debt, ff.interest_debt, ff.total_equity,
                    ff.eps, ff.bps, ff.per, ff.psr, ff.ev_ebitda,
                    ff.revenue, ff.operating_income, ff.net_income,
-                   ff.oi_margin, ff.div_yield, ff.pcf{_fcf_sel}
+                   ff.oi_margin, ff.div_yield, ff.pcf{_fcf_sel}{_dr_sel}{_gpa_sel}
             FROM fnspace_finance ff
             INNER JOIN (
                 SELECT stock_code, MAX(fiscal_year) as max_year
@@ -1273,6 +1352,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         ma_rev_df = _calc_ma_reversion(_ma_price_all, calc_date, ma_window=_ma_window) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "price_ma_rev", "below_ma"])
         mfi_df = _calc_mfi(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "mfi"])
         obv_df = _calc_obv_slope(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "obv_slope"])
+        beta_df = _calc_beta_cached(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "beta"])
 
         # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
         _snap_month = calc_date[:7]
@@ -1289,7 +1369,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # ─── 병합 ───
     merged = fin_df.merge(price_df, on="stock_code", how="inner")
     merged = merged.merge(master_df, on="stock_code", how="inner")
-    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, mfi_df, obv_df]:
+    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, mfi_df, obv_df, beta_df]:
         if not df_extra.empty:
             merged = merged.merge(df_extra, on="stock_code", how="left")
     merged = merged[(merged["market_cap"] > 0) & (merged["close"] > 0)].copy()
@@ -1304,7 +1384,8 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
 
     # 단위 통일 (천원 -> 원)
     for c in ["ev", "ic", "ebit", "ebitda", "net_debt", "interest_debt",
-              "total_equity", "revenue", "operating_income", "net_income", "fcf"]:
+              "total_equity", "revenue", "operating_income", "net_income", "fcf",
+              "gross_profit", "total_assets"]:
         if c in merged.columns:
             merged[c] = merged[c] * 1000
     for c in ["fwd_ebit", "fwd_ebitda", "fwd_revenue", "fwd_oi", "fwd_ni"]:
@@ -1448,6 +1529,17 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     ebitda_col = "ebitda" if ("ebitda" in merged.columns and merged["ebitda"].notna().sum() > 10) else "ebit"
     m = merged[ebitda_col].notna() & (merged[ebitda_col] > 0) & merged["net_debt"].notna()
     merged["ndebt_ebitda"] = np.where(m, merged["net_debt"] / merged[ebitda_col], np.nan)
+
+    # GPA (Gross Profit / Total Assets)
+    if "gross_profit" in merged.columns and "total_assets" in merged.columns:
+        m = merged["gross_profit"].notna() & merged["total_assets"].notna() & (merged["total_assets"] > 0)
+        merged["gpa"] = np.where(m, merged["gross_profit"] / merged["total_assets"], np.nan)
+    else:
+        merged["gpa"] = np.nan
+
+    # BETA
+    if "beta" not in merged.columns:
+        merged["beta"] = np.nan
 
     # FCF_YIELD
     if "fcf" in merged.columns:
@@ -1736,6 +1828,50 @@ def apply_quality_filter(df, filter_config):
         df.loc[m, "quality_pass"] = 0
         df.loc[m, "quality_fail_reason"] += "거래대금부족; "
 
+    return df
+
+
+def apply_dividend_quality_score(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    배당-퀄리티-리스크 스코어링. quality_pass==1 종목 대상.
+
+    0점 조건 (하나라도 해당 시):
+        A. 배당수익률이 유니버스 중앙값 이하 (하위 50%, 미배당 포함)
+        B. Beta > 1.2 (Junk Risk)
+        C. GPA 데이터 없음
+
+    통과 시 GPA 높은 순서대로:
+        상위 50% → 2점 / 하위 50% → 1점
+
+    Returns df with 'div_quality_score' column added.
+    """
+    df = df.copy()
+    universe = df[df["quality_pass"] == 1].copy() if "quality_pass" in df.columns else df.copy()
+
+    div_median = universe["div_yield"].median() if "div_yield" in universe.columns else 0.0
+
+    def _score(row):
+        # 0점 조건
+        if "div_yield" not in row or pd.isna(row["div_yield"]) or row["div_yield"] <= div_median:
+            return 0
+        if "beta" not in row or pd.isna(row["beta"]) or row["beta"] > 1.2:
+            return 0
+        if "gpa" not in row or pd.isna(row["gpa"]):
+            return 0
+        return None  # 통과 — GPA 순위로 결정
+
+    scores = universe.apply(_score, axis=1)
+    passed_idx = scores[scores.isna()].index
+
+    # GPA 순위로 1~2점 부여
+    if len(passed_idx) > 0:
+        gpa_median = universe.loc[passed_idx, "gpa"].median()
+        scores.loc[passed_idx] = universe.loc[passed_idx, "gpa"].apply(
+            lambda g: 2 if g >= gpa_median else 1
+        )
+
+    df["div_quality_score"] = 0
+    df.loc[scores.index, "div_quality_score"] = scores.astype(int)
     return df
 
 
