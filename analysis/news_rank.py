@@ -15,7 +15,28 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from lib.db import get_conn, read_sql
-from lib.ai_stock_filter import search_stock_news, run_news_ranking_agent
+from lib.ai_stock_filter2 import run_news_ranking_agent, search_stock_news
+
+
+def _fetch_macro_context(conn, calc_date: str) -> str:
+    """alpha_lab.news_nate에서 기준일 직전 1개월 매크로 뉴스 제목을 가져온다.
+    시장 전체 배경(금리/환율/유가/지정학)으로 Claude에 공통 주입."""
+    from datetime import datetime, timedelta
+    calc_dt = datetime.strptime(calc_date, "%Y-%m-%d")
+    start = (calc_dt - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    df = read_sql("""
+        SELECT published_date, title
+        FROM news_nate
+        WHERE published_date >= ? AND published_date < ?
+        ORDER BY published_date DESC
+        LIMIT 60
+    """, conn, params=(start, calc_date))
+
+    if df.empty:
+        return ""
+    lines = [f"- [{r['published_date']}] {r['title']}" for _, r in df.iterrows()]
+    return "\n".join(lines)
 
 
 def _build_stock_info(conn, stocks: list[tuple[str, float]]) -> dict:
@@ -28,13 +49,82 @@ def _build_stock_info(conn, stocks: list[tuple[str, float]]) -> dict:
     return result
 
 
-def _fetch_news(tech_data: dict, calc_date: str) -> dict:
+def _save_news_to_db(conn, calc_date: str, code: str, name: str,
+                     factor_score: float, items: list):
+    """Gemini로 새로 가져온 뉴스를 alpha_lab.news_google에 적재 (재사용 위해)."""
+    if not items:
+        return
+    cur = conn.cursor()
+    for it in items:
+        fact = it.get("fact", "")
+        if not fact:
+            continue
+        cur.execute("""
+            INSERT INTO news_google (
+                calc_date, stock_code, stock_name, factor_score,
+                news_date, source_type, source_name, category,
+                fact, figures, price_reaction
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT (calc_date, stock_code, fact) DO NOTHING
+        """, (calc_date, code, name, factor_score,
+              it.get("date"), it.get("source_type"), it.get("source_name"),
+              it.get("category"), fact, it.get("figures"), it.get("price_reaction")))
+    conn.commit()
+
+
+def _fetch_news_hybrid(conn, tech_data: dict, calc_date: str) -> dict:
+    """종목별 뉴스 조회. DB(news_google)에 있으면 DB 사용,
+    없으면 Gemini(search_stock_news)로 가져와 DB에 저장 후 사용."""
     news = {}
     total = len(tech_data)
     for i, (code, info) in enumerate(tech_data.items(), 1):
-        print(f"[{i}/{total}] {info['name']} ({code}) 뉴스 검색 중...", flush=True)
-        news[code] = search_stock_news(info["name"], code, calc_date)
-        print(news[code], flush=True)
+        df = read_sql("""
+            SELECT news_date, source_type, source_name, category,
+                   fact, figures, price_reaction
+            FROM news_google
+            WHERE calc_date = ? AND stock_code = ?
+            ORDER BY news_date DESC
+        """, conn, params=(calc_date, code))
+
+        db_items = [{
+            "date": r["news_date"], "source_type": r["source_type"],
+            "source_name": r["source_name"], "category": r["category"],
+            "fact": r["fact"], "figures": r["figures"],
+            "price_reaction": r["price_reaction"],
+        } for _, r in df.iterrows()]
+
+        # DB 뉴스가 3건 이상이면 그대로 사용
+        if len(db_items) >= 3:
+            news[code] = json.dumps(
+                {"stock_code": code, "stock_name": info["name"], "news_items": db_items},
+                ensure_ascii=False, indent=2)
+            print(f"[{i}/{total}] {info['name']} ({code}) DB 뉴스 {len(db_items)}건", flush=True)
+        else:
+            # DB 3건 미만 → Gemini로 보강 후 DB 저장, 기존 DB 뉴스와 합침
+            print(f"[{i}/{total}] {info['name']} ({code}) DB {len(db_items)}건(부족) → Gemini 보강...", flush=True)
+            raw = search_stock_news(info["name"], code, calc_date)
+            try:
+                parsed = json.loads(raw)
+                gemini_items = parsed.get("news_items", [])
+                _save_news_to_db(conn, calc_date, code, info["name"],
+                                 info["factor_score"], gemini_items)
+                # 기존 DB + Gemini 합치고 fact 기준 중복 제거
+                merged, seen = [], set()
+                for it in db_items + gemini_items:
+                    f = it.get("fact", "")
+                    if f and f not in seen:
+                        seen.add(f)
+                        merged.append(it)
+                news[code] = json.dumps(
+                    {"stock_code": code, "stock_name": info["name"], "news_items": merged},
+                    ensure_ascii=False, indent=2)
+                print(f"      → Gemini {len(gemini_items)}건 추가, 총 {len(merged)}건(DB 저장 완료)", flush=True)
+            except (json.JSONDecodeError, TypeError):
+                # Gemini 파싱 실패 → 기존 DB 뉴스라도 사용
+                news[code] = json.dumps(
+                    {"stock_code": code, "stock_name": info["name"], "news_items": db_items},
+                    ensure_ascii=False, indent=2)
+                print(f"      → Gemini 파싱 실패, DB {len(db_items)}건만 사용", flush=True)
     return news
 
 STOCKS = {
@@ -91,8 +181,10 @@ def main():
             print(f"\n[{date}] 뉴스 에이전트 실행 중... ({len(stocks)}종목)")
 
             tech_data = _build_stock_info(conn, stocks)
-            news_data = _fetch_news(tech_data, date)
-            result = run_news_ranking_agent(tech_data, news_data)
+            news_data = _fetch_news_hybrid(conn, tech_data, date)
+            macro_context = _fetch_macro_context(conn, date)
+            print(f"  매크로 배경 뉴스 {macro_context.count(chr(10))+1 if macro_context else 0}건 포함")
+            result = run_news_ranking_agent(tech_data, news_data, date, macro_context)
 
             rankings = result.get("rankings", [])
             print(f"\n{'='*70}")
@@ -108,7 +200,7 @@ def main():
                 print(f"  {rank:>4}  {name:<18}  {code:>8}  {score:>8}  {fscore if fscore else '-':>8}  {reason}")
             print(f"  {'='*65}")
 
-            out = out_dir / f"news_rank_{date}.json"
+            out = out_dir / f"{date}_news_rank.json"
             with open(out, "w", encoding="utf-8") as f:
                 json.dump(result, f, ensure_ascii=False, indent=2, default=str)
             print(f"\n저장: {out}")
