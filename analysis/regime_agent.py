@@ -143,6 +143,38 @@ def get_news_summary(as_of: date):
     return "\n".join([f"- {r[0]}: {r[1][:200]}" for r in rows])
 
 
+def get_news_summary2(as_of: date, lookback_days: int = 30):
+    """get_news_summary와 동일하되, '직전 한 달치(달 단위)' 대신
+    'as_of 전일 기준 최근 lookback_days일' 범위로 조회한다 (시점 단위 신선도 반영).
+    news_nate → news 순으로 조회. lookahead bias 방지(전일까지)."""
+    end = (as_of - relativedelta(days=1)).strftime('%Y-%m-%d')
+    start = (as_of - relativedelta(days=lookback_days)).strftime('%Y-%m-%d')
+    cur = get_conn().cursor()
+    # news_nate 먼저 (네이트 뉴스)
+    cur.execute("""
+        SELECT title, summary
+        FROM alpha_lab.news_nate
+        WHERE published_date >= %s AND published_date <= %s
+        ORDER BY published_date DESC
+        LIMIT 20
+    """, (start, end))
+    rows = cur.fetchall()
+    # 없으면 기존 news 테이블
+    if not rows:
+        cur.execute("""
+            SELECT title, summary
+            FROM alpha_lab.news
+            WHERE category = 'macro'
+              AND published_date >= %s AND published_date <= %s
+            ORDER BY published_date DESC
+            LIMIT 20
+        """, (start, end))
+        rows = cur.fetchall()
+    if not rows:
+        return None
+    return "\n".join([f"- {r[0]}: {r[1][:200]}" for r in rows])
+
+
 def get_trade_amount_series(as_of: date, n_months: int = 6):
     """KOSPI ETF(069500) 월별 평균 거래대금 + 12개월 평균 대비 배율"""
     cur = get_conn().cursor()
@@ -243,8 +275,9 @@ def build_technical_summary(as_of: date) -> str:
             if i == 0:
                 cutoff = as_of - relativedelta(days=1)
             else:
-                m = (as_of - relativedelta(months=i)).replace(day=28) + relativedelta(days=4)
-                cutoff = m - relativedelta(days=m.day)
+                # as_of가 월초일 때 i=0과 겹치지 않도록, i개월 전 -1일 = (i-1)개월 전 월말
+                m = as_of - relativedelta(months=i)
+                cutoff = m - relativedelta(days=1)
             sub = _technical_df[(_technical_df['indicator'] == indicator) & (_technical_df['symbol'] == symbol) & (_technical_df['trade_date'] <= cutoff)]
             if not sub.empty:
                 row = sub.sort_values('trade_date').iloc[-1]

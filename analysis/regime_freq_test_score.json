@@ -1,0 +1,386 @@
+{
+  "method": "reign(다음 예측까지)",
+  "bull_th": 1.0,
+  "bear_th": -2.0,
+  "summary": {
+    "1회": {
+      "n": 5,
+      "sign_hit": 3,
+      "sign_acc": 60.0,
+      "regime_hit": 4,
+      "regime_acc": 80.0
+    },
+    "2회": {
+      "n": 10,
+      "sign_hit": 5,
+      "sign_acc": 50.0,
+      "regime_hit": 8,
+      "regime_acc": 80.0
+    },
+    "4회": {
+      "n": 20,
+      "sign_hit": 13,
+      "sign_acc": 65.0,
+      "regime_hit": 16,
+      "regime_acc": 80.0
+    }
+  },
+  "detail": {
+    "1회": [
+      {
+        "as_of": "2026-01-01",
+        "end": "2026-02-01",
+        "er": 0.8,
+        "actual_ret": 23.37,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-01",
+        "end": "2026-03-01",
+        "er": 2.0,
+        "actual_ret": 29.46,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-01",
+        "end": "2026-04-01",
+        "er": 1.5,
+        "actual_ret": -13.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-01",
+        "end": "2026-05-01",
+        "er": -1.5,
+        "actual_ret": 21.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-01",
+        "end": "2026-06-01",
+        "er": 2.5,
+        "actual_ret": 28.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      }
+    ],
+    "2회": [
+      {
+        "as_of": "2026-01-01",
+        "end": "2026-01-15",
+        "er": 0.8,
+        "actual_ret": 9.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-15",
+        "end": "2026-02-01",
+        "er": -1.0,
+        "actual_ret": 10.41,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-01",
+        "end": "2026-02-15",
+        "er": 2.0,
+        "actual_ret": 12.6,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-15",
+        "end": "2026-03-01",
+        "er": 0.5,
+        "actual_ret": 11.53,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-01",
+        "end": "2026-03-15",
+        "er": 1.5,
+        "actual_ret": -5.96,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-03-15",
+        "end": "2026-04-01",
+        "er": 1.2,
+        "actual_ret": -9.1,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-01",
+        "end": "2026-04-15",
+        "er": -1.5,
+        "actual_ret": 10.05,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-04-15",
+        "end": "2026-05-01",
+        "er": 2.0,
+        "actual_ret": 7.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-01",
+        "end": "2026-05-15",
+        "er": 2.5,
+        "actual_ret": 18.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-15",
+        "end": "2026-06-01",
+        "er": -1.8,
+        "actual_ret": 15.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      }
+    ],
+    "4회": [
+      {
+        "as_of": "2026-01-01",
+        "end": "2026-01-08",
+        "er": 0.8,
+        "actual_ret": 6.48,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-08",
+        "end": "2026-01-15",
+        "er": 2.0,
+        "actual_ret": 3.33,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-15",
+        "end": "2026-01-22",
+        "er": -1.0,
+        "actual_ret": 2.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-22",
+        "end": "2026-02-01",
+        "er": 2.5,
+        "actual_ret": 6.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-01",
+        "end": "2026-02-08",
+        "er": 2.0,
+        "actual_ret": 3.43,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-08",
+        "end": "2026-02-15",
+        "er": 2.5,
+        "actual_ret": 4.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-15",
+        "end": "2026-02-22",
+        "er": 0.5,
+        "actual_ret": 2.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-22",
+        "end": "2026-03-01",
+        "er": 1.5,
+        "actual_ret": 8.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-01",
+        "end": "2026-03-08",
+        "er": 1.5,
+        "actual_ret": -3.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-03-08",
+        "end": "2026-03-15",
+        "er": -0.8,
+        "actual_ret": 4.23,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-15",
+        "end": "2026-03-22",
+        "er": 1.2,
+        "actual_ret": 4.43,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-22",
+        "end": "2026-04-01",
+        "er": 1.5,
+        "actual_ret": -6.91,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-01",
+        "end": "2026-04-08",
+        "er": -1.5,
+        "actual_ret": 0.73,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-08",
+        "end": "2026-04-15",
+        "er": -3.5,
+        "actual_ret": 1.61,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-15",
+        "end": "2026-04-22",
+        "er": 2.0,
+        "actual_ret": 4.59,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-04-22",
+        "end": "2026-05-01",
+        "er": 1.2,
+        "actual_ret": 2.68,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-01",
+        "end": "2026-05-08",
+        "er": 2.5,
+        "actual_ret": 9.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-08",
+        "end": "2026-05-15",
+        "er": 1.5,
+        "actual_ret": 7.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-15",
+        "end": "2026-05-22",
+        "er": -1.8,
+        "actual_ret": 5.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-22",
+        "end": "2026-06-01",
+        "er": 3.5,
+        "actual_ret": 9.29,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      }
+    ]
+  }
+}

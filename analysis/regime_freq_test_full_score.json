@@ -1,0 +1,6896 @@
+{
+  "method": "reign(다음 예측까지)",
+  "bull_th": 1.0,
+  "bear_th": -2.0,
+  "summary": {
+    "1회": {
+      "n": 98,
+      "sign_hit": 56,
+      "sign_acc": 57.1,
+      "regime_hit": 54,
+      "regime_acc": 55.1
+    },
+    "2회": {
+      "n": 196,
+      "sign_hit": 108,
+      "sign_acc": 55.1,
+      "regime_hit": 107,
+      "regime_acc": 54.6
+    },
+    "4회": {
+      "n": 392,
+      "sign_hit": 198,
+      "sign_acc": 50.5,
+      "regime_hit": 235,
+      "regime_acc": 59.9
+    }
+  },
+  "detail": {
+    "1회": [
+      {
+        "as_of": "2018-04-01",
+        "end": "2018-05-01",
+        "er": -1.2,
+        "actual_ret": 1.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-05-01",
+        "end": "2018-06-01",
+        "er": 1.5,
+        "actual_ret": -3.02,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-06-01",
+        "end": "2018-07-01",
+        "er": -1.5,
+        "actual_ret": -3.98,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-07-01",
+        "end": "2018-08-01",
+        "er": -2.0,
+        "actual_ret": 1.46,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-08-01",
+        "end": "2018-09-01",
+        "er": -2.0,
+        "actual_ret": 0.17,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-09-01",
+        "end": "2018-10-01",
+        "er": -1.0,
+        "actual_ret": 1.14,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-10-01",
+        "end": "2018-11-01",
+        "er": 0.5,
+        "actual_ret": -12.38,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-11-01",
+        "end": "2018-12-01",
+        "er": 2.8,
+        "actual_ret": 3.35,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-12-01",
+        "end": "2019-01-01",
+        "er": -2.0,
+        "actual_ret": -3.82,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-01-01",
+        "end": "2019-02-01",
+        "er": -2.0,
+        "actual_ret": 10.49,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-02-01",
+        "end": "2019-03-01",
+        "er": 2.0,
+        "actual_ret": -0.66,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-03-01",
+        "end": "2019-04-01",
+        "er": 1.5,
+        "actual_ret": -1.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-04-01",
+        "end": "2019-05-01",
+        "er": -0.5,
+        "actual_ret": -0.19,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-05-01",
+        "end": "2019-06-01",
+        "er": 0.7,
+        "actual_ret": -7.88,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-06-01",
+        "end": "2019-07-01",
+        "er": -1.0,
+        "actual_ret": 3.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-07-01",
+        "end": "2019-08-01",
+        "er": 0.5,
+        "actual_ret": -4.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-08-01",
+        "end": "2019-09-01",
+        "er": -1.5,
+        "actual_ret": -2.87,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-09-01",
+        "end": "2019-10-01",
+        "er": -3.5,
+        "actual_ret": 5.83,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-10-01",
+        "end": "2019-11-01",
+        "er": -0.5,
+        "actual_ret": 0.6,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-11-01",
+        "end": "2019-12-01",
+        "er": 2.5,
+        "actual_ret": -0.61,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-12-01",
+        "end": "2020-01-01",
+        "er": 1.5,
+        "actual_ret": 7.16,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-01-01",
+        "end": "2020-02-01",
+        "er": 3.2,
+        "actual_ret": -2.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-02-01",
+        "end": "2020-03-01",
+        "er": 1.0,
+        "actual_ret": -5.9,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-03-01",
+        "end": "2020-04-01",
+        "er": -2.0,
+        "actual_ret": -12.26,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-04-01",
+        "end": "2020-05-01",
+        "er": -2.0,
+        "actual_ret": 12.48,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-05-01",
+        "end": "2020-06-01",
+        "er": -1.0,
+        "actual_ret": 6.95,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-06-01",
+        "end": "2020-07-01",
+        "er": 1.5,
+        "actual_ret": 2.8,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-07-01",
+        "end": "2020-08-01",
+        "er": 2.0,
+        "actual_ret": 6.57,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-08-01",
+        "end": "2020-09-01",
+        "er": 2.5,
+        "actual_ret": 2.72,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-09-01",
+        "end": "2020-10-01",
+        "er": 1.5,
+        "actual_ret": 0.32,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-10-01",
+        "end": "2020-11-01",
+        "er": 0.5,
+        "actual_ret": -4.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-11-01",
+        "end": "2020-12-01",
+        "er": 2.5,
+        "actual_ret": 13.35,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-12-01",
+        "end": "2021-01-01",
+        "er": 1.5,
+        "actual_ret": 12.1,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-01-01",
+        "end": "2021-02-01",
+        "er": 1.8,
+        "actual_ret": 1.44,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-02-01",
+        "end": "2021-03-01",
+        "er": 2.5,
+        "actual_ret": -1.06,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-03-01",
+        "end": "2021-04-01",
+        "er": 2.0,
+        "actual_ret": 0.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-04-01",
+        "end": "2021-05-01",
+        "er": 1.0,
+        "actual_ret": -0.65,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-05-01",
+        "end": "2021-06-01",
+        "er": 1.5,
+        "actual_ret": 1.75,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-06-01",
+        "end": "2021-07-01",
+        "er": 0.8,
+        "actual_ret": 2.07,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-07-01",
+        "end": "2021-08-01",
+        "er": 1.5,
+        "actual_ret": -2.65,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-08-01",
+        "end": "2021-09-01",
+        "er": -1.0,
+        "actual_ret": -1.64,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-09-01",
+        "end": "2021-10-01",
+        "er": -1.5,
+        "actual_ret": -4.4,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-10-01",
+        "end": "2021-11-01",
+        "er": -1.5,
+        "actual_ret": -1.57,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-11-01",
+        "end": "2021-12-01",
+        "er": -1.5,
+        "actual_ret": -3.99,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-12-01",
+        "end": "2022-01-01",
+        "er": 1.5,
+        "actual_ret": 4.02,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-01-01",
+        "end": "2022-02-01",
+        "er": -1.2,
+        "actual_ret": -9.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-02-01",
+        "end": "2022-03-01",
+        "er": 1.5,
+        "actual_ret": 0.01,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-03-01",
+        "end": "2022-04-01",
+        "er": -4.0,
+        "actual_ret": 1.71,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-04-01",
+        "end": "2022-05-01",
+        "er": -0.5,
+        "actual_ret": -3.49,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-05-01",
+        "end": "2022-06-01",
+        "er": -1.5,
+        "actual_ret": 0.18,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-06-01",
+        "end": "2022-07-01",
+        "er": -0.5,
+        "actual_ret": -11.92,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-07-01",
+        "end": "2022-08-01",
+        "er": -1.5,
+        "actual_ret": 5.97,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-08-01",
+        "end": "2022-09-01",
+        "er": 1.5,
+        "actual_ret": -0.43,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-09-01",
+        "end": "2022-10-01",
+        "er": -0.5,
+        "actual_ret": -10.24,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-10-01",
+        "end": "2022-11-01",
+        "er": 0.8,
+        "actual_ret": 3.47,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-11-01",
+        "end": "2022-12-01",
+        "er": -2.5,
+        "actual_ret": 5.44,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-12-01",
+        "end": "2023-01-01",
+        "er": 1.5,
+        "actual_ret": -8.28,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-01-01",
+        "end": "2023-02-01",
+        "er": 1.0,
+        "actual_ret": 9.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-02-01",
+        "end": "2023-03-01",
+        "er": -1.5,
+        "actual_ret": -1.85,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-03-01",
+        "end": "2023-04-01",
+        "er": 1.5,
+        "actual_ret": 2.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-04-01",
+        "end": "2023-05-01",
+        "er": 0.5,
+        "actual_ret": 0.31,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-05-01",
+        "end": "2023-06-01",
+        "er": 0.5,
+        "actual_ret": 3.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-06-01",
+        "end": "2023-07-01",
+        "er": 1.8,
+        "actual_ret": 0.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-07-01",
+        "end": "2023-08-01",
+        "er": 0.5,
+        "actual_ret": 0.42,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-08-01",
+        "end": "2023-09-01",
+        "er": 1.5,
+        "actual_ret": -4.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-09-01",
+        "end": "2023-10-01",
+        "er": -1.5,
+        "actual_ret": -3.05,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-10-01",
+        "end": "2023-11-01",
+        "er": -1.0,
+        "actual_ret": -4.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-11-01",
+        "end": "2023-12-01",
+        "er": -2.0,
+        "actual_ret": 9.23,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-12-01",
+        "end": "2024-01-01",
+        "er": 0.5,
+        "actual_ret": 7.75,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-01-01",
+        "end": "2024-02-01",
+        "er": 1.0,
+        "actual_ret": -7.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-02-01",
+        "end": "2024-03-01",
+        "er": 1.5,
+        "actual_ret": 4.14,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-03-01",
+        "end": "2024-04-01",
+        "er": 2.0,
+        "actual_ret": 4.4,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-04-01",
+        "end": "2024-05-01",
+        "er": 2.3,
+        "actual_ret": -3.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-05-01",
+        "end": "2024-06-01",
+        "er": -1.0,
+        "actual_ret": -1.38,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-06-01",
+        "end": "2024-07-01",
+        "er": 0.5,
+        "actual_ret": 5.14,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-07-01",
+        "end": "2024-08-01",
+        "er": 1.8,
+        "actual_ret": -1.28,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-08-01",
+        "end": "2024-09-01",
+        "er": 1.2,
+        "actual_ret": -4.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-09-01",
+        "end": "2024-10-01",
+        "er": -2.0,
+        "actual_ret": -4.25,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-10-01",
+        "end": "2024-11-01",
+        "er": -1.5,
+        "actual_ret": -0.79,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-11-01",
+        "end": "2024-12-01",
+        "er": -1.5,
+        "actual_ret": -3.56,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-12-01",
+        "end": "2025-01-01",
+        "er": -2.5,
+        "actual_ret": -1.96,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-01-01",
+        "end": "2025-02-01",
+        "er": -2.0,
+        "actual_ret": 4.55,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-02-01",
+        "end": "2025-03-01",
+        "er": -1.5,
+        "actual_ret": 3.84,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-03-01",
+        "end": "2025-04-01",
+        "er": 1.0,
+        "actual_ret": 0.5,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-04-01",
+        "end": "2025-05-01",
+        "er": -2.3,
+        "actual_ret": -1.21,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-05-01",
+        "end": "2025-06-01",
+        "er": -2.0,
+        "actual_ret": 6.4,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-06-01",
+        "end": "2025-07-01",
+        "er": 3.2,
+        "actual_ret": 15.43,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-07-01",
+        "end": "2025-08-01",
+        "er": 2.0,
+        "actual_ret": 5.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-08-01",
+        "end": "2025-09-01",
+        "er": 4.0,
+        "actual_ret": 2.52,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-09-01",
+        "end": "2025-10-01",
+        "er": 1.8,
+        "actual_ret": 12.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-10-01",
+        "end": "2025-11-01",
+        "er": 3.2,
+        "actual_ret": 20.8,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-11-01",
+        "end": "2025-12-01",
+        "er": 1.4,
+        "actual_ret": -7.14,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-12-01",
+        "end": "2026-01-01",
+        "er": -1.0,
+        "actual_ret": 9.57,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-01",
+        "end": "2026-02-01",
+        "er": 2.5,
+        "actual_ret": 23.37,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-01",
+        "end": "2026-03-01",
+        "er": 1.2,
+        "actual_ret": 29.46,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-01",
+        "end": "2026-04-01",
+        "er": 1.0,
+        "actual_ret": -13.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-01",
+        "end": "2026-05-01",
+        "er": -2.5,
+        "actual_ret": 21.58,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-05-01",
+        "end": "2026-06-01",
+        "er": 1.2,
+        "actual_ret": 28.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      }
+    ],
+    "2회": [
+      {
+        "as_of": "2018-04-01",
+        "end": "2018-04-15",
+        "er": -1.2,
+        "actual_ret": 0.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-04-15",
+        "end": "2018-05-01",
+        "er": -2.5,
+        "actual_ret": 0.97,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-05-01",
+        "end": "2018-05-15",
+        "er": 1.5,
+        "actual_ret": -0.84,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-05-15",
+        "end": "2018-06-01",
+        "er": -1.0,
+        "actual_ret": -1.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-06-01",
+        "end": "2018-06-15",
+        "er": -1.5,
+        "actual_ret": -0.46,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-06-15",
+        "end": "2018-07-01",
+        "er": -2.0,
+        "actual_ret": -3.05,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-07-01",
+        "end": "2018-07-15",
+        "er": -2.0,
+        "actual_ret": 1.94,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-07-15",
+        "end": "2018-08-01",
+        "er": -2.0,
+        "actual_ret": -0.17,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-08-01",
+        "end": "2018-08-15",
+        "er": -2.0,
+        "actual_ret": -2.49,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-08-15",
+        "end": "2018-09-01",
+        "er": -2.0,
+        "actual_ret": 3.74,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-09-01",
+        "end": "2018-09-15",
+        "er": -1.0,
+        "actual_ret": -0.07,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-09-15",
+        "end": "2018-10-01",
+        "er": -2.0,
+        "actual_ret": 2.01,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-10-01",
+        "end": "2018-10-15",
+        "er": 0.5,
+        "actual_ret": -7.07,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-10-15",
+        "end": "2018-11-01",
+        "er": 1.0,
+        "actual_ret": -5.19,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-11-01",
+        "end": "2018-11-15",
+        "er": 2.8,
+        "actual_ret": 2.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-11-15",
+        "end": "2018-12-01",
+        "er": -2.5,
+        "actual_ret": 0.02,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-12-01",
+        "end": "2018-12-15",
+        "er": -2.0,
+        "actual_ret": -3.8,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-12-15",
+        "end": "2019-01-01",
+        "er": -2.5,
+        "actual_ret": -0.3,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-01-01",
+        "end": "2019-01-15",
+        "er": -2.0,
+        "actual_ret": 2.32,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-01-15",
+        "end": "2019-02-01",
+        "er": 1.2,
+        "actual_ret": 5.85,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-02-01",
+        "end": "2019-02-15",
+        "er": 2.0,
+        "actual_ret": 0.76,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-02-15",
+        "end": "2019-03-01",
+        "er": 0.5,
+        "actual_ret": -0.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-03-01",
+        "end": "2019-03-15",
+        "er": 1.5,
+        "actual_ret": -2.01,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-03-15",
+        "end": "2019-04-01",
+        "er": -2.0,
+        "actual_ret": -0.84,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-04-01",
+        "end": "2019-04-15",
+        "er": -0.5,
+        "actual_ret": 2.63,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-04-15",
+        "end": "2019-05-01",
+        "er": 1.5,
+        "actual_ret": -3.14,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-05-01",
+        "end": "2019-05-15",
+        "er": 0.7,
+        "actual_ret": -6.11,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-05-15",
+        "end": "2019-06-01",
+        "er": 2.0,
+        "actual_ret": -2.33,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-06-01",
+        "end": "2019-06-15",
+        "er": -1.0,
+        "actual_ret": 0.78,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-06-15",
+        "end": "2019-07-01",
+        "er": -1.5,
+        "actual_ret": 2.94,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-07-01",
+        "end": "2019-07-15",
+        "er": 0.5,
+        "actual_ret": -1.65,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-07-15",
+        "end": "2019-08-01",
+        "er": -1.5,
+        "actual_ret": -2.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-08-01",
+        "end": "2019-08-15",
+        "er": -1.5,
+        "actual_ret": -4.28,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-08-15",
+        "end": "2019-09-01",
+        "er": -1.5,
+        "actual_ret": 1.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-09-01",
+        "end": "2019-09-15",
+        "er": -3.5,
+        "actual_ret": 4.49,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-09-15",
+        "end": "2019-10-01",
+        "er": -1.2,
+        "actual_ret": 0.96,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-10-01",
+        "end": "2019-10-15",
+        "er": -0.5,
+        "actual_ret": 0.07,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-10-15",
+        "end": "2019-11-01",
+        "er": 2.5,
+        "actual_ret": 0.4,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-11-01",
+        "end": "2019-11-15",
+        "er": 2.5,
+        "actual_ret": 1.79,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-11-15",
+        "end": "2019-12-01",
+        "er": 1.8,
+        "actual_ret": -3.72,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-12-01",
+        "end": "2019-12-15",
+        "er": 1.5,
+        "actual_ret": 4.53,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-12-15",
+        "end": "2020-01-01",
+        "er": 2.5,
+        "actual_ret": 2.55,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-01-01",
+        "end": "2020-01-15",
+        "er": 3.2,
+        "actual_ret": 3.61,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-01-15",
+        "end": "2020-02-01",
+        "er": 2.5,
+        "actual_ret": -4.89,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-02-01",
+        "end": "2020-02-15",
+        "er": 1.0,
+        "actual_ret": 6.07,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-02-15",
+        "end": "2020-03-01",
+        "er": -2.0,
+        "actual_ret": -11.22,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-03-01",
+        "end": "2020-03-15",
+        "er": -2.0,
+        "actual_ret": -10.64,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-03-15",
+        "end": "2020-04-01",
+        "er": -2.0,
+        "actual_ret": 1.88,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-04-01",
+        "end": "2020-04-15",
+        "er": -2.0,
+        "actual_ret": 9.61,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-04-15",
+        "end": "2020-05-01",
+        "er": -1.0,
+        "actual_ret": 2.62,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-05-01",
+        "end": "2020-05-15",
+        "er": -1.0,
+        "actual_ret": 1.12,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-05-15",
+        "end": "2020-06-01",
+        "er": -1.0,
+        "actual_ret": 5.52,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-06-01",
+        "end": "2020-06-15",
+        "er": 1.5,
+        "actual_ret": 2.97,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-06-15",
+        "end": "2020-07-01",
+        "er": 2.5,
+        "actual_ret": 5.13,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-07-01",
+        "end": "2020-07-15",
+        "er": 2.0,
+        "actual_ret": 3.38,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-07-15",
+        "end": "2020-08-01",
+        "er": 1.5,
+        "actual_ret": 2.06,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-08-01",
+        "end": "2020-08-15",
+        "er": 2.5,
+        "actual_ret": 6.65,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-08-15",
+        "end": "2020-09-01",
+        "er": 2.5,
+        "actual_ret": -1.65,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-09-01",
+        "end": "2020-09-15",
+        "er": 1.5,
+        "actual_ret": 3.37,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-09-15",
+        "end": "2020-10-01",
+        "er": 0.8,
+        "actual_ret": -3.7,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-10-01",
+        "end": "2020-10-15",
+        "er": 0.5,
+        "actual_ret": 0.72,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-10-15",
+        "end": "2020-11-01",
+        "er": 1.8,
+        "actual_ret": -4.06,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-11-01",
+        "end": "2020-11-15",
+        "er": 2.5,
+        "actual_ret": 8.77,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-11-15",
+        "end": "2020-12-01",
+        "er": 2.5,
+        "actual_ret": 2.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-12-01",
+        "end": "2020-12-15",
+        "er": 1.5,
+        "actual_ret": 5.24,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-12-15",
+        "end": "2021-01-01",
+        "er": 2.1,
+        "actual_ret": 6.53,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-01-01",
+        "end": "2021-01-15",
+        "er": 1.8,
+        "actual_ret": 7.31,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-01-15",
+        "end": "2021-02-01",
+        "er": -0.5,
+        "actual_ret": -3.35,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-02-01",
+        "end": "2021-02-15",
+        "er": 2.5,
+        "actual_ret": 1.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-02-15",
+        "end": "2021-03-01",
+        "er": 1.5,
+        "actual_ret": -3.69,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-03-01",
+        "end": "2021-03-15",
+        "er": 2.0,
+        "actual_ret": 0.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-03-15",
+        "end": "2021-04-01",
+        "er": 0.5,
+        "actual_ret": 0.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-04-01",
+        "end": "2021-04-15",
+        "er": 1.0,
+        "actual_ret": 2.98,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-04-15",
+        "end": "2021-05-01",
+        "er": 1.0,
+        "actual_ret": -3.61,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-05-01",
+        "end": "2021-05-15",
+        "er": 1.5,
+        "actual_ret": 0.07,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-05-15",
+        "end": "2021-06-01",
+        "er": -2.5,
+        "actual_ret": 2.11,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-06-01",
+        "end": "2021-06-15",
+        "er": 0.8,
+        "actual_ret": 0.51,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-06-15",
+        "end": "2021-07-01",
+        "er": 2.0,
+        "actual_ret": 1.32,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-07-01",
+        "end": "2021-07-15",
+        "er": 1.5,
+        "actual_ret": -0.55,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-07-15",
+        "end": "2021-08-01",
+        "er": 2.0,
+        "actual_ret": -2.77,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-08-01",
+        "end": "2021-08-15",
+        "er": -1.0,
+        "actual_ret": -2.47,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-08-15",
+        "end": "2021-09-01",
+        "er": 2.5,
+        "actual_ret": 2.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-09-01",
+        "end": "2021-09-15",
+        "er": -1.5,
+        "actual_ret": -1.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-09-15",
+        "end": "2021-10-01",
+        "er": -1.5,
+        "actual_ret": -2.73,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-10-01",
+        "end": "2021-10-15",
+        "er": -1.5,
+        "actual_ret": -1.08,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-10-15",
+        "end": "2021-11-01",
+        "er": -1.0,
+        "actual_ret": -1.51,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-11-01",
+        "end": "2021-11-15",
+        "er": -1.5,
+        "actual_ret": 0.13,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-11-15",
+        "end": "2021-12-01",
+        "er": -1.0,
+        "actual_ret": -5.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-12-01",
+        "end": "2021-12-15",
+        "er": 1.5,
+        "actual_ret": 3.08,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-12-15",
+        "end": "2022-01-01",
+        "er": 0.5,
+        "actual_ret": 0.89,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-01-01",
+        "end": "2022-01-15",
+        "er": -1.2,
+        "actual_ret": -2.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-01-15",
+        "end": "2022-02-01",
+        "er": -1.5,
+        "actual_ret": -6.62,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-02-01",
+        "end": "2022-02-15",
+        "er": 1.5,
+        "actual_ret": 0.38,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-02-15",
+        "end": "2022-03-01",
+        "er": -2.5,
+        "actual_ret": 0.25,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-03-01",
+        "end": "2022-03-15",
+        "er": -4.0,
+        "actual_ret": -1.74,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-03-15",
+        "end": "2022-04-01",
+        "er": -2.5,
+        "actual_ret": 4.42,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-04-01",
+        "end": "2022-04-15",
+        "er": -0.5,
+        "actual_ret": -1.52,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-04-15",
+        "end": "2022-05-01",
+        "er": -2.5,
+        "actual_ret": -0.82,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-05-01",
+        "end": "2022-05-15",
+        "er": -1.5,
+        "actual_ret": -2.18,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-05-15",
+        "end": "2022-06-01",
+        "er": -1.5,
+        "actual_ret": 2.81,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-06-01",
+        "end": "2022-06-15",
+        "er": -0.5,
+        "actual_ret": -6.23,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-06-15",
+        "end": "2022-07-01",
+        "er": -1.0,
+        "actual_ret": -4.37,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-07-01",
+        "end": "2022-07-15",
+        "er": -1.5,
+        "actual_ret": 0.49,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-07-15",
+        "end": "2022-08-01",
+        "er": -1.5,
+        "actual_ret": 4.82,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-08-01",
+        "end": "2022-08-15",
+        "er": 1.5,
+        "actual_ret": 2.33,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-08-15",
+        "end": "2022-09-01",
+        "er": -1.5,
+        "actual_ret": -2.95,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-09-01",
+        "end": "2022-09-15",
+        "er": -0.5,
+        "actual_ret": -0.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-09-15",
+        "end": "2022-10-01",
+        "er": -2.5,
+        "actual_ret": -9.08,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-10-01",
+        "end": "2022-10-15",
+        "er": 0.8,
+        "actual_ret": 0.33,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-10-15",
+        "end": "2022-11-01",
+        "er": -3.2,
+        "actual_ret": 3.06,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-11-01",
+        "end": "2022-11-15",
+        "er": -2.5,
+        "actual_ret": 5.82,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-11-15",
+        "end": "2022-12-01",
+        "er": 0.5,
+        "actual_ret": -0.64,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-12-01",
+        "end": "2022-12-15",
+        "er": 1.5,
+        "actual_ret": -2.8,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-12-15",
+        "end": "2023-01-01",
+        "er": -0.5,
+        "actual_ret": -4.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-01-01",
+        "end": "2023-01-15",
+        "er": 1.0,
+        "actual_ret": 8.24,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-01-15",
+        "end": "2023-02-01",
+        "er": -1.0,
+        "actual_ret": 0.17,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-02-01",
+        "end": "2023-02-15",
+        "er": -1.5,
+        "actual_ret": 0.77,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-02-15",
+        "end": "2023-03-01",
+        "er": 2.5,
+        "actual_ret": -0.72,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-03-01",
+        "end": "2023-03-15",
+        "er": 1.5,
+        "actual_ret": -3.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-03-15",
+        "end": "2023-04-01",
+        "er": -1.5,
+        "actual_ret": 4.32,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-04-01",
+        "end": "2023-04-15",
+        "er": 0.5,
+        "actual_ret": 4.12,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-04-15",
+        "end": "2023-05-01",
+        "er": 1.5,
+        "actual_ret": -3.69,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-05-01",
+        "end": "2023-05-15",
+        "er": 0.5,
+        "actual_ret": -1.7,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-05-15",
+        "end": "2023-06-01",
+        "er": -1.0,
+        "actual_ret": 4.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-06-01",
+        "end": "2023-06-15",
+        "er": 1.8,
+        "actual_ret": 1.89,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-06-15",
+        "end": "2023-07-01",
+        "er": 2.0,
+        "actual_ret": -1.22,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-07-01",
+        "end": "2023-07-15",
+        "er": 0.5,
+        "actual_ret": 1.06,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-07-15",
+        "end": "2023-08-01",
+        "er": 2.1,
+        "actual_ret": -0.24,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-08-01",
+        "end": "2023-08-15",
+        "er": 1.5,
+        "actual_ret": -4.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-08-15",
+        "end": "2023-09-01",
+        "er": 0.5,
+        "actual_ret": 1.18,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-09-01",
+        "end": "2023-09-15",
+        "er": -1.5,
+        "actual_ret": 0.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-09-15",
+        "end": "2023-10-01",
+        "er": 1.2,
+        "actual_ret": -4.97,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-10-01",
+        "end": "2023-10-15",
+        "er": -1.0,
+        "actual_ret": 2.39,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-10-15",
+        "end": "2023-11-01",
+        "er": -1.0,
+        "actual_ret": -5.72,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-11-01",
+        "end": "2023-11-15",
+        "er": -2.0,
+        "actual_ret": 5.47,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-11-15",
+        "end": "2023-12-01",
+        "er": -1.5,
+        "actual_ret": 1.37,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-12-01",
+        "end": "2023-12-15",
+        "er": 0.5,
+        "actual_ret": 1.79,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-12-15",
+        "end": "2024-01-01",
+        "er": 2.0,
+        "actual_ret": 5.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-01-01",
+        "end": "2024-01-15",
+        "er": 1.0,
+        "actual_ret": -6.38,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-01-15",
+        "end": "2024-02-01",
+        "er": 1.3,
+        "actual_ret": -1.13,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-02-01",
+        "end": "2024-02-15",
+        "er": 1.5,
+        "actual_ret": 2.98,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-02-15",
+        "end": "2024-03-01",
+        "er": 3.5,
+        "actual_ret": 1.27,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-03-01",
+        "end": "2024-03-15",
+        "er": 2.0,
+        "actual_ret": 1.75,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-03-15",
+        "end": "2024-04-01",
+        "er": 1.5,
+        "actual_ret": 4.57,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-04-01",
+        "end": "2024-04-15",
+        "er": 2.3,
+        "actual_ret": -2.05,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-04-15",
+        "end": "2024-05-01",
+        "er": 1.0,
+        "actual_ret": -1.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-05-01",
+        "end": "2024-05-15",
+        "er": -1.0,
+        "actual_ret": 1.97,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-05-15",
+        "end": "2024-06-01",
+        "er": 1.5,
+        "actual_ret": -4.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-06-01",
+        "end": "2024-06-15",
+        "er": 0.5,
+        "actual_ret": 2.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-06-15",
+        "end": "2024-07-01",
+        "er": -1.5,
+        "actual_ret": 2.92,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-07-01",
+        "end": "2024-07-15",
+        "er": 1.8,
+        "actual_ret": 2.1,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-07-15",
+        "end": "2024-08-01",
+        "er": 1.5,
+        "actual_ret": -3.92,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-08-01",
+        "end": "2024-08-15",
+        "er": 1.2,
+        "actual_ret": -5.56,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-08-15",
+        "end": "2024-09-01",
+        "er": -2.0,
+        "actual_ret": -1.6,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-09-01",
+        "end": "2024-09-15",
+        "er": -2.0,
+        "actual_ret": -4.88,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-09-15",
+        "end": "2024-10-01",
+        "er": -0.5,
+        "actual_ret": 0.84,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-10-01",
+        "end": "2024-10-15",
+        "er": -1.5,
+        "actual_ret": 2.28,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-10-15",
+        "end": "2024-11-01",
+        "er": -0.5,
+        "actual_ret": -3.35,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-11-01",
+        "end": "2024-11-15",
+        "er": -1.5,
+        "actual_ret": -5.88,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-11-15",
+        "end": "2024-12-01",
+        "er": 2.0,
+        "actual_ret": 1.73,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-12-01",
+        "end": "2024-12-15",
+        "er": -2.5,
+        "actual_ret": 1.28,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-12-15",
+        "end": "2025-01-01",
+        "er": -1.5,
+        "actual_ret": -2.85,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-01-01",
+        "end": "2025-01-15",
+        "er": -2.0,
+        "actual_ret": 4.2,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-01-15",
+        "end": "2025-02-01",
+        "er": 0.7,
+        "actual_ret": 0.48,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-02-01",
+        "end": "2025-02-15",
+        "er": -1.5,
+        "actual_ret": 5.64,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-02-15",
+        "end": "2025-03-01",
+        "er": 1.5,
+        "actual_ret": -2.41,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-03-01",
+        "end": "2025-03-15",
+        "er": 1.0,
+        "actual_ret": 2.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-03-15",
+        "end": "2025-04-01",
+        "er": -2.5,
+        "actual_ret": -3.38,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-04-01",
+        "end": "2025-04-15",
+        "er": -2.3,
+        "actual_ret": -3.84,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-04-15",
+        "end": "2025-05-01",
+        "er": -2.0,
+        "actual_ret": 1.74,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-05-01",
+        "end": "2025-05-15",
+        "er": -2.0,
+        "actual_ret": 3.92,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-05-15",
+        "end": "2025-06-01",
+        "er": 2.5,
+        "actual_ret": 3.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-06-01",
+        "end": "2025-06-15",
+        "er": 3.2,
+        "actual_ret": 7.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-06-15",
+        "end": "2025-07-01",
+        "er": 2.0,
+        "actual_ret": 5.37,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-07-01",
+        "end": "2025-07-15",
+        "er": 2.0,
+        "actual_ret": 3.84,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-07-15",
+        "end": "2025-08-01",
+        "er": 2.1,
+        "actual_ret": 0.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-08-01",
+        "end": "2025-08-15",
+        "er": 4.0,
+        "actual_ret": 3.75,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-08-15",
+        "end": "2025-09-01",
+        "er": 1.5,
+        "actual_ret": 0.33,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-09-01",
+        "end": "2025-09-15",
+        "er": 1.8,
+        "actual_ret": 9.21,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-09-15",
+        "end": "2025-10-01",
+        "er": 2.5,
+        "actual_ret": 2.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-10-01",
+        "end": "2025-10-15",
+        "er": 3.2,
+        "actual_ret": 3.57,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-10-15",
+        "end": "2025-11-01",
+        "er": 2.8,
+        "actual_ret": 13.48,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-11-01",
+        "end": "2025-11-15",
+        "er": 1.4,
+        "actual_ret": -5.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-11-15",
+        "end": "2025-12-01",
+        "er": 4.0,
+        "actual_ret": -3.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-12-01",
+        "end": "2025-12-15",
+        "er": -1.0,
+        "actual_ret": 6.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-12-15",
+        "end": "2026-01-01",
+        "er": 1.5,
+        "actual_ret": 5.62,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-01",
+        "end": "2026-01-15",
+        "er": 2.5,
+        "actual_ret": 9.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-15",
+        "end": "2026-02-01",
+        "er": 2.0,
+        "actual_ret": 10.41,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-01",
+        "end": "2026-02-15",
+        "er": 1.2,
+        "actual_ret": 12.6,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-15",
+        "end": "2026-03-01",
+        "er": 1.2,
+        "actual_ret": 11.53,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-01",
+        "end": "2026-03-15",
+        "er": 1.0,
+        "actual_ret": -5.96,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-03-15",
+        "end": "2026-04-01",
+        "er": 2.0,
+        "actual_ret": -9.1,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-01",
+        "end": "2026-04-15",
+        "er": -2.5,
+        "actual_ret": 10.05,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-15",
+        "end": "2026-05-01",
+        "er": 1.5,
+        "actual_ret": 7.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-01",
+        "end": "2026-05-15",
+        "er": 1.2,
+        "actual_ret": 18.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-15",
+        "end": "2026-06-01",
+        "er": -1.5,
+        "actual_ret": 15.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      }
+    ],
+    "4회": [
+      {
+        "as_of": "2018-04-01",
+        "end": "2018-04-08",
+        "er": -1.2,
+        "actual_ret": -0.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-04-08",
+        "end": "2018-04-15",
+        "er": -1.5,
+        "actual_ret": 0.42,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-04-15",
+        "end": "2018-04-22",
+        "er": -2.5,
+        "actual_ret": 0.86,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-04-22",
+        "end": "2018-05-01",
+        "er": -1.0,
+        "actual_ret": 0.17,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-05-01",
+        "end": "2018-05-08",
+        "er": 1.5,
+        "actual_ret": -1.14,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-05-08",
+        "end": "2018-05-15",
+        "er": -1.0,
+        "actual_ret": 0.76,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-05-15",
+        "end": "2018-05-22",
+        "er": -1.0,
+        "actual_ret": 0.43,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-05-22",
+        "end": "2018-06-01",
+        "er": -1.5,
+        "actual_ret": -2.39,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-06-01",
+        "end": "2018-06-08",
+        "er": -1.5,
+        "actual_ret": 1.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-06-08",
+        "end": "2018-06-15",
+        "er": -0.8,
+        "actual_ret": -1.1,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-06-15",
+        "end": "2018-06-22",
+        "er": -2.0,
+        "actual_ret": -2.61,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-06-22",
+        "end": "2018-07-01",
+        "er": 1.5,
+        "actual_ret": -1.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-07-01",
+        "end": "2018-07-08",
+        "er": -2.0,
+        "actual_ret": 0.32,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-07-08",
+        "end": "2018-07-15",
+        "er": -2.5,
+        "actual_ret": 0.86,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-07-15",
+        "end": "2018-07-22",
+        "er": -2.0,
+        "actual_ret": -0.13,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-07-22",
+        "end": "2018-08-01",
+        "er": -1.5,
+        "actual_ret": 0.78,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-08-01",
+        "end": "2018-08-08",
+        "er": -2.0,
+        "actual_ret": -0.5,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-08-08",
+        "end": "2018-08-15",
+        "er": -1.5,
+        "actual_ret": -2.02,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-08-15",
+        "end": "2018-08-22",
+        "er": -2.0,
+        "actual_ret": 1.21,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-08-22",
+        "end": "2018-09-01",
+        "er": -2.0,
+        "actual_ret": 2.13,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-09-01",
+        "end": "2018-09-08",
+        "er": -1.0,
+        "actual_ret": -1.56,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-09-08",
+        "end": "2018-09-15",
+        "er": -2.5,
+        "actual_ret": 1.29,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-09-15",
+        "end": "2018-09-22",
+        "er": -2.0,
+        "actual_ret": 1.88,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-09-22",
+        "end": "2018-10-01",
+        "er": 0.5,
+        "actual_ret": -0.63,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-10-01",
+        "end": "2018-10-08",
+        "er": 0.5,
+        "actual_ret": -2.89,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-10-08",
+        "end": "2018-10-15",
+        "er": -1.0,
+        "actual_ret": -3.83,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-10-15",
+        "end": "2018-10-22",
+        "er": 1.0,
+        "actual_ret": 0.52,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-10-22",
+        "end": "2018-11-01",
+        "er": 1.5,
+        "actual_ret": -5.87,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-11-01",
+        "end": "2018-11-08",
+        "er": 2.8,
+        "actual_ret": 2.83,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-11-08",
+        "end": "2018-11-15",
+        "er": -1.2,
+        "actual_ret": -1.36,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-11-15",
+        "end": "2018-11-22",
+        "er": -2.5,
+        "actual_ret": -1.2,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-11-22",
+        "end": "2018-12-01",
+        "er": -2.5,
+        "actual_ret": 1.34,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2018-12-01",
+        "end": "2018-12-08",
+        "er": -2.0,
+        "actual_ret": -2.86,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-12-08",
+        "end": "2018-12-15",
+        "er": -3.5,
+        "actual_ret": -0.04,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-12-15",
+        "end": "2018-12-22",
+        "er": -2.5,
+        "actual_ret": -0.68,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2018-12-22",
+        "end": "2019-01-01",
+        "er": -2.0,
+        "actual_ret": 0.34,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-01-01",
+        "end": "2019-01-08",
+        "er": -2.0,
+        "actual_ret": 1.22,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-01-08",
+        "end": "2019-01-15",
+        "er": -0.5,
+        "actual_ret": 1.76,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-01-15",
+        "end": "2019-01-22",
+        "er": 1.2,
+        "actual_ret": 1.48,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-01-22",
+        "end": "2019-02-01",
+        "er": -1.5,
+        "actual_ret": 4.84,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-02-01",
+        "end": "2019-02-08",
+        "er": 2.0,
+        "actual_ret": 0.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-02-08",
+        "end": "2019-02-15",
+        "er": 1.5,
+        "actual_ret": 2.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-02-15",
+        "end": "2019-02-22",
+        "er": 0.5,
+        "actual_ret": 1.42,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-02-22",
+        "end": "2019-03-01",
+        "er": 0.5,
+        "actual_ret": -1.54,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-03-01",
+        "end": "2019-03-08",
+        "er": 1.5,
+        "actual_ret": -1.27,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-03-08",
+        "end": "2019-03-15",
+        "er": -1.0,
+        "actual_ret": 0.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-03-15",
+        "end": "2019-03-22",
+        "er": -2.0,
+        "actual_ret": 0.79,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-03-22",
+        "end": "2019-04-01",
+        "er": -1.0,
+        "actual_ret": -1.85,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-04-01",
+        "end": "2019-04-08",
+        "er": -0.5,
+        "actual_ret": 2.15,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-04-08",
+        "end": "2019-04-15",
+        "er": 1.5,
+        "actual_ret": 0.7,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-04-15",
+        "end": "2019-04-22",
+        "er": 1.5,
+        "actual_ret": -1.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-04-22",
+        "end": "2019-05-01",
+        "er": 2.0,
+        "actual_ret": -1.93,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-05-01",
+        "end": "2019-05-08",
+        "er": 0.7,
+        "actual_ret": -1.68,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-05-08",
+        "end": "2019-05-15",
+        "er": 1.5,
+        "actual_ret": -4.07,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-05-15",
+        "end": "2019-05-22",
+        "er": 2.0,
+        "actual_ret": -1.32,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-05-22",
+        "end": "2019-06-01",
+        "er": -0.5,
+        "actual_ret": -1.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-06-01",
+        "end": "2019-06-08",
+        "er": -1.0,
+        "actual_ret": -0.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-06-08",
+        "end": "2019-06-15",
+        "er": -1.0,
+        "actual_ret": -0.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-06-15",
+        "end": "2019-06-22",
+        "er": -1.5,
+        "actual_ret": 1.83,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-06-22",
+        "end": "2019-07-01",
+        "er": 0.7,
+        "actual_ret": 0.93,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-07-01",
+        "end": "2019-07-08",
+        "er": 0.5,
+        "actual_ret": -1.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-07-08",
+        "end": "2019-07-15",
+        "er": -0.5,
+        "actual_ret": 1.62,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-07-15",
+        "end": "2019-07-22",
+        "er": -1.5,
+        "actual_ret": 0.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-07-22",
+        "end": "2019-08-01",
+        "er": -1.0,
+        "actual_ret": -3.14,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-08-01",
+        "end": "2019-08-08",
+        "er": -1.5,
+        "actual_ret": -5.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-08-08",
+        "end": "2019-08-15",
+        "er": 0.4,
+        "actual_ret": 0.53,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-08-15",
+        "end": "2019-08-22",
+        "er": -1.5,
+        "actual_ret": 1.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-08-22",
+        "end": "2019-09-01",
+        "er": -2.0,
+        "actual_ret": 0.8,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-09-01",
+        "end": "2019-09-08",
+        "er": -3.5,
+        "actual_ret": 2.45,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-09-08",
+        "end": "2019-09-15",
+        "er": -2.0,
+        "actual_ret": 1.18,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-09-15",
+        "end": "2019-09-22",
+        "er": -1.2,
+        "actual_ret": 1.73,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-09-22",
+        "end": "2019-10-01",
+        "er": 1.5,
+        "actual_ret": -0.89,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-10-01",
+        "end": "2019-10-08",
+        "er": -0.5,
+        "actual_ret": -2.36,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-10-08",
+        "end": "2019-10-15",
+        "er": 0.8,
+        "actual_ret": 1.01,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-10-15",
+        "end": "2019-10-22",
+        "er": 2.5,
+        "actual_ret": -0.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-10-22",
+        "end": "2019-11-01",
+        "er": -0.5,
+        "actual_ret": -0.72,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-11-01",
+        "end": "2019-11-08",
+        "er": 2.5,
+        "actual_ret": 2.05,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-11-08",
+        "end": "2019-11-15",
+        "er": 2.6,
+        "actual_ret": 0.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-11-15",
+        "end": "2019-11-22",
+        "er": 1.8,
+        "actual_ret": -3.27,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-11-22",
+        "end": "2019-12-01",
+        "er": 1.5,
+        "actual_ret": -0.95,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-12-01",
+        "end": "2019-12-08",
+        "er": 1.5,
+        "actual_ret": -0.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2019-12-08",
+        "end": "2019-12-15",
+        "er": -0.5,
+        "actual_ret": 4.33,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-12-15",
+        "end": "2019-12-22",
+        "er": 2.5,
+        "actual_ret": 1.69,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2019-12-22",
+        "end": "2020-01-01",
+        "er": 2.5,
+        "actual_ret": 0.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-01-01",
+        "end": "2020-01-08",
+        "er": 3.2,
+        "actual_ret": 0.22,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-01-08",
+        "end": "2020-01-15",
+        "er": 2.1,
+        "actual_ret": 4.06,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-01-15",
+        "end": "2020-01-22",
+        "er": 2.5,
+        "actual_ret": 0.87,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-01-22",
+        "end": "2020-02-01",
+        "er": 1.5,
+        "actual_ret": -6.95,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-02-01",
+        "end": "2020-02-08",
+        "er": 1.0,
+        "actual_ret": 4.38,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-02-08",
+        "end": "2020-02-15",
+        "er": 1.5,
+        "actual_ret": 2.17,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-02-15",
+        "end": "2020-02-22",
+        "er": -2.0,
+        "actual_ret": -3.31,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-02-22",
+        "end": "2020-03-01",
+        "er": 1.5,
+        "actual_ret": -4.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-03-01",
+        "end": "2020-03-08",
+        "er": -2.0,
+        "actual_ret": 1.57,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-03-08",
+        "end": "2020-03-15",
+        "er": -2.8,
+        "actual_ret": -8.14,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-03-15",
+        "end": "2020-03-22",
+        "er": -2.0,
+        "actual_ret": -7.8,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-03-22",
+        "end": "2020-04-01",
+        "er": -1.5,
+        "actual_ret": 17.4,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-04-01",
+        "end": "2020-04-08",
+        "er": -2.0,
+        "actual_ret": 8.58,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-04-08",
+        "end": "2020-04-15",
+        "er": -2.0,
+        "actual_ret": 2.44,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-04-15",
+        "end": "2020-04-22",
+        "er": -1.0,
+        "actual_ret": 0.68,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-04-22",
+        "end": "2020-05-01",
+        "er": -1.0,
+        "actual_ret": 1.06,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-05-01",
+        "end": "2020-05-08",
+        "er": -1.0,
+        "actual_ret": 1.62,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-05-08",
+        "end": "2020-05-15",
+        "er": 2.0,
+        "actual_ret": -1.34,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-05-15",
+        "end": "2020-05-22",
+        "er": -1.0,
+        "actual_ret": 3.94,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-05-22",
+        "end": "2020-06-01",
+        "er": -1.0,
+        "actual_ret": 3.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-06-01",
+        "end": "2020-06-08",
+        "er": 1.5,
+        "actual_ret": 6.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-06-08",
+        "end": "2020-06-15",
+        "er": 2.0,
+        "actual_ret": -3.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-06-15",
+        "end": "2020-06-22",
+        "er": 2.5,
+        "actual_ret": 5.92,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-06-22",
+        "end": "2020-07-01",
+        "er": 2.0,
+        "actual_ret": -0.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-07-01",
+        "end": "2020-07-08",
+        "er": 2.0,
+        "actual_ret": 2.42,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-07-08",
+        "end": "2020-07-15",
+        "er": 1.5,
+        "actual_ret": 1.24,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-07-15",
+        "end": "2020-07-22",
+        "er": 1.5,
+        "actual_ret": 0.87,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-07-22",
+        "end": "2020-08-01",
+        "er": 2.0,
+        "actual_ret": 1.56,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-08-01",
+        "end": "2020-08-08",
+        "er": 2.5,
+        "actual_ret": 4.36,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-08-08",
+        "end": "2020-08-15",
+        "er": 2.5,
+        "actual_ret": 0.69,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-08-15",
+        "end": "2020-08-22",
+        "er": 2.5,
+        "actual_ret": -2.06,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-08-22",
+        "end": "2020-09-01",
+        "er": 1.0,
+        "actual_ret": -0.68,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-09-01",
+        "end": "2020-09-08",
+        "er": 1.5,
+        "actual_ret": 1.07,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-09-08",
+        "end": "2020-09-15",
+        "er": 1.2,
+        "actual_ret": 0.99,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-09-15",
+        "end": "2020-09-22",
+        "er": 0.8,
+        "actual_ret": -2.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-09-22",
+        "end": "2020-10-01",
+        "er": 2.5,
+        "actual_ret": 0.88,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-10-01",
+        "end": "2020-10-08",
+        "er": 0.5,
+        "actual_ret": 1.19,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-10-08",
+        "end": "2020-10-15",
+        "er": 2.0,
+        "actual_ret": -0.5,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-10-15",
+        "end": "2020-10-22",
+        "er": 1.8,
+        "actual_ret": 0.65,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-10-22",
+        "end": "2020-11-01",
+        "er": 1.5,
+        "actual_ret": -4.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2020-11-01",
+        "end": "2020-11-08",
+        "er": 2.5,
+        "actual_ret": 5.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-11-08",
+        "end": "2020-11-15",
+        "er": 1.5,
+        "actual_ret": 2.16,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-11-15",
+        "end": "2020-11-22",
+        "er": 2.5,
+        "actual_ret": 0.1,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-11-22",
+        "end": "2020-12-01",
+        "er": 2.5,
+        "actual_ret": -0.36,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-12-01",
+        "end": "2020-12-08",
+        "er": 1.5,
+        "actual_ret": 4.87,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-12-08",
+        "end": "2020-12-15",
+        "er": 2.0,
+        "actual_ret": 1.98,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-12-15",
+        "end": "2020-12-22",
+        "er": 2.1,
+        "actual_ret": 0.31,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2020-12-22",
+        "end": "2021-01-01",
+        "er": 0.8,
+        "actual_ret": 7.95,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-01-01",
+        "end": "2021-01-08",
+        "er": 1.8,
+        "actual_ret": 2.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-01-08",
+        "end": "2021-01-15",
+        "er": 2.3,
+        "actual_ret": -0.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-01-15",
+        "end": "2021-01-22",
+        "er": -0.5,
+        "actual_ret": 2.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-01-22",
+        "end": "2021-02-01",
+        "er": 1.5,
+        "actual_ret": -4.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-02-01",
+        "end": "2021-02-08",
+        "er": 2.5,
+        "actual_ret": 1.9,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-02-08",
+        "end": "2021-02-15",
+        "er": 3.5,
+        "actual_ret": 0.35,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-02-15",
+        "end": "2021-02-22",
+        "er": 1.5,
+        "actual_ret": -1.21,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-02-22",
+        "end": "2021-03-01",
+        "er": -0.5,
+        "actual_ret": -1.48,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-03-01",
+        "end": "2021-03-08",
+        "er": 2.0,
+        "actual_ret": -0.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-03-08",
+        "end": "2021-03-15",
+        "er": -0.5,
+        "actual_ret": 1.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-03-15",
+        "end": "2021-03-22",
+        "er": 0.5,
+        "actual_ret": -0.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-03-22",
+        "end": "2021-04-01",
+        "er": -1.5,
+        "actual_ret": 0.62,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-04-01",
+        "end": "2021-04-08",
+        "er": 1.0,
+        "actual_ret": 1.7,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-04-08",
+        "end": "2021-04-15",
+        "er": 1.2,
+        "actual_ret": 1.35,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-04-15",
+        "end": "2021-04-22",
+        "er": 1.0,
+        "actual_ret": -1.24,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-04-22",
+        "end": "2021-05-01",
+        "er": 1.5,
+        "actual_ret": -2.55,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-05-01",
+        "end": "2021-05-08",
+        "er": 1.5,
+        "actual_ret": 2.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-05-08",
+        "end": "2021-05-15",
+        "er": 1.5,
+        "actual_ret": -3.6,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-05-15",
+        "end": "2021-05-22",
+        "er": -2.5,
+        "actual_ret": 0.81,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-05-22",
+        "end": "2021-06-01",
+        "er": -1.0,
+        "actual_ret": 1.58,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-06-01",
+        "end": "2021-06-08",
+        "er": 0.8,
+        "actual_ret": 0.83,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-06-08",
+        "end": "2021-06-15",
+        "er": 1.5,
+        "actual_ret": -0.12,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-06-15",
+        "end": "2021-06-22",
+        "er": 2.0,
+        "actual_ret": -0.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-06-22",
+        "end": "2021-07-01",
+        "er": -1.5,
+        "actual_ret": 1.27,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-07-01",
+        "end": "2021-07-08",
+        "er": 1.5,
+        "actual_ret": 0.17,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-07-08",
+        "end": "2021-07-15",
+        "er": 1.2,
+        "actual_ret": 0.32,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-07-15",
+        "end": "2021-07-22",
+        "er": 2.0,
+        "actual_ret": -2.37,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-07-22",
+        "end": "2021-08-01",
+        "er": -0.8,
+        "actual_ret": -1.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-08-01",
+        "end": "2021-08-08",
+        "er": -1.0,
+        "actual_ret": 1.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-08-08",
+        "end": "2021-08-15",
+        "er": 1.5,
+        "actual_ret": -3.59,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-08-15",
+        "end": "2021-08-22",
+        "er": 2.5,
+        "actual_ret": -2.47,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-08-22",
+        "end": "2021-09-01",
+        "er": -2.5,
+        "actual_ret": 3.65,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-09-01",
+        "end": "2021-09-08",
+        "er": -1.5,
+        "actual_ret": -0.52,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-09-08",
+        "end": "2021-09-15",
+        "er": -1.0,
+        "actual_ret": -0.47,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-09-15",
+        "end": "2021-09-22",
+        "er": -1.5,
+        "actual_ret": -0.62,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-09-22",
+        "end": "2021-10-01",
+        "er": 0.5,
+        "actual_ret": -1.98,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-10-01",
+        "end": "2021-10-08",
+        "er": -1.5,
+        "actual_ret": -1.38,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-10-08",
+        "end": "2021-10-15",
+        "er": 2.0,
+        "actual_ret": 0.53,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-10-15",
+        "end": "2021-10-22",
+        "er": -1.0,
+        "actual_ret": -0.1,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-10-22",
+        "end": "2021-11-01",
+        "er": -1.5,
+        "actual_ret": -1.5,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-11-01",
+        "end": "2021-11-08",
+        "er": -1.5,
+        "actual_ret": 0.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-11-08",
+        "end": "2021-11-15",
+        "er": -2.5,
+        "actual_ret": 0.23,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-11-15",
+        "end": "2021-11-22",
+        "er": -1.0,
+        "actual_ret": -1.11,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-11-22",
+        "end": "2021-12-01",
+        "er": -1.5,
+        "actual_ret": -6.31,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-12-01",
+        "end": "2021-12-08",
+        "er": 1.5,
+        "actual_ret": 3.39,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2021-12-08",
+        "end": "2021-12-15",
+        "er": -2.5,
+        "actual_ret": -0.74,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-12-15",
+        "end": "2021-12-22",
+        "er": 0.5,
+        "actual_ret": -0.27,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2021-12-22",
+        "end": "2022-01-01",
+        "er": -2.0,
+        "actual_ret": 0.62,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-01-01",
+        "end": "2022-01-08",
+        "er": -1.2,
+        "actual_ret": -1.25,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-01-08",
+        "end": "2022-01-15",
+        "er": -2.5,
+        "actual_ret": -0.15,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-01-15",
+        "end": "2022-01-22",
+        "er": -1.5,
+        "actual_ret": -2.04,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-01-22",
+        "end": "2022-02-01",
+        "er": -2.0,
+        "actual_ret": -3.59,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-02-01",
+        "end": "2022-02-08",
+        "er": 1.5,
+        "actual_ret": 0.27,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-02-08",
+        "end": "2022-02-15",
+        "er": -2.5,
+        "actual_ret": -0.08,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-02-15",
+        "end": "2022-02-22",
+        "er": -2.5,
+        "actual_ret": 2.15,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-02-22",
+        "end": "2022-03-01",
+        "er": -1.5,
+        "actual_ret": -0.42,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-03-01",
+        "end": "2022-03-08",
+        "er": -4.0,
+        "actual_ret": -1.92,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-03-08",
+        "end": "2022-03-15",
+        "er": -1.5,
+        "actual_ret": 1.5,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-03-15",
+        "end": "2022-03-22",
+        "er": -2.5,
+        "actual_ret": 2.2,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-03-22",
+        "end": "2022-04-01",
+        "er": -1.5,
+        "actual_ret": 1.26,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-04-01",
+        "end": "2022-04-08",
+        "er": -0.5,
+        "actual_ret": -1.96,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-04-08",
+        "end": "2022-04-15",
+        "er": -3.2,
+        "actual_ret": 0.37,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-04-15",
+        "end": "2022-04-22",
+        "er": -2.5,
+        "actual_ret": 1.62,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-04-22",
+        "end": "2022-05-01",
+        "er": -1.5,
+        "actual_ret": -1.32,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-05-01",
+        "end": "2022-05-08",
+        "er": -1.5,
+        "actual_ret": -1.39,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-05-08",
+        "end": "2022-05-15",
+        "er": -3.5,
+        "actual_ret": 0.14,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-05-15",
+        "end": "2022-05-22",
+        "er": -1.5,
+        "actual_ret": 1.49,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-05-22",
+        "end": "2022-06-01",
+        "er": -2.5,
+        "actual_ret": 0.97,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-06-01",
+        "end": "2022-06-08",
+        "er": -0.5,
+        "actual_ret": -1.31,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-06-08",
+        "end": "2022-06-15",
+        "er": -2.0,
+        "actual_ret": -5.19,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-06-15",
+        "end": "2022-06-22",
+        "er": -1.0,
+        "actual_ret": -1.84,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-06-22",
+        "end": "2022-07-01",
+        "er": -2.0,
+        "actual_ret": -0.05,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-07-01",
+        "end": "2022-07-08",
+        "er": -1.5,
+        "actual_ret": 1.31,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-07-08",
+        "end": "2022-07-15",
+        "er": -2.5,
+        "actual_ret": -1.35,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-07-15",
+        "end": "2022-07-22",
+        "er": -1.5,
+        "actual_ret": 3.75,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-07-22",
+        "end": "2022-08-01",
+        "er": -2.0,
+        "actual_ret": 1.66,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-08-01",
+        "end": "2022-08-08",
+        "er": 1.5,
+        "actual_ret": 1.33,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-08-08",
+        "end": "2022-08-15",
+        "er": 1.5,
+        "actual_ret": 1.18,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-08-15",
+        "end": "2022-08-22",
+        "er": -1.5,
+        "actual_ret": -1.46,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-08-22",
+        "end": "2022-09-01",
+        "er": 1.2,
+        "actual_ret": -0.22,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-09-01",
+        "end": "2022-09-08",
+        "er": -0.5,
+        "actual_ret": -2.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-09-08",
+        "end": "2022-09-15",
+        "er": -1.5,
+        "actual_ret": 1.12,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-09-15",
+        "end": "2022-09-22",
+        "er": -2.5,
+        "actual_ret": -1.99,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-09-22",
+        "end": "2022-10-01",
+        "er": -2.0,
+        "actual_ret": -6.22,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-10-01",
+        "end": "2022-10-08",
+        "er": 0.8,
+        "actual_ret": 0.74,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-10-08",
+        "end": "2022-10-15",
+        "er": -1.0,
+        "actual_ret": 1.66,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-10-15",
+        "end": "2022-10-22",
+        "er": -3.2,
+        "actual_ret": -0.31,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-10-22",
+        "end": "2022-11-01",
+        "er": -2.0,
+        "actual_ret": 2.43,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-11-01",
+        "end": "2022-11-08",
+        "er": -2.5,
+        "actual_ret": 1.2,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-11-08",
+        "end": "2022-11-15",
+        "er": -1.0,
+        "actual_ret": 3.07,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-11-15",
+        "end": "2022-11-22",
+        "er": 0.5,
+        "actual_ret": -2.48,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-11-22",
+        "end": "2022-12-01",
+        "er": 1.0,
+        "actual_ret": 2.62,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-12-01",
+        "end": "2022-12-08",
+        "er": 1.5,
+        "actual_ret": -4.32,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2022-12-08",
+        "end": "2022-12-15",
+        "er": -1.0,
+        "actual_ret": 1.59,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-12-15",
+        "end": "2022-12-22",
+        "er": -0.5,
+        "actual_ret": -1.52,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2022-12-22",
+        "end": "2023-01-01",
+        "er": -2.5,
+        "actual_ret": -3.8,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-01-01",
+        "end": "2023-01-08",
+        "er": 1.0,
+        "actual_ret": 4.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-01-08",
+        "end": "2023-01-15",
+        "er": -2.0,
+        "actual_ret": 1.32,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-01-15",
+        "end": "2023-01-22",
+        "er": -1.0,
+        "actual_ret": -0.17,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-01-22",
+        "end": "2023-02-01",
+        "er": 0.5,
+        "actual_ret": -1.21,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-02-01",
+        "end": "2023-02-08",
+        "er": -1.5,
+        "actual_ret": -0.2,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-02-08",
+        "end": "2023-02-15",
+        "er": -0.5,
+        "actual_ret": -0.58,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-02-15",
+        "end": "2023-02-22",
+        "er": 2.5,
+        "actual_ret": 1.29,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-02-22",
+        "end": "2023-03-01",
+        "er": 1.8,
+        "actual_ret": -0.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-03-01",
+        "end": "2023-03-08",
+        "er": 1.5,
+        "actual_ret": 1.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-03-08",
+        "end": "2023-03-15",
+        "er": -1.5,
+        "actual_ret": -2.92,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-03-15",
+        "end": "2023-03-22",
+        "er": -1.5,
+        "actual_ret": 0.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-03-22",
+        "end": "2023-04-01",
+        "er": -2.0,
+        "actual_ret": 2.72,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-04-01",
+        "end": "2023-04-08",
+        "er": 0.5,
+        "actual_ret": 0.92,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-04-08",
+        "end": "2023-04-15",
+        "er": 1.5,
+        "actual_ret": 2.19,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-04-15",
+        "end": "2023-04-22",
+        "er": 1.5,
+        "actual_ret": -0.87,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-04-22",
+        "end": "2023-05-01",
+        "er": -1.0,
+        "actual_ret": -2.17,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-05-01",
+        "end": "2023-05-08",
+        "er": 0.5,
+        "actual_ret": -1.27,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-05-08",
+        "end": "2023-05-15",
+        "er": -1.0,
+        "actual_ret": -1.67,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-05-15",
+        "end": "2023-05-22",
+        "er": -1.0,
+        "actual_ret": 3.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-05-22",
+        "end": "2023-06-01",
+        "er": 0.5,
+        "actual_ret": 0.8,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-06-01",
+        "end": "2023-06-08",
+        "er": 1.8,
+        "actual_ret": 1.36,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-06-08",
+        "end": "2023-06-15",
+        "er": 1.0,
+        "actual_ret": 0.66,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-06-15",
+        "end": "2023-06-22",
+        "er": 2.0,
+        "actual_ret": -1.18,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-06-22",
+        "end": "2023-07-01",
+        "er": 1.2,
+        "actual_ret": -0.29,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-07-01",
+        "end": "2023-07-08",
+        "er": 0.5,
+        "actual_ret": -3.48,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-07-08",
+        "end": "2023-07-15",
+        "er": -2.0,
+        "actual_ret": 4.87,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-07-15",
+        "end": "2023-07-22",
+        "er": 2.1,
+        "actual_ret": -0.96,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-07-22",
+        "end": "2023-08-01",
+        "er": 2.5,
+        "actual_ret": 0.07,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-08-01",
+        "end": "2023-08-08",
+        "er": 1.5,
+        "actual_ret": -3.05,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-08-08",
+        "end": "2023-08-15",
+        "er": -0.8,
+        "actual_ret": -0.46,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-08-15",
+        "end": "2023-08-22",
+        "er": 0.5,
+        "actual_ret": -0.75,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-08-22",
+        "end": "2023-09-01",
+        "er": 2.5,
+        "actual_ret": 1.54,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-09-01",
+        "end": "2023-09-08",
+        "er": -1.5,
+        "actual_ret": -0.68,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-09-08",
+        "end": "2023-09-15",
+        "er": 0.8,
+        "actual_ret": 1.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-09-15",
+        "end": "2023-09-22",
+        "er": 1.2,
+        "actual_ret": -3.69,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-09-22",
+        "end": "2023-10-01",
+        "er": 1.0,
+        "actual_ret": -0.98,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-10-01",
+        "end": "2023-10-08",
+        "er": -1.0,
+        "actual_ret": 0.22,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-10-08",
+        "end": "2023-10-15",
+        "er": 2.5,
+        "actual_ret": 1.93,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-10-15",
+        "end": "2023-10-22",
+        "er": -1.0,
+        "actual_ret": -1.78,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-10-22",
+        "end": "2023-11-01",
+        "er": -1.0,
+        "actual_ret": -3.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-11-01",
+        "end": "2023-11-08",
+        "er": -2.0,
+        "actual_ret": 5.55,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-11-08",
+        "end": "2023-11-15",
+        "er": -1.5,
+        "actual_ret": 0.86,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-11-15",
+        "end": "2023-11-22",
+        "er": -1.5,
+        "actual_ret": 0.69,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2023-11-22",
+        "end": "2023-12-01",
+        "er": 1.5,
+        "actual_ret": 0.5,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-12-01",
+        "end": "2023-12-08",
+        "er": 0.5,
+        "actual_ret": -0.66,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-12-08",
+        "end": "2023-12-15",
+        "er": 2.5,
+        "actual_ret": 0.99,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-12-15",
+        "end": "2023-12-22",
+        "er": 2.0,
+        "actual_ret": 1.67,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2023-12-22",
+        "end": "2024-01-01",
+        "er": 1.5,
+        "actual_ret": 3.2,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-01-01",
+        "end": "2024-01-08",
+        "er": 1.0,
+        "actual_ret": -3.9,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-01-08",
+        "end": "2024-01-15",
+        "er": 2.3,
+        "actual_ret": -2.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-01-15",
+        "end": "2024-01-22",
+        "er": 1.3,
+        "actual_ret": -1.89,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-01-22",
+        "end": "2024-02-01",
+        "er": -1.5,
+        "actual_ret": 0.67,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-02-01",
+        "end": "2024-02-08",
+        "er": 1.5,
+        "actual_ret": 3.02,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-02-08",
+        "end": "2024-02-15",
+        "er": 2.0,
+        "actual_ret": -0.15,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-02-15",
+        "end": "2024-02-22",
+        "er": 3.5,
+        "actual_ret": 1.16,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-02-22",
+        "end": "2024-03-01",
+        "er": 2.5,
+        "actual_ret": -0.4,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-03-01",
+        "end": "2024-03-08",
+        "er": 2.0,
+        "actual_ret": -1.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-03-08",
+        "end": "2024-03-15",
+        "er": 1.2,
+        "actual_ret": 1.38,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-03-15",
+        "end": "2024-03-22",
+        "er": 1.5,
+        "actual_ret": 3.93,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-03-22",
+        "end": "2024-04-01",
+        "er": 2.5,
+        "actual_ret": 0.92,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-04-01",
+        "end": "2024-04-08",
+        "er": 2.3,
+        "actual_ret": -0.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-04-08",
+        "end": "2024-04-15",
+        "er": 3.5,
+        "actual_ret": -1.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-04-15",
+        "end": "2024-04-22",
+        "er": 1.0,
+        "actual_ret": -3.54,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-04-22",
+        "end": "2024-05-01",
+        "er": -0.8,
+        "actual_ret": 1.24,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-05-01",
+        "end": "2024-05-08",
+        "er": -1.0,
+        "actual_ret": 2.23,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-05-08",
+        "end": "2024-05-15",
+        "er": 0.5,
+        "actual_ret": -0.6,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-05-15",
+        "end": "2024-05-22",
+        "er": 1.5,
+        "actual_ret": -0.86,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-05-22",
+        "end": "2024-06-01",
+        "er": 2.5,
+        "actual_ret": -3.37,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-06-01",
+        "end": "2024-06-08",
+        "er": 0.5,
+        "actual_ret": 1.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-06-08",
+        "end": "2024-06-15",
+        "er": 0.5,
+        "actual_ret": 2.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-06-15",
+        "end": "2024-06-22",
+        "er": -1.5,
+        "actual_ret": 2.08,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-06-22",
+        "end": "2024-07-01",
+        "er": 1.8,
+        "actual_ret": 1.59,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-07-01",
+        "end": "2024-07-08",
+        "er": 1.8,
+        "actual_ret": 2.9,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-07-08",
+        "end": "2024-07-15",
+        "er": 1.5,
+        "actual_ret": -0.45,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-07-15",
+        "end": "2024-07-22",
+        "er": 1.5,
+        "actual_ret": -2.66,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-07-22",
+        "end": "2024-08-01",
+        "er": 1.2,
+        "actual_ret": -0.3,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-08-01",
+        "end": "2024-08-08",
+        "er": 1.2,
+        "actual_ret": -8.37,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-08-08",
+        "end": "2024-08-15",
+        "er": -2.0,
+        "actual_ret": 3.85,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-08-15",
+        "end": "2024-08-22",
+        "er": -2.0,
+        "actual_ret": -0.03,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-08-22",
+        "end": "2024-09-01",
+        "er": 0.8,
+        "actual_ret": -1.72,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-09-01",
+        "end": "2024-09-08",
+        "er": -2.0,
+        "actual_ret": -5.3,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-09-08",
+        "end": "2024-09-15",
+        "er": 1.2,
+        "actual_ret": 1.11,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-09-15",
+        "end": "2024-09-22",
+        "er": -0.5,
+        "actual_ret": 0.25,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-09-22",
+        "end": "2024-10-01",
+        "er": -1.5,
+        "actual_ret": 0.29,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-10-01",
+        "end": "2024-10-08",
+        "er": -1.5,
+        "actual_ret": 1.54,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-10-08",
+        "end": "2024-10-15",
+        "er": 1.0,
+        "actual_ret": 1.5,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-10-15",
+        "end": "2024-10-22",
+        "er": -0.5,
+        "actual_ret": -0.98,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-10-22",
+        "end": "2024-11-01",
+        "er": 0.5,
+        "actual_ret": -0.94,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-11-01",
+        "end": "2024-11-08",
+        "er": -1.5,
+        "actual_ret": 0.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-11-08",
+        "end": "2024-11-15",
+        "er": -1.5,
+        "actual_ret": -6.53,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-11-15",
+        "end": "2024-11-22",
+        "er": 2.0,
+        "actual_ret": 3.01,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-11-22",
+        "end": "2024-12-01",
+        "er": -0.7,
+        "actual_ret": -2.11,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-12-01",
+        "end": "2024-12-08",
+        "er": -2.5,
+        "actual_ret": -1.12,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-12-08",
+        "end": "2024-12-15",
+        "er": -1.0,
+        "actual_ret": 5.04,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2024-12-15",
+        "end": "2024-12-22",
+        "er": -1.5,
+        "actual_ret": -3.44,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2024-12-22",
+        "end": "2025-01-01",
+        "er": -1.5,
+        "actual_ret": -1.05,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-01-01",
+        "end": "2025-01-08",
+        "er": -2.0,
+        "actual_ret": 4.22,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-01-08",
+        "end": "2025-01-15",
+        "er": -2.0,
+        "actual_ret": -0.97,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-01-15",
+        "end": "2025-01-22",
+        "er": 0.7,
+        "actual_ret": 1.14,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-01-22",
+        "end": "2025-02-01",
+        "er": -1.0,
+        "actual_ret": -1.78,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-02-01",
+        "end": "2025-02-08",
+        "er": -1.5,
+        "actual_ret": 2.8,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-02-08",
+        "end": "2025-02-15",
+        "er": -2.0,
+        "actual_ret": 2.55,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-02-15",
+        "end": "2025-02-22",
+        "er": 1.5,
+        "actual_ret": 2.01,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-02-22",
+        "end": "2025-03-01",
+        "er": 0.5,
+        "actual_ret": -3.73,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-03-01",
+        "end": "2025-03-08",
+        "er": 1.0,
+        "actual_ret": 1.28,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-03-08",
+        "end": "2025-03-15",
+        "er": -1.0,
+        "actual_ret": 0.51,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-03-15",
+        "end": "2025-03-22",
+        "er": -2.5,
+        "actual_ret": 2.27,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-03-22",
+        "end": "2025-04-01",
+        "er": 0.7,
+        "actual_ret": -5.19,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-04-01",
+        "end": "2025-04-08",
+        "er": -2.3,
+        "actual_ret": -8.15,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-04-08",
+        "end": "2025-04-15",
+        "er": -1.0,
+        "actual_ret": 4.74,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-04-15",
+        "end": "2025-04-22",
+        "er": -2.0,
+        "actual_ret": 0.22,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-04-22",
+        "end": "2025-05-01",
+        "er": -2.5,
+        "actual_ret": 1.85,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-05-01",
+        "end": "2025-05-08",
+        "er": -2.0,
+        "actual_ret": 0.85,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-05-08",
+        "end": "2025-05-15",
+        "er": 2.0,
+        "actual_ret": 2.99,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-05-15",
+        "end": "2025-05-22",
+        "er": 2.5,
+        "actual_ret": 0.07,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-05-22",
+        "end": "2025-06-01",
+        "er": -0.8,
+        "actual_ret": 4.42,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-06-01",
+        "end": "2025-06-08",
+        "er": 3.2,
+        "actual_ret": 4.61,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-06-08",
+        "end": "2025-06-15",
+        "er": 2.5,
+        "actual_ret": 1.09,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-06-15",
+        "end": "2025-06-22",
+        "er": 2.0,
+        "actual_ret": 2.69,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-06-22",
+        "end": "2025-07-01",
+        "er": 4.0,
+        "actual_ret": 2.71,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-07-01",
+        "end": "2025-07-08",
+        "er": 2.0,
+        "actual_ret": -0.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-07-08",
+        "end": "2025-07-15",
+        "er": 3.2,
+        "actual_ret": 2.6,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-07-15",
+        "end": "2025-07-22",
+        "er": 2.1,
+        "actual_ret": -0.05,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-07-22",
+        "end": "2025-08-01",
+        "er": 2.0,
+        "actual_ret": 1.94,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-08-01",
+        "end": "2025-08-08",
+        "er": 4.0,
+        "actual_ret": 3.35,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-08-08",
+        "end": "2025-08-15",
+        "er": 1.5,
+        "actual_ret": 0.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-08-15",
+        "end": "2025-08-22",
+        "er": 1.5,
+        "actual_ret": -1.06,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-08-22",
+        "end": "2025-09-01",
+        "er": 0.5,
+        "actual_ret": 0.56,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-09-01",
+        "end": "2025-09-08",
+        "er": 1.8,
+        "actual_ret": 2.35,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-09-08",
+        "end": "2025-09-15",
+        "er": 0.5,
+        "actual_ret": 6.28,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-09-15",
+        "end": "2025-09-22",
+        "er": 2.5,
+        "actual_ret": 1.77,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-09-22",
+        "end": "2025-10-01",
+        "er": 1.5,
+        "actual_ret": -0.66,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-10-01",
+        "end": "2025-10-08",
+        "er": 3.2,
+        "actual_ret": 2.98,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-10-08",
+        "end": "2025-10-15",
+        "er": 2.5,
+        "actual_ret": -1.92,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-10-15",
+        "end": "2025-10-22",
+        "er": 2.8,
+        "actual_ret": 5.03,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-10-22",
+        "end": "2025-11-01",
+        "er": 2.5,
+        "actual_ret": 6.84,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-11-01",
+        "end": "2025-11-08",
+        "er": 1.4,
+        "actual_ret": -6.65,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-11-08",
+        "end": "2025-11-15",
+        "er": 3.5,
+        "actual_ret": -1.99,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-11-15",
+        "end": "2025-11-22",
+        "er": 4.0,
+        "actual_ret": -6.05,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2025-11-22",
+        "end": "2025-12-01",
+        "er": 1.8,
+        "actual_ret": 2.66,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-12-01",
+        "end": "2025-12-08",
+        "er": -1.0,
+        "actual_ret": 4.8,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-12-08",
+        "end": "2025-12-15",
+        "er": 1.5,
+        "actual_ret": -0.04,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-12-15",
+        "end": "2025-12-22",
+        "er": 1.5,
+        "actual_ret": -0.93,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2025-12-22",
+        "end": "2026-01-01",
+        "er": 2.0,
+        "actual_ret": 4.23,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-01",
+        "end": "2026-01-08",
+        "er": 2.5,
+        "actual_ret": 6.48,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-08",
+        "end": "2026-01-15",
+        "er": 2.5,
+        "actual_ret": 3.33,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-15",
+        "end": "2026-01-22",
+        "er": 2.0,
+        "actual_ret": 2.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-01-22",
+        "end": "2026-02-01",
+        "er": 1.0,
+        "actual_ret": 6.58,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-01",
+        "end": "2026-02-08",
+        "er": 1.2,
+        "actual_ret": 3.43,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-08",
+        "end": "2026-02-15",
+        "er": 2.5,
+        "actual_ret": 4.49,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-15",
+        "end": "2026-02-22",
+        "er": 1.2,
+        "actual_ret": 2.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-02-22",
+        "end": "2026-03-01",
+        "er": 1.8,
+        "actual_ret": 8.26,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-01",
+        "end": "2026-03-08",
+        "er": 1.0,
+        "actual_ret": -3.63,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-03-08",
+        "end": "2026-03-15",
+        "er": -3.5,
+        "actual_ret": 4.23,
+        "pred_regime": "Bear",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-03-15",
+        "end": "2026-03-22",
+        "er": 2.0,
+        "actual_ret": 4.43,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-03-22",
+        "end": "2026-04-01",
+        "er": 2.0,
+        "actual_ret": -6.91,
+        "pred_regime": "Bull",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": false
+      },
+      {
+        "as_of": "2026-04-01",
+        "end": "2026-04-08",
+        "er": -2.5,
+        "actual_ret": 0.73,
+        "pred_regime": "Bear",
+        "actual_regime": "Bear",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-04-08",
+        "end": "2026-04-15",
+        "er": 1.5,
+        "actual_ret": 1.61,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-04-15",
+        "end": "2026-04-22",
+        "er": 1.5,
+        "actual_ret": 4.59,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-04-22",
+        "end": "2026-05-01",
+        "er": 2.5,
+        "actual_ret": 2.68,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-01",
+        "end": "2026-05-08",
+        "er": 1.2,
+        "actual_ret": 9.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-08",
+        "end": "2026-05-15",
+        "er": 1.2,
+        "actual_ret": 7.81,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-15",
+        "end": "2026-05-22",
+        "er": -1.5,
+        "actual_ret": 5.0,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": false,
+        "regime_ok": true
+      },
+      {
+        "as_of": "2026-05-22",
+        "end": "2026-06-01",
+        "er": 2.0,
+        "actual_ret": 9.29,
+        "pred_regime": "Bull",
+        "actual_regime": "Bull",
+        "sign_ok": true,
+        "regime_ok": true
+      }
+    ]
+  }
+}

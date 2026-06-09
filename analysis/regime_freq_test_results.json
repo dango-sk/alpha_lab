@@ -1,0 +1,182 @@
+[
+  {
+    "as_of": "2026-01-01",
+    "expected_return": 0.8,
+    "judgment": "변동성",
+    "confidence": 70,
+    "summary": "KOSPI는 12월 MA50과 MA200 위에 위치하며 기술적 상승 신호를 보이나, 거래대금 감소와 경기전망CSI 하락은 혼재된 신호를 보여줍니다. 경제 회복 전망에도 불구하고 경기 둔화 우려가 남아 있어 보수적 운용이 적절해 보입니다.",
+    "kospi_next_month_return": 23.3721672518353,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-01-08",
+    "expected_return": 2.0,
+    "judgment": "변동성",
+    "confidence": 75,
+    "summary": "KOSPI는 MA50과 MA200 상승 추세에 있으며, KOSPI 작년 대비 70% 이상 상승은 강력한 상승 모멘텀을 시사합니다. 과매수 상태인 RSI는 조정 가능성을 내포하지만 거래대금 증가와 경제 회복 신호가 긍정적입니다.",
+    "kospi_next_month_return": 12.871510057039929,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-01-15",
+    "expected_return": -1.0,
+    "judgment": "변동성",
+    "confidence": 70,
+    "summary": "KOSPI는 최근 과매수 상태로 기술적 조정 가능성이 있지만, 펀더멘털적으로는 긍정적 신호가 있습니다. 반도체 시장의 호황이 긍정적 요인이나 글로벌 보호주의 영향으로 신중한 접근이 필요합니다.",
+    "kospi_next_month_return": 16.917803327858316,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-01-22",
+    "expected_return": 2.5,
+    "judgment": "변동성",
+    "confidence": 60,
+    "summary": "KOSPI는 상승 추세와 외국인 순매수, 국민연금의 주식 비중 상향 가능성에 힘입어 2.5% 수익률을 기대합니다. 그러나 RSI 과매수 및 경기전망 악화로 인해 조정 가능성도 남아 있어 확신도는 60%입니다.",
+    "kospi_next_month_return": 18.985247483799807,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-02-01",
+    "expected_return": 2.0,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 최근 6개월간 78% 상승하며 기술적 강세를 보이고 있으며, 펀더멘털 지표들은 경제 회복 기대감을 나타내고 있습니다. 그러나 RSI의 과매수 상태와 경기 불확실성으로 인해 상승 지속성에 대한 신중한 접근이 필요합니다.",
+    "kospi_next_month_return": 29.463548830811554,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-02-08",
+    "expected_return": 2.5,
+    "judgment": "변동성",
+    "confidence": 70,
+    "summary": "KOSPI는 6개월 연속 상승과 강한 매입세로 상승 가능성이 높으나, 글로벌 불확실성과 외국인 순매도로 인한 불안 요소도 존재합니다. 기술적 지표와 산업 성장 전망의 긍정적 영향에 근거하여 예상 수익률은 +2.5%로 추정합니다.",
+    "kospi_next_month_return": 6.66326270104672,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-02-15",
+    "expected_return": 0.5,
+    "judgment": "변동성",
+    "confidence": 70,
+    "summary": "KOSPI는 현재 상승 추세에 있으며, MA50 및 MA200 위에 위치하나 RSI 과매수로 조정 가능성 존재. 펀더멘털 개선과 반도체 산업 이슈 긍정적이나, 외국인 순매도와 VIX 상승은 리스크 요인입니다.",
+    "kospi_next_month_return": -3.3771773906861,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-02-22",
+    "expected_return": 1.5,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 최근 상승 추세와 단기 강세 신호에도 불구하고, 과매수 구간 진입과 경제 전망 불확실성이 존재합니다. 따라서 예상 수익률은 1.5%로, 확신도는 65입니다.",
+    "kospi_next_month_return": -0.322061191626409,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-03-01",
+    "expected_return": 1.5,
+    "judgment": "변동성",
+    "confidence": 70,
+    "summary": "최근 KOSPI의 강한 상승세에도 불구하고 과매수와 외국인의 순매수 감소는 하락 가능성을 일부 시사합니다. 펀더멘털 지표는 대체로 긍정적이지만, 인플레이션 압박과 시장 신뢰도 저하는 주의가 필요합니다.",
+    "kospi_next_month_return": -13.00386367568191,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-03-08",
+    "expected_return": -0.8,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 지난 6개월간 상승세를 유지했으나 최근 기술적 모멘텀 약화, 외국인 순매수 감소, 중동 지역 긴장 고조로 인한 변동성 증가 영향으로 불확실성이 큽니다. 기술적 지표와 펀더멘털 요소가 복합적으로 작용하여 보수적인 접근이 권장됩니다.",
+    "kospi_next_month_return": 5.803400230090758,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-03-15",
+    "expected_return": 1.2,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 외국인 매수세 및 기술적 강세에 힘입어 상승 압력이 있으나, 전반적인 글로벌 불확실성과 인플레이션 우려로 인해 변동성이 예상됩니다. 예상 수익률은 +1.2%로 보수적 운용이 적합하며, 확신도는 65%입니다.",
+    "kospi_next_month_return": 8.971500873651864,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-03-22",
+    "expected_return": 1.5,
+    "judgment": "변동성",
+    "confidence": 70,
+    "summary": "KOSPI는 최근 6개월 상승세와 거래대금 증가로 긍정적이며, 선행종합지수 상승도 지지합니다. 그러나 RSI 중립화와 VIX 상승은 변동성을 시사하여 보수적 접근이 필요합니다.",
+    "kospi_next_month_return": 19.617402036408514,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-04-01",
+    "expected_return": -1.5,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 3월에 급락하여 하락 추세를 보였고, RSI도 중립 구간으로 급락하며 가격 하락 경고를 시사합니다. 펀더멘털 지표 중 경기전망CSI 하락과 에너지 비용 증가로 인한 부정적 영향이 예상됩니다.",
+    "kospi_next_month_return": 21.583302908604114,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-04-08",
+    "expected_return": -3.5,
+    "judgment": "약세",
+    "confidence": 70,
+    "summary": "KOSPI는 MACD 급락과 외환시장의 불안정성, 반도체 주가 하락 등의 부정적 요인으로 이번 달 약세장 가능성이 높습니다. 과거 사례에서도 기술적 약세와 펀더멘털 악화 시 하락이 두드러졌습니다.",
+    "kospi_next_month_return": 29.91011235955056,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-04-15",
+    "expected_return": 2.0,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 현재 강한 상승 추세로 MA200을 크게 상회하고 있으며, 높은 거래대금과 경제 지표 호조는 긍정적 신호입니다. 그러나 인플레이션 압력과 국제 정세 불안정으로 인한 하방 위험을 고려할 때, 이번 달 예상 수익률은 +2.0%, 확신도는 65%입니다.",
+    "kospi_next_month_return": 34.738034856742026,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-04-22",
+    "expected_return": 1.2,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 MA200 상회와 6개월 연속 상승세로 긍정적인 모멘텀을 보이고 있지만, 물가 상승과 소비자 심리 불안정 등이 있어 신중한 접근이 요구됩니다. 예상 수익률은 1.2%로 보수적 운용을 권장합니다.",
+    "kospi_next_month_return": 26.47482014388489,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-05-01",
+    "expected_return": 2.5,
+    "judgment": "변동성",
+    "confidence": 75,
+    "summary": "KOSPI는 기술적 상승세와 펀더멘털의 긍정적 신호로 강세 전망입니다. 그러나 일부 불안 요소도 존재해 예상 수익률은 +2.5%로 보수적 강세를 유지합니다.",
+    "kospi_next_month_return": 28.035519255425235,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-05-08",
+    "expected_return": 1.5,
+    "judgment": "변동성",
+    "confidence": 65,
+    "summary": "KOSPI는 최근 6개월간 2배 가까이 상승하며 강세를 보이고 있지만, RSI가 과매수 구간에 위치해 변동성 위험이 존재합니다. 경제 개선 신호에도 경기전망CSI 하락과 인플레이션 우려가 혼재하여 중립적 수익률을 예상합니다.",
+    "kospi_next_month_return": 13.142215698126241,
+    "direction_correct": true
+  },
+  {
+    "as_of": "2026-05-15",
+    "expected_return": -1.8,
+    "judgment": "변동성",
+    "confidence": 70,
+    "summary": "KOSPI는 기술적 과매수 구간과 펀더멘털 불확실성으로 인해 주의가 필요하며, 6.11%의 최근 급락은 변동성 확대를 시사합니다. 외국인 및 기관 매도와 경기전망CSI 감소는 하락 압력을 증가시킬 수 있습니다.",
+    "kospi_next_month_return": 11.800341296928329,
+    "direction_correct": false
+  },
+  {
+    "as_of": "2026-05-22",
+    "expected_return": 3.5,
+    "judgment": "강세",
+    "confidence": 80,
+    "summary": "KOSPI는 지속적인 기술적 상승세와 긍정적인 펀더멘털 지표들 덕분에 3.5% 수익률을 예상합니다. 거래대금 증가와 MACD 상승 모멘텀, 미국 국채 금리 안정과 유가 하락이 강세를 지지합니다.",
+    "kospi_next_month_return": 6.226185650587759,
+    "direction_correct": true
+  }
+]
