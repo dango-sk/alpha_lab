@@ -528,9 +528,14 @@ MANAGER_SYSTEM = (
     "양쪽 비용을 균형 있게 고려하세요. 확신이 없다고 무조건 보수적으로 가지 마세요.\n\n"
     "[출력 규칙]\n"
     "반드시 JSON 한 줄만 출력. 앞뒤 설명, 마크다운, 코드블록 절대 금지.\n"
-    "형식: {\"expected_return\": 숫자, \"confidence\": 숫자, \"summary\": \"문장\"}\n"
+    "형식: {\"expected_return\": 숫자, \"confidence\": 숫자, \"strength\": \"강함|보통|약함\", \"summary\": \"문장\"}\n"
     "expected_return: KOSPI 예상 월간 수익률(%). 소수점 1자리.\n"
     "confidence: 확신도 0~100.\n"
+    "strength: 예상 방향(강세/약세)의 '세기'를 추세의 강도·지속성 기준으로 판단.\n"
+    "  - 강함: 추세가 뚜렷하고 지속 가능성이 높음 (방향 신호가 강함)\n"
+    "  - 보통: 방향은 있으나 강도는 중간\n"
+    "  - 약함: 방향성이 약하거나 불안정·혼조 (변동성장 포함)\n"
+    "  expected_return 크기와 대체로 일관되게(|er|이 크면 강함) 판단하되 추세의 질도 함께 보세요.\n"
     "summary는 핵심 수치를 포함해 2문장 이내로 간결하게 작성하세요."
 )
 
@@ -618,11 +623,14 @@ def run_manager_agent(manager_user: str) -> dict:
                     else:
                         parsed["judgment"] = "변동성"
                     parsed["expected_return"] = er
+                    # 강도: 모델이 안 줬거나 허용값이 아니면 '보통'으로 보정
+                    if parsed.get("strength") not in ("강함", "보통", "약함"):
+                        parsed["strength"] = "보통"
                     return parsed
         except Exception:
             pass
         print(f"  ⚠️ Manager 파싱 실패 (시도 {attempt+1}/3): {result[:80]}")
-    return {"judgment": "N/A", "expected_return": 0, "confidence": 0, "summary": result[:200]}
+    return {"judgment": "N/A", "expected_return": 0, "confidence": 0, "strength": "N/A", "summary": result[:200]}
 
 
 # ── 하드코딩 사이클 (레짐 조합 백테스트와 동일) ──────────────
@@ -787,8 +795,9 @@ def run_month(as_of: date, past_results: list = None) -> dict:
     er = result.get("expected_return", 0)
     j = result["judgment"]
     conf = result.get("confidence", 0)
+    strength = result.get("strength", "보통")
 
-    print(f"  → 예상 수익률: {er:+.1f}% → {j} (신뢰도: {conf})")
+    print(f"  → 예상 수익률: {er:+.1f}% → {j} (강도: {strength}, 신뢰도: {conf})")
     print(f"  → 실제 KOSPI: {kospi_ret:+.1f}%" if kospi_ret else "  → 실제 수익률: N/A")
 
     # 방향 맞춤 여부 (up/down)
@@ -804,6 +813,7 @@ def run_month(as_of: date, past_results: list = None) -> dict:
         "expected_return": er,
         "judgment": j,
         "confidence": conf,
+        "strength": strength,
         "summary": result.get("summary", ""),
         "cycle": cycle,
         "transition": transition,

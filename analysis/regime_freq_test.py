@@ -18,11 +18,19 @@
   python analysis/regime_freq_test.py            # 예측 생성(완료분 스킵)
   python analysis/regime_freq_test.py --score    # 빈도 비교표 출력
 """
+import sys
 import json
 import argparse
 import bisect
 from pathlib import Path
 from datetime import date
+
+# Windows(cp949) 콘솔/파일 출력에서 이모지(📰📚 등) 출력 시 UnicodeEncodeError 방지.
+# 출력 인코딩을 UTF-8로 고정 (regime_agent의 print들도 이 stdout을 통해 나감).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 
 DAYS = [1, 8, 15, 22]                 # 4회 기준
 FREQ = {"1회": [1], "2회": [1, 15], "4회": [1, 8, 15, 22]}
@@ -100,7 +108,7 @@ def generate():
             base_excl = [x for x in base if x.get("as_of", "")[:7] != cur_month]
             r = ra.run_month(as_of, past_results=base_excl)
             slim = {k: r.get(k) for k in (
-                "as_of", "expected_return", "judgment", "confidence",
+                "as_of", "expected_return", "judgment", "confidence", "strength",
                 "summary", "kospi_next_month_return", "direction_correct")}
             results = [x for x in results if x["as_of"] != key]
             results.append(slim)
@@ -166,7 +174,8 @@ def score():
         i = bisect.bisect_left(dts, d) - 1
         return px[dts[i]] if i >= 0 else None
 
-    print(f"채점 = reign(다음 예측까지) | 레짐 임계값: Bull>={BULL_TH:+.0f}% / Bear<={BEAR_TH:+.0f}% (히스테리시스)\n")
+    print(f"채점 = reign(다음 예측까지) | 레짐 임계값: Bull>={BULL_TH:+.0f}% / Bear<={BEAR_TH:+.0f}% (히스테리시스)")
+    print(f"강도 = 모델이 출력한 strength(강함/보통/약함) 표시 (적중 채점 안 함)\n")
     print(f"{'빈도':6} {'예측수':>5} {'부호 적중':>10} {'레짐 적중':>10}")
 
     out = {
@@ -208,17 +217,19 @@ def score():
         out["detail"][fname] = [
             {"as_of": a, "end": b, "er": er, "actual_ret": round(r, 2),
              "pred_regime": pr, "actual_regime": ac,
+             "strength": preds[a].get("strength"),   # 모델이 출력한 강도 (표시용)
              "sign_ok": (er > 0 and r > 0) or (er < 0 and r < 0) or er == 0,
              "regime_ok": pr == ac}
             for (a, b, er, r), pr, ac in detail_store[fname]
         ]
 
     # 4회 세부
-    print("\n[4회 세부]  예측일→종료      er    실제%    예측/실제레짐   부호  레짐")
+    print("\n[4회 세부]  예측일→종료      er    실제%    예측/실제레짐   강도(모델)   부호  레짐")
     for (a, b, er, r), pr, ac in detail_store["4회"]:
         sg = (er > 0 and r > 0) or (er < 0 and r < 0) or er == 0
         rg = pr == ac
-        print(f"  {a}→{b}  {er:+5.1f}  {r:+7.2f}%   {pr}/{ac:<4}    "
+        st = preds[a].get("strength") or "-"
+        print(f"  {a}→{b}  {er:+5.1f}  {r:+7.2f}%   {pr}/{ac:<4}  {st:<6}   "
               f"{'O' if sg else 'X'}    {'O' if rg else 'X'}")
 
     json.dump(out, open(SCORE_OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=2)

@@ -34,6 +34,7 @@
         "actual_ret": 23.37,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -44,6 +45,7 @@
         "actual_ret": 29.46,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -54,6 +56,7 @@
         "actual_ret": -13.0,
         "pred_regime": "Bull",
         "actual_regime": "Bear",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": false
       },
@@ -64,6 +67,7 @@
         "actual_ret": 21.58,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": true
       },
@@ -74,6 +78,7 @@
         "actual_ret": 28.04,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       }
@@ -86,6 +91,7 @@
         "actual_ret": 9.86,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -96,6 +102,7 @@
         "actual_ret": 10.41,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": true
       },
@@ -106,6 +113,7 @@
         "actual_ret": 12.6,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -116,6 +124,7 @@
         "actual_ret": 11.53,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -126,6 +135,7 @@
         "actual_ret": -5.96,
         "pred_regime": "Bull",
         "actual_regime": "Bear",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": false
       },
@@ -136,6 +146,7 @@
         "actual_ret": -9.1,
         "pred_regime": "Bull",
         "actual_regime": "Bear",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": false
       },
@@ -146,6 +157,7 @@
         "actual_ret": 10.05,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": true
       },
@@ -156,6 +168,7 @@
         "actual_ret": 7.81,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -166,6 +179,7 @@
         "actual_ret": 18.58,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -176,6 +190,7 @@
         "actual_ret": 15.03,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": true
       }
@@ -188,6 +203,7 @@
         "actual_ret": 6.48,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -198,6 +214,7 @@
         "actual_ret": 3.33,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -208,6 +225,7 @@
         "actual_ret": 2.49,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": true
       },
@@ -218,6 +236,7 @@
         "actual_ret": 6.58,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -228,6 +247,7 @@
         "actual_ret": 3.43,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -238,6 +258,7 @@
         "actual_ret": 4.49,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -248,6 +269,7 @@
         "actual_ret": 2.26,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -258,6 +280,7 @@
         "actual_ret": 8.26,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -268,6 +291,7 @@
         "actual_ret": -3.63,
         "pred_regime": "Bull",
         "actual_regime": "Bear",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": false
       },
@@ -278,6 +302,7 @@
         "actual_ret": 4.23,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": true
       },
@@ -288,6 +313,7 @@
         "actual_ret": 4.43,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -298,6 +324,7 @@
         "actual_ret": -6.91,
         "pred_regime": "Bull",
         "actual_regime": "Bear",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": false
       },
@@ -308,6 +335,7 @@
         "actual_ret": 0.73,
         "pred_regime": "Bull",
         "actual_regime": "Bear",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": false
       },
@@ -318,6 +346,7 @@
         "actual_ret": 1.61,
         "pred_regime": "Bear",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": false
       },
@@ -328,6 +357,7 @@
         "actual_ret": 4.59,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -338,6 +368,7 @@
         "actual_ret": 2.68,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -348,6 +379,7 @@
         "actual_ret": 9.81,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -358,6 +390,7 @@
         "actual_ret": 7.81,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       },
@@ -368,6 +401,7 @@
         "actual_ret": 5.0,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": false,
         "regime_ok": true
       },
@@ -378,6 +412,7 @@
         "actual_ret": 9.29,
         "pred_regime": "Bull",
         "actual_regime": "Bull",
+        "strength": null,
         "sign_ok": true,
         "regime_ok": true
       }
