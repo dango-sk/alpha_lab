@@ -23,13 +23,25 @@ universe 테이블을 PG에 생성.
 백테스트 기간: 2018-01-01 ~
 """
 import sys
+import os
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-PG_URL = "postgresql://postgres:NgHDMsgiGwbvMpWHLUgTQguaedbGoxvv@metro.proxy.rlwy.net:50087/railway"
+# .env 로드 (DATABASE_URL)
+for env_path in [
+    Path(__file__).parent.parent / ".env",
+]:
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                os.environ.setdefault(key.strip(), val.strip().strip('"'))
+
+PG_URL = os.environ["DATABASE_URL"]
 
 FINANCE_TYPES = ["금융업", "은행업", "보험업", "증권업", "여신전문금융업", "기타금융업"]
 EXCLUDE_KEYWORDS = ["스팩", "SPAC", "ETF", "ETN", "리츠", "REIT"]
@@ -97,6 +109,27 @@ def build_universe(rebuild_all: bool = False):
     for ym, first_day in monthly_dates:
         rebal_dates.append((first_day, "monthly"))
 
+    # ── 예정(forward) 리밸: 최신 데이터 다음 달 1일 ──
+    # 그 달 거래일이 아직 없어도(예: 6/30 시점의 7/1) 직전 최신 거래일 데이터로
+    # 편입 종목을 미리 산출한다. (실거래: 6/30 종가로 결정 → 7/1 매수)
+    if monthly_dates:
+        latest_first = monthly_dates[-1][1]          # 최신 월 첫 거래일 (예: 2026-06-01)
+        ly, lm = int(latest_first[:4]), int(latest_first[5:7])
+        fy, fm = (ly + 1, 1) if lm == 12 else (ly, lm + 1)
+        forward_rebal = f"{fy:04d}-{fm:02d}-01"      # 예: 2026-07-01
+        if (forward_rebal, "monthly") not in rebal_dates:
+            rebal_dates.append((forward_rebal, "monthly"))
+
+        # 최신 월 + 예정 리밸은 데이터가 아직 갱신될 수 있으므로 매 실행 시 재구축한다.
+        # (지난달에 6/30 데이터로 만든 7/1 forward → 7/1 실데이터 도착 시 자동 갱신)
+        if not rebuild_all:
+            cur.execute(
+                "DELETE FROM alpha_lab.universe WHERE rebal_type='monthly' AND rebal_date >= %s",
+                (latest_first,),
+            )
+            conn.commit()
+            existing = {e for e in existing if not (e[1] == "monthly" and e[0] >= latest_first)}
+
     todo_rebal_dates = [rd for rd in rebal_dates if rd not in existing]
     print(f"리밸런싱 날짜: 전체 {len(rebal_dates)}건 / 추가 대상 {len(todo_rebal_dates)}건")
     if not todo_rebal_dates:
@@ -137,15 +170,23 @@ def build_universe(rebuild_all: bool = False):
     total_inserted = 0
 
     for idx, (rebal_date, rebal_type) in enumerate(todo_rebal_dates):
-        rebal_ym = rebal_date[:7]
         applicable_fy = get_applicable_fiscal_year(rebal_date)
 
-        # fnspace_master 스냅샷
-        snapshot = master_by_month.get(rebal_ym, {})
+        # 데이터 as-of 날짜: 그 리밸 날짜에 거래 데이터가 없으면(예정 리밸)
+        # 직전 최신 거래일을 사용한다. (정상 과거 리밸은 rebal_date == 거래일이라 동일)
+        cur.execute(
+            "SELECT MAX(trade_date) FROM alpha_lab.daily_price WHERE trade_date <= %s",
+            (rebal_date,),
+        )
+        as_of_date = cur.fetchone()[0] or rebal_date
+        rebal_ym = rebal_date[:7]
+
+        # fnspace_master 스냅샷: 해당 월 없으면 as-of 월로 fallback (예정 리밸용)
+        snapshot = master_by_month.get(rebal_ym) or master_by_month.get(as_of_date[:7], {})
         if not snapshot:
             continue
 
-        # 거래대금 20일 평균 (직전 40일 범위)
+        # 거래대금 20일 평균 (as-of 직전 40일 범위)
         cur.execute("""
             SELECT stock_code, AVG(trade_amount)
             FROM (
@@ -155,15 +196,15 @@ def build_universe(rebuild_all: bool = False):
                   AND trade_amount > 0
             ) sub
             GROUP BY stock_code
-        """, (rebal_date, rebal_date))
+        """, (as_of_date, as_of_date))
         avg_trade = {r[0]: r[1] for r in cur.fetchall()}
 
-        # 해당 날짜 market_cap
+        # as-of 날짜 market_cap
         cur.execute("""
             SELECT stock_code, market_cap
             FROM alpha_lab.daily_price
             WHERE trade_date = %s AND market_cap > 0
-        """, (rebal_date,))
+        """, (as_of_date,))
         mcap_by = {r[0]: r[1] for r in cur.fetchall()}
 
         inserts = []

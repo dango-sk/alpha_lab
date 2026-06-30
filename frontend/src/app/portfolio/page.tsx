@@ -111,10 +111,10 @@ export default function PortfolioPage() {
         const bm = universe === 'KOSPI+KOSDAQ' ? 'KOSDAQ' : 'KOSPI';
         setSelectedStrategies([bm, 'A0'].filter((k) => keys.includes(k)));
         for (const key of keys) {
-          if (res[key]?.rebalance_dates?.length >= 2) {
+          if (res[key]?.rebalance_dates?.length >= 1) {
             const dates = res[key].rebalance_dates;
-            // Last date is end-of-period marker; use second-to-last as latest rebal date
-            setSelectedDate(dates[dates.length - 2]);
+            // 최신 리밸(예정/forward 포함)을 기본 선택
+            setSelectedDate(dates[dates.length - 1]);
             break;
           }
         }
@@ -123,16 +123,18 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [universe, rebalType]);
 
-  // Available dates — use A0 (base strategy) dates as canonical schedule
-  // Exclude the last date (it's the end-of-period marker for return calc, not a rebalance date)
+  // Available dates — A0(base) 리밸 일정 전체.
+  // 마지막은 예정(forward) 리밸(예: 2026-07-01)이므로 포함한다.
+  // (과거엔 마지막이 수익률 계산용 경계일이라 잘랐지만, 이제 파이프라인이
+  //  경계일을 붙이지 않고 항상 예정 리밸로 끝낸다.)
   const availableDates = useMemo(() => {
     const base = results['A0']?.rebalance_dates;
-    if (base?.length && base.length >= 2) return base.slice(0, -1).sort();
-    // fallback: intersection of all strategies
+    if (base?.length) return [...base].sort();
+    // fallback: union of all strategies
     const dateSet = new Set<string>();
     Object.values(results).forEach((r) => {
-      if (r.rebalance_dates?.length && r.rebalance_dates.length >= 2) {
-        r.rebalance_dates.slice(0, -1).forEach((d) => dateSet.add(d));
+      if (r.rebalance_dates?.length) {
+        r.rebalance_dates.forEach((d) => dateSet.add(d));
       }
     });
     return [...dateSet].sort();

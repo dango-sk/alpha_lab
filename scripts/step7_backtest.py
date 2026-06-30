@@ -10,6 +10,7 @@ Step 7: 백테스트
 비중: 시총 비례 + 비중상한 캡 (전 전략 공통)
 """
 import json
+import os
 import sys
 import time
 import numpy as np
@@ -25,6 +26,9 @@ from lib.factor_engine import (
 )
 import lib.factor_engine as _fe  # _prefetch_cache 접근용
 from lib.db import get_conn
+
+# 손절 상세 로그는 기본 OFF (수천 줄 도배 방지). STOPLOSS_VERBOSE=1 로 켤 수 있음.
+_STOPLOSS_VERBOSE = os.environ.get("STOPLOSS_VERBOSE", "") not in ("", "0", "false", "False")
 
 
 def _get_price_cache():
@@ -307,7 +311,8 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
                     ret_so_far = (price - entry_price) / entry_price
                     stopped_info[i] = (dt, ret_so_far)
                     stopped = True
-                    print(f"  [손절] {code} | {dt} | 최초편입가={first_entry_price:,.0f} 고점={peak_price:,.0f} 현재={price:,.0f} 고점대비={drawdown*100:.1f}%")
+                    if _STOPLOSS_VERBOSE:
+                        print(f"  [손절] {code} | {dt} | 최초편입가={first_entry_price:,.0f} 고점={peak_price:,.0f} 현재={price:,.0f} 고점대비={drawdown*100:.1f}%")
                     break
             else:
                 # entry: 최초 편입가 대비
@@ -316,7 +321,8 @@ def calc_portfolio_return_with_stoploss(conn, stocks, start_date, end_date,
                     ret_so_far = (price - entry_price) / entry_price
                     stopped_info[i] = (dt, ret_so_far)
                     stopped = True
-                    print(f"  [손절] {code} | {dt} | 최초편입가={first_entry_price:,.0f} 현재={price:,.0f} 편입가대비={ret_from_first*100:.1f}%")
+                    if _STOPLOSS_VERBOSE:
+                        print(f"  [손절] {code} | {dt} | 최초편입가={first_entry_price:,.0f} 현재={price:,.0f} 편입가대비={ret_from_first*100:.1f}%")
                     break
 
         # carry_over 업데이트 (손절된 종목은 제외)
@@ -953,7 +959,10 @@ def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
         holdings_all[key] = {}
         attr_all[key] = {}
 
-        for idx in range(len(rb_dates) - 1):
+        # range(len) — 마지막(예정/forward) 리밸 날짜도 holdings 생성.
+        #   · 정상 과거 리밸: idx < len-1 일 때만 attribution(수익률) 계산
+        #   · 마지막이 단순 거래일 경계(universe 미존재)면 get_universe_stocks 빈값 → 자동 skip
+        for idx in range(len(rb_dates)):
             calc_date = rb_dates[idx]
 
             # 해당 월 마스터 선택
@@ -985,6 +994,23 @@ def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
                 ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.d
             """, (*codes, calc_date)).fetchall()
             start_map = {r[0]: (r[1], r[2]) for r in start_rows}
+
+            # forward(예정) 리밸: calc_date 당일/이후 거래가 없으면 직전 최신가로 fallback
+            missing = [c for c in codes if c not in start_map]
+            if missing:
+                ph2 = ",".join(["?"] * len(missing))
+                fb_rows = conn.execute(f"""
+                    SELECT dp.stock_code, dp.market_cap, dp.adj_close
+                    FROM daily_price dp
+                    INNER JOIN (
+                        SELECT stock_code, MAX(trade_date) as d
+                        FROM daily_price WHERE stock_code IN ({ph2}) AND trade_date <= ? AND adj_close > 0
+                        GROUP BY stock_code
+                    ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.d
+                """, (*missing, calc_date)).fetchall()
+                for r in fb_rows:
+                    start_map.setdefault(r[0], (r[1], r[2]))
+
             raw_mcaps = [start_map.get(c, (0, 0))[0] or 0 for c in codes]
             weights = _apply_mcap_cap(raw_mcaps, cap=cap)
 
