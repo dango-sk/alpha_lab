@@ -551,6 +551,65 @@ def api_cumulative_returns(
 
 
 # ══════════════════════════════════════════════
+# 5-2. GET /api/monthly-ohlc
+# ══════════════════════════════════════════════
+@app.get("/api/monthly-ohlc")
+def api_monthly_ohlc(
+    strategy: str,
+    date: str,
+    end_date: Optional[str] = None,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    """보유 종목의 '편입 달'(date ~ 다음 리밸런싱일; 진행 중이면 최신일까지) 구간
+    일별 주가에서 월중 고가(최고 high)/저가(최저 low)/최근 종가(close)를 계산.
+
+    daily_price에 매일 데이터가 쌓이면 조회 시마다 자동으로 최신값 반영됨.
+    end_date 없으면(진행 중인 달) 최신 거래일까지 집계. 있으면 그 직전까지(< end_date)."""
+    holdings_df = get_holdings(strategy, date, universe=universe, rebal_type=rebal_type)
+    if holdings_df.empty:
+        return {}
+
+    codes = holdings_df["종목코드"].tolist()
+
+    from lib.db import get_conn
+    conn = get_conn()
+    placeholders = ",".join(["%s"] * len(codes))
+    # end_date 있으면 그 날(다음 리밸일) 직전까지, 없으면 상한 없음(최신일까지)
+    upper_clause = "AND trade_date < %s" if end_date else ""
+    params = [*codes, date] + ([end_date] if end_date else [])
+    cur = conn.execute(f"""
+        SELECT stock_code,
+               MAX(high) as month_high,
+               MIN(low)  as month_low,
+               MAX(CASE WHEN rn_end = 1 THEN close END) as last_close,
+               MAX(CASE WHEN rn_end = 1 THEN trade_date END) as last_date
+        FROM (
+            SELECT stock_code, high, low, close, trade_date,
+                   ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date DESC) as rn_end
+            FROM daily_price
+            WHERE stock_code IN ({placeholders})
+              AND trade_date >= %s {upper_clause}
+              AND close > 0
+        ) sub
+        GROUP BY stock_code
+    """, tuple(params))
+    rows = cur.fetchall()
+    conn.close()
+
+    result = {}
+    for r in rows:
+        code, hi, lo, close, last_date = r[0], r[1], r[2], r[3], r[4]
+        result[code] = {
+            "월중고가": round(float(hi)) if hi else None,
+            "월중저가": round(float(lo)) if lo else None,
+            "종가": round(float(close)) if close else None,
+            "기준일": str(last_date)[:10] if last_date else None,
+        }
+    return _convert_for_json(result)
+
+
+# ══════════════════════════════════════════════
 # 6. GET /api/characteristics
 # ══════════════════════════════════════════════
 @app.get("/api/characteristics")

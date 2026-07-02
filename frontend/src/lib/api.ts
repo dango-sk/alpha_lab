@@ -101,6 +101,21 @@ export async function getCumulativeReturns(
   return fetchApi(`/api/cumulative-returns?${qs}`);
 }
 
+export async function getMonthlyOhlc(
+  strategy: string,
+  date: string,
+  end_date?: string,
+  universe?: string,
+  rebal_type?: string
+) {
+  const params: Record<string, string> = { strategy, date };
+  if (end_date) params.end_date = end_date;
+  if (universe) params.universe = universe;
+  if (rebal_type) params.rebal_type = rebal_type;
+  const qs = new URLSearchParams(params).toString();
+  return fetchApi(`/api/monthly-ohlc?${qs}`);
+}
+
 export async function getFirstEntryDates(
   strategy: string,
   universe?: string,
