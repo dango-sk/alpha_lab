@@ -558,6 +558,7 @@ def api_monthly_ohlc(
     strategy: str,
     date: str,
     end_date: Optional[str] = None,
+    prev_date: Optional[str] = None,
     universe: Optional[str] = None,
     rebal_type: Optional[str] = None,
 ):
@@ -565,7 +566,11 @@ def api_monthly_ohlc(
     일별 주가에서 월중 고가(최고 high)/저가(최저 low)/최근 종가(close)를 계산.
 
     daily_price에 매일 데이터가 쌓이면 조회 시마다 자동으로 최신값 반영됨.
-    end_date 없으면(진행 중인 달) 최신 거래일까지 집계. 있으면 그 직전까지(< end_date)."""
+    end_date 없으면(진행 중인 달) 최신 거래일까지 집계. 있으면 그 직전까지(< end_date).
+
+    자동 대체: 선택한 달(date)이 최신 주가일보다 미래라 데이터가 아직 없으면
+    (예: 7월 예정 리밸), prev_date(직전 리밸일)가 있으면 [prev_date, date) 구간
+    = 데이터가 있는 최근 달의 값으로 대체해서 보여준다."""
     holdings_df = get_holdings(strategy, date, universe=universe, rebal_type=rebal_type)
     if holdings_df.empty:
         return {}
@@ -574,10 +579,23 @@ def api_monthly_ohlc(
 
     from lib.db import get_conn
     conn = get_conn()
+
+    # 선택한 달에 주가가 아직 없으면(예정 리밸) 직전 리밸 구간으로 대체
+    start = date
+    upper = end_date
+    fallback = False
+    cur = conn.execute("SELECT MAX(trade_date) FROM daily_price")
+    _row = cur.fetchone()
+    latest = str(_row[0])[:10] if _row and _row[0] else None
+    if latest and date > latest and prev_date:
+        start = prev_date   # 데이터 있는 최근 달 시작
+        upper = date        # 이번(예정) 리밸 직전까지
+        fallback = True
+
     placeholders = ",".join(["%s"] * len(codes))
-    # end_date 있으면 그 날(다음 리밸일) 직전까지, 없으면 상한 없음(최신일까지)
-    upper_clause = "AND trade_date < %s" if end_date else ""
-    params = [*codes, date] + ([end_date] if end_date else [])
+    # upper 있으면 그 날 직전까지(< upper), 없으면 상한 없음(최신일까지)
+    upper_clause = "AND trade_date < %s" if upper else ""
+    params = [*codes, start] + ([upper] if upper else [])
     cur = conn.execute(f"""
         SELECT stock_code,
                MAX(high) as month_high,
@@ -605,6 +623,7 @@ def api_monthly_ohlc(
             "월중저가": round(float(lo)) if lo else None,
             "종가": round(float(close)) if close else None,
             "기준일": str(last_date)[:10] if last_date else None,
+            "대체": fallback,  # True면 선택 달이 아니라 직전(데이터 있는) 달 값
         }
     return _convert_for_json(result)
 

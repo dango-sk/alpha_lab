@@ -105,11 +105,13 @@ export async function getMonthlyOhlc(
   strategy: string,
   date: string,
   end_date?: string,
+  prev_date?: string,
   universe?: string,
   rebal_type?: string
 ) {
   const params: Record<string, string> = { strategy, date };
   if (end_date) params.end_date = end_date;
+  if (prev_date) params.prev_date = prev_date;
   if (universe) params.universe = universe;
   if (rebal_type) params.rebal_type = rebal_type;
   const qs = new URLSearchParams(params).toString();

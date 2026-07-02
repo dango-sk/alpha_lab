@@ -215,7 +215,7 @@ export default function PortfolioPage() {
     // 편입 달 일별 주가 → 월중 고가/저가/최근 종가 (nextDate 없으면 진행 중인 달 = 최신일까지)
     type OhlcRow = { 월중고가: number | null; 월중저가: number | null; 종가: number | null; 기준일: string | null };
     const ohlcPromises = strategyKeys.map((key) =>
-      getMonthlyOhlc(key, selectedDate, nextDate, universe, rebalType)
+      getMonthlyOhlc(key, selectedDate, nextDate, prevDate, universe, rebalType)
         .then((data) => ({ key, data: data as Record<string, OhlcRow> }))
         .catch(() => ({ key, data: {} as Record<string, OhlcRow> }))
     );
