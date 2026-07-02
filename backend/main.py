@@ -598,12 +598,14 @@ def api_monthly_ohlc(
     params = [*codes, start] + ([upper] if upper else [])
     cur = conn.execute(f"""
         SELECT stock_code,
+               MAX(CASE WHEN rn_start = 1 THEN open END) as month_open,
                MAX(high) as month_high,
                MIN(low)  as month_low,
                MAX(CASE WHEN rn_end = 1 THEN close END) as last_close,
                MAX(CASE WHEN rn_end = 1 THEN trade_date END) as last_date
         FROM (
-            SELECT stock_code, high, low, close, trade_date,
+            SELECT stock_code, open, high, low, close, trade_date,
+                   ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date ASC)  as rn_start,
                    ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date DESC) as rn_end
             FROM daily_price
             WHERE stock_code IN ({placeholders})
@@ -617,8 +619,9 @@ def api_monthly_ohlc(
 
     result = {}
     for r in rows:
-        code, hi, lo, close, last_date = r[0], r[1], r[2], r[3], r[4]
+        code, op, hi, lo, close, last_date = r[0], r[1], r[2], r[3], r[4], r[5]
         result[code] = {
+            "월초시가": round(float(op)) if op else None,
             "월중고가": round(float(hi)) if hi else None,
             "월중저가": round(float(lo)) if lo else None,
             "종가": round(float(close)) if close else None,
