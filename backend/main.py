@@ -551,6 +551,87 @@ def api_cumulative_returns(
 
 
 # ══════════════════════════════════════════════
+# 5-2. GET /api/monthly-ohlc
+# ══════════════════════════════════════════════
+@app.get("/api/monthly-ohlc")
+def api_monthly_ohlc(
+    strategy: str,
+    date: str,
+    end_date: Optional[str] = None,
+    prev_date: Optional[str] = None,
+    universe: Optional[str] = None,
+    rebal_type: Optional[str] = None,
+):
+    """보유 종목의 '편입 달'(date ~ 다음 리밸런싱일; 진행 중이면 최신일까지) 구간
+    일별 주가에서 월중 고가(최고 high)/저가(최저 low)/최근 종가(close)를 계산.
+
+    daily_price에 매일 데이터가 쌓이면 조회 시마다 자동으로 최신값 반영됨.
+    end_date 없으면(진행 중인 달) 최신 거래일까지 집계. 있으면 그 직전까지(< end_date).
+
+    자동 대체: 선택한 달(date)이 최신 주가일보다 미래라 데이터가 아직 없으면
+    (예: 7월 예정 리밸), prev_date(직전 리밸일)가 있으면 [prev_date, date) 구간
+    = 데이터가 있는 최근 달의 값으로 대체해서 보여준다."""
+    holdings_df = get_holdings(strategy, date, universe=universe, rebal_type=rebal_type)
+    if holdings_df.empty:
+        return {}
+
+    codes = holdings_df["종목코드"].tolist()
+
+    from lib.db import get_conn
+    conn = get_conn()
+
+    # 선택한 달에 주가가 아직 없으면(예정 리밸) 직전 리밸 구간으로 대체
+    start = date
+    upper = end_date
+    fallback = False
+    cur = conn.execute("SELECT MAX(trade_date) FROM daily_price")
+    _row = cur.fetchone()
+    latest = str(_row[0])[:10] if _row and _row[0] else None
+    if latest and date > latest and prev_date:
+        start = prev_date   # 데이터 있는 최근 달 시작
+        upper = date        # 이번(예정) 리밸 직전까지
+        fallback = True
+
+    placeholders = ",".join(["%s"] * len(codes))
+    # upper 있으면 그 날 직전까지(< upper), 없으면 상한 없음(최신일까지)
+    upper_clause = "AND trade_date < %s" if upper else ""
+    params = [*codes, start] + ([upper] if upper else [])
+    cur = conn.execute(f"""
+        SELECT stock_code,
+               MAX(CASE WHEN rn_start = 1 THEN open END) as month_open,
+               MAX(high) as month_high,
+               MIN(low)  as month_low,
+               MAX(CASE WHEN rn_end = 1 THEN close END) as last_close,
+               MAX(CASE WHEN rn_end = 1 THEN trade_date END) as last_date
+        FROM (
+            SELECT stock_code, open, high, low, close, trade_date,
+                   ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date ASC)  as rn_start,
+                   ROW_NUMBER() OVER (PARTITION BY stock_code ORDER BY trade_date DESC) as rn_end
+            FROM daily_price
+            WHERE stock_code IN ({placeholders})
+              AND trade_date >= %s {upper_clause}
+              AND close > 0
+        ) sub
+        GROUP BY stock_code
+    """, tuple(params))
+    rows = cur.fetchall()
+    conn.close()
+
+    result = {}
+    for r in rows:
+        code, op, hi, lo, close, last_date = r[0], r[1], r[2], r[3], r[4], r[5]
+        result[code] = {
+            "월초시가": round(float(op)) if op else None,
+            "월중고가": round(float(hi)) if hi else None,
+            "월중저가": round(float(lo)) if lo else None,
+            "종가": round(float(close)) if close else None,
+            "기준일": str(last_date)[:10] if last_date else None,
+            "대체": fallback,  # True면 선택 달이 아니라 직전(데이터 있는) 달 값
+        }
+    return _convert_for_json(result)
+
+
+# ══════════════════════════════════════════════
 # 6. GET /api/characteristics
 # ══════════════════════════════════════════════
 @app.get("/api/characteristics")

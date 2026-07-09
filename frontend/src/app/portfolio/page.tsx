@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution, getFirstEntryDates, getCumulativeReturns } from '@/lib/api';
+import { getResults, getConfig, getHoldings, getCharacteristics, getTurnover, getAttribution, getFirstEntryDates, getCumulativeReturns, getMonthlyOhlc } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct } from '@/lib/hooks';
 import KpiCard from '@/components/KpiCard';
 import DataTable from '@/components/DataTable';
@@ -96,6 +96,7 @@ export default function PortfolioPage() {
   const [attrMap, setAttrMap] = useState<Record<string, Record<string, number>>>({});
   const [firstEntryMap, setFirstEntryMap] = useState<Record<string, Record<string, string>>>({});
   const [cumRetMap, setCumRetMap] = useState<Record<string, Record<string, { '누적수익률(%)': number | null; is_new: boolean }>>>({});
+  const [ohlcMap, setOhlcMap] = useState<Record<string, Record<string, { 월초시가: number | null; 월중고가: number | null; 월중저가: number | null; 종가: number | null; 기준일: string | null }>>>({});
 
   // Load config and results
   useEffect(() => {
@@ -211,6 +212,14 @@ export default function PortfolioPage() {
         .catch(() => ({ key, data: {} as Record<string, { '누적수익률(%)': number | null; is_new: boolean }> }))
     );
 
+    // 편입 달 일별 주가 → 월중 고가/저가/최근 종가 (nextDate 없으면 진행 중인 달 = 최신일까지)
+    type OhlcRow = { 월초시가: number | null; 월중고가: number | null; 월중저가: number | null; 종가: number | null; 기준일: string | null };
+    const ohlcPromises = strategyKeys.map((key) =>
+      getMonthlyOhlc(key, selectedDate, nextDate, prevDate, universe, rebalType)
+        .then((data) => ({ key, data: data as Record<string, OhlcRow> }))
+        .catch(() => ({ key, data: {} as Record<string, OhlcRow> }))
+    );
+
     Promise.all([
       Promise.all(holdingsPromises),
       Promise.all(charsPromises),
@@ -218,8 +227,9 @@ export default function PortfolioPage() {
       Promise.all(attrPromises),
       Promise.all(firstEntryPromises),
       Promise.all(cumRetPromises),
+      Promise.all(ohlcPromises),
     ])
-      .then(([holdingsResults, charsResults, turnoverResults, attrResults, firstEntryResults, cumRetResults]) => {
+      .then(([holdingsResults, charsResults, turnoverResults, attrResults, firstEntryResults, cumRetResults, ohlcResults]) => {
         const hMap: Record<string, Holding[]> = {};
         holdingsResults.forEach(({ key, data }) => { hMap[key] = data; });
         setHoldingsMap(hMap);
@@ -248,6 +258,10 @@ export default function PortfolioPage() {
         const crMap: Record<string, Record<string, { '누적수익률(%)': number | null; is_new: boolean }>> = {};
         cumRetResults.forEach(({ key, data }) => { crMap[key] = data; });
         setCumRetMap(crMap);
+
+        const oMap: Record<string, Record<string, OhlcRow>> = {};
+        ohlcResults.forEach(({ key, data }) => { oMap[key] = data; });
+        setOhlcMap(oMap);
       })
       .catch(console.error)
       .finally(() => setDetailLoading(false));
@@ -457,6 +471,34 @@ export default function PortfolioPage() {
       format: (v: unknown) => typeof v === 'number' ? v.toFixed(1) : String(v ?? ''),
     },
     {
+      key: '월초시가',
+      label: '월초시가',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => typeof v === 'number' ? v.toLocaleString() : '-',
+    },
+    {
+      key: '월중고가',
+      label: '월중고가',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => typeof v === 'number' ? v.toLocaleString() : '-',
+    },
+    {
+      key: '월중저가',
+      label: '월중저가',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => typeof v === 'number' ? v.toLocaleString() : '-',
+    },
+    {
+      key: '종가',
+      label: '종가',
+      align: 'right' as const,
+      mono: true,
+      format: (v: unknown) => typeof v === 'number' ? v.toLocaleString() : '-',
+    },
+    {
       key: '월수익률(%)',
       label: '월수익률(%)',
       align: 'right' as const,
@@ -571,6 +613,7 @@ export default function PortfolioPage() {
                 const returnMap = attrMap[key] || {};
                 const entryMap = firstEntryMap[key] || {};
                 const cumMap = cumRetMap[key] || {};
+                const oMap = ohlcMap[key] || {};
                 const prevHoldings = turnoverMap[key]
                   ? new Set([
                       ...(turnoverMap[key].removed || []).map((r) => r['종목코드'] as string),
@@ -587,6 +630,10 @@ export default function PortfolioPage() {
                       : '유지',
                     '월수익률(%)': returnMap[h.종목명] ?? null,
                     '누적수익률(%)': cumMap[h.종목코드]?.['누적수익률(%)'] ?? null,
+                    '월초시가': oMap[h.종목코드]?.['월초시가'] ?? null,
+                    '월중고가': oMap[h.종목코드]?.['월중고가'] ?? null,
+                    '월중저가': oMap[h.종목코드]?.['월중저가'] ?? null,
+                    '종가': oMap[h.종목코드]?.['종가'] ?? null,
                     '최초편입일': entryMap[h.종목코드] ?? '-',
                   }))
                   .sort((a, b) => b['비중(%)'] - a['비중(%)']);
