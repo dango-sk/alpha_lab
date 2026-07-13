@@ -449,6 +449,12 @@ def api_attribution(
 # ══════════════════════════════════════════════
 # 5-1. GET /api/cumulative-returns
 # ══════════════════════════════════════════════
+def _row_code(row):
+    """holdings 행에서 종목코드 추출 (dict / list[코드,점수,비중,시총] 포맷 모두 지원).
+    레짐/커스텀 전략은 list 포맷, A0/기본 전략은 dict 포맷."""
+    return row[0] if isinstance(row, (list, tuple)) else row.get("종목코드")
+
+
 @app.get("/api/cumulative-returns")
 def api_cumulative_returns(
     strategy: str,
@@ -475,14 +481,14 @@ def api_cumulative_returns(
     date_idx = sorted_dates.index(date)
 
     # 현재 보유 종목
-    current_codes = {row["종목코드"] for row in strat_cache[date]}
+    current_codes = {_row_code(row) for row in strat_cache[date]}
 
     # 종목별 연속 보유 시작 인덱스 찾기 (역추적)
     code_streak_start: dict[str, int] = {}
     for code in current_codes:
         start = date_idx
         for i in range(date_idx - 1, -1, -1):
-            period_codes = {row["종목코드"] for row in strat_cache[sorted_dates[i]]}
+            period_codes = {_row_code(row) for row in strat_cache[sorted_dates[i]]}
             if code in period_codes:
                 start = i
             else:
@@ -506,7 +512,7 @@ def api_cumulative_returns(
 
         # 이 기간에 연속 보유 중인 종목만 쿼리
         codes_to_query = [c for c in current_codes if code_streak_start[c] <= i]
-        period_codes_set = {row["종목코드"] for row in strat_cache[period_start]}
+        period_codes_set = {_row_code(row) for row in strat_cache[period_start]}
         codes_to_query = [c for c in codes_to_query if c in period_codes_set]
         if not codes_to_query:
             continue
