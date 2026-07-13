@@ -72,6 +72,23 @@ function formatMarketCap(value: number): string {
   return `${value}`;
 }
 
+// 오늘(로컬/KST) 날짜 YYYY-MM-DD
+function todayStr(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// 아직 시작되지 않은 예정(forward, 미래 월) 리밸 날짜를 제외한다.
+// 전부 미래이면(방어) 원본을 그대로 반환.
+function excludeForward(dates: string[]): string[] {
+  const today = todayStr();
+  const settled = dates.filter((d) => d <= today);
+  return settled.length ? settled : dates;
+}
+
 interface AttributionRow {
   종목명: string;
   섹터: string;
@@ -113,8 +130,8 @@ export default function PortfolioPage() {
         setSelectedStrategies([bm, 'A0'].filter((k) => keys.includes(k)));
         for (const key of keys) {
           if (res[key]?.rebalance_dates?.length >= 1) {
-            const dates = res[key].rebalance_dates;
-            // 최신 리밸(예정/forward 포함)을 기본 선택
+            // 예정(forward, 미래 월) 리밸은 제외하고 현재까지 시작된 최신 리밸을 기본 선택
+            const dates = excludeForward(res[key].rebalance_dates);
             setSelectedDate(dates[dates.length - 1]);
             break;
           }
@@ -124,13 +141,12 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [universe, rebalType]);
 
-  // Available dates — A0(base) 리밸 일정 전체.
-  // 마지막은 예정(forward) 리밸(예: 2026-07-01)이므로 포함한다.
-  // (과거엔 마지막이 수익률 계산용 경계일이라 잘랐지만, 이제 파이프라인이
-  //  경계일을 붙이지 않고 항상 예정 리밸로 끝낸다.)
+  // Available dates — A0(base) 리밸 일정.
+  // 파이프라인이 마지막에 예정(forward) 리밸(다음 달 1일)을 붙이지만,
+  // 아직 시작되지 않은 미래 월은 드롭다운에서 제외한다(현재 보유 달까지만 노출).
   const availableDates = useMemo(() => {
     const base = results['A0']?.rebalance_dates;
-    if (base?.length) return [...base].sort();
+    if (base?.length) return excludeForward([...base].sort());
     // fallback: union of all strategies
     const dateSet = new Set<string>();
     Object.values(results).forEach((r) => {
@@ -138,7 +154,7 @@ export default function PortfolioPage() {
         r.rebalance_dates.forEach((d) => dateSet.add(d));
       }
     });
-    return [...dateSet].sort();
+    return excludeForward([...dateSet].sort());
   }, [results]);
 
   // All available strategy keys (for selector)
@@ -165,6 +181,13 @@ export default function PortfolioPage() {
     const idx = base.indexOf(selectedDate);
     return idx >= 0 && idx < base.length - 1 ? base[idx + 1] : '';
   }, [results, selectedDate]);
+
+  // 선택한 달이 아직 진행 중인지(월말 미도래). 다음 리밸이 없거나 오늘 이후면 진행 중.
+  // 진행 중이면 OHLC를 end_date 없이 조회 → 최신 거래일까지(month-to-date) 계속 갱신.
+  const isCurrentMonth = useMemo(
+    () => !nextDate || nextDate > todayStr(),
+    [nextDate]
+  );
 
   // Stable key for useEffect dependency
   const strategyKeysStr = strategyKeys.join(',');
@@ -212,10 +235,12 @@ export default function PortfolioPage() {
         .catch(() => ({ key, data: {} as Record<string, { '누적수익률(%)': number | null; is_new: boolean }> }))
     );
 
-    // 편입 달 일별 주가 → 월중 고가/저가/최근 종가 (nextDate 없으면 진행 중인 달 = 최신일까지)
+    // 편입 달 일별 주가 → 월중 고가/저가/최근 종가.
+    // 진행 중인 달(월말 미도래)은 end_date를 넘기지 않아 최신 거래일까지 계속 갱신되게 한다.
     type OhlcRow = { 월초시가: number | null; 월중고가: number | null; 월중저가: number | null; 종가: number | null; 기준일: string | null };
+    const ohlcEndDate = isCurrentMonth ? undefined : nextDate;
     const ohlcPromises = strategyKeys.map((key) =>
-      getMonthlyOhlc(key, selectedDate, nextDate, prevDate, universe, rebalType)
+      getMonthlyOhlc(key, selectedDate, ohlcEndDate, prevDate, universe, rebalType)
         .then((data) => ({ key, data: data as Record<string, OhlcRow> }))
         .catch(() => ({ key, data: {} as Record<string, OhlcRow> }))
     );
@@ -266,7 +291,7 @@ export default function PortfolioPage() {
       .catch(console.error)
       .finally(() => setDetailLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, strategyKeysStr, universe, rebalType, prevDate, nextDate]);
+  }, [selectedDate, strategyKeysStr, universe, rebalType, prevDate, nextDate, isCurrentMonth]);
 
   const bmName = universe === 'KOSPI+KOSDAQ' ? 'KRX 300' : 'KODEX 200';
   const labels: Record<string, string> = { ...(config?.strategy_labels || {}), KOSPI: `벤치마크 (${bmName})` };
