@@ -215,9 +215,13 @@ export default function PortfolioPage() {
         )
       : [];
 
-    const attrPromises = nextDate
+    // 진행 중인 달(다음 리밸이 없거나 미래)은 다음 리밸일이 없으므로,
+    // 최신 거래일까지 집계되도록 넉넉한 end_date를 넘긴다(월수익률 = 리밸일~최신 종가).
+    // 과거(완료된) 달은 다음 리밸일을 경계로 사용.
+    const attrEndDate = isCurrentMonth ? '2999-12-31' : nextDate;
+    const attrPromises = attrEndDate
       ? strategyKeys.map((key) =>
-          getAttribution(key, selectedDate, nextDate, universe, rebalType)
+          getAttribution(key, selectedDate, attrEndDate, universe, rebalType)
             .then((data) => ({ key, data: data as AttributionRow[] }))
             .catch(() => ({ key, data: [] as AttributionRow[] }))
         )
