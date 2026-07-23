@@ -24,7 +24,7 @@ const FACTOR_CATEGORIES: Record<string, { factors: string[]; color: string }> = 
     color: '#4CAF50',
   },
   '차별화': {
-    factors: ['F_EPS_M', 'PRICE_MA_REV', 'OBV_SLOPE', 'MFI', 'NDEBT_EBITDA', 'CURRENT', 'FCF_YIELD'],
+    factors: ['F_EPS_M', 'PRICE_MA_REV', 'IDR_MOM', 'OBV_SLOPE', 'MFI', 'NDEBT_EBITDA', 'CURRENT', 'FCF_YIELD'],
     color: '#f59e0b',
   },
 };
@@ -46,6 +46,7 @@ const FACTOR_LABELS: Record<string, string> = {
   F_EPS_M: 'EPS 모멘텀',
   PRICE_M: '가격 모멘텀',
   PRICE_MA_REV: '가격 모멘텀 (MA회귀)',
+  IDR_MOM: '일중 모멘텀 (12M)',
   OBV_SLOPE: 'OBV 기울기',
   MFI: 'MFI (자금 유입)',
   NDEBT_EBITDA: '순부채/EBITDA',
@@ -110,6 +111,7 @@ function parseStrategyParams(code: string): {
 // ALWAYS_SHOW 팩터의 SCORE_MAP / SCORING_RULES 매핑
 const EXTRA_FACTOR_META: Record<string, { scoreCol: string; rule: string }> = {
   PRICE_MA_REV: { scoreCol: 'price_ma_rev_score', rule: 'rule2' },
+  IDR_MOM:      { scoreCol: 'idr_mom_score',      rule: 'rule2' },
   OBV_SLOPE:    { scoreCol: 'obv_slope_score',    rule: 'rule2' },
   MFI:          { scoreCol: 'mfi_score',           rule: 'rule2' },
   FCF_YIELD:    { scoreCol: 'fcf_yield_score',     rule: 'rule2' },
@@ -797,7 +799,7 @@ export default function LabPage() {
             {/* ─── Factor Weights Editor ─── */}
             {Object.keys(weights).length > 0 && (() => {
               const totalWeight = Object.values(weights).reduce((s, v) => s + v, 0);
-              const ALWAYS_SHOW = new Set(['OBV_SLOPE', 'MFI', 'PRICE_MA_REV']);
+              const ALWAYS_SHOW = new Set(['OBV_SLOPE', 'MFI', 'PRICE_MA_REV', 'IDR_MOM']);
               const categoryData = Object.entries(FACTOR_CATEGORIES).map(([cat, { factors, color }]) => {
                 const active = factors.filter((f) => weights[f] !== undefined || ALWAYS_SHOW.has(f));
                 const catSum = active.reduce((s, f) => s + (weights[f] ?? 0), 0);

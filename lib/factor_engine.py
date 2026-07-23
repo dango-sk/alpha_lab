@@ -340,7 +340,7 @@ def prefetch_all_data(conn, use_local_cache=True):
         for _yr in range(_start_yr, _end_yr + 1):
             print(f"[PREFETCH] price {_yr}...", flush=True)
             _chunk = read_sql(f"""
-                SELECT 'A' || stock_code as stock_code, trade_date, close, high, low, volume, market_cap, trade_amount
+                SELECT 'A' || stock_code as stock_code, trade_date, open, close, high, low, volume, market_cap, trade_amount
                 FROM daily_price
                 WHERE trade_date >= '{_yr}-01-01' AND trade_date < '{_yr + 1}-01-01'
             """, conn)
@@ -821,6 +821,39 @@ def _calc_ma_reversion_cached(price_all: pd.DataFrame, calc_date: str, ma_window
     return result
 
 
+def _calc_idr_momentum_cached(price_all: pd.DataFrame, calc_date: str) -> pd.DataFrame:
+    """일중(intraday) 12개월 모멘텀 팩터.
+    idr = close/open - 1 (일별) → 월별 누적 → 12M 모멘텀[m-12,m-2](최근월 제외) → 횡단면 윈저화.
+    반환: [stock_code, idr_mom]. open 컬럼이 없으면(구 캐시) 빈 결과(팩터 미가용).
+    (논문: Barardehi et al. day/night signals — 일중신호 모멘텀. adj_open 불필요: 같은날 원시 open/close 비율)
+    """
+    if "open" not in price_all.columns:
+        return pd.DataFrame(columns=["stock_code", "idr_mom"])
+    lookback_days = int(365 * 1.4) + 40                      # ~13개월 + 여유
+    cutoff = (datetime.strptime(calc_date, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    d = price_all[(price_all["trade_date"] >= cutoff) & (price_all["trade_date"] < calc_date)]
+    d = d[(d["open"] > 0) & (d["close"] > 0)][["stock_code", "trade_date", "open", "close"]].copy()
+    if d.empty:
+        return pd.DataFrame(columns=["stock_code", "idr_mom"])
+    d["idr"] = (d["close"] / d["open"] - 1.0).clip(-0.5, 1.0)  # 일중수익, 안전 클립
+    d["ym"] = d["trade_date"].str.slice(0, 7)
+    d["g"] = 1.0 + d["idr"]
+    gm = d.groupby(["stock_code", "ym"])["g"].prod().reset_index()  # 월별 gross
+    gm = gm.sort_values(["stock_code", "ym"])
+
+    def _mom(s):                                             # 최근월 제외 직전 11개월 누적 = [m-12,m-2]
+        if len(s) < 12:
+            return np.nan
+        return float(s.iloc[-12:-1].prod() - 1.0)
+    res = (gm.groupby("stock_code")["g"].apply(_mom)
+             .reset_index().rename(columns={"g": "idr_mom"}).dropna())
+    if res.empty:
+        return pd.DataFrame(columns=["stock_code", "idr_mom"])
+    lo, hi = res["idr_mom"].quantile(0.01), res["idr_mom"].quantile(0.99)   # 횡단면 윈저화(이상치 제거)
+    res["idr_mom"] = res["idr_mom"].clip(lo, hi)
+    return res[["stock_code", "idr_mom"]]
+
+
 def _ensure_mfi_indicators(price_all: pd.DataFrame, period: int):
     if period in _mfi_indicator_cache:
         return _mfi_indicator_cache[period]
@@ -1202,6 +1235,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
             mfi_df = _calc_mfi(_prefetch_cache["price"], calc_date)
             obv_df = _calc_obv_slope(_prefetch_cache["price"], calc_date)
         beta_df = _calc_beta_cached(_prefetch_cache["price"], calc_date)
+        idr_df = _calc_idr_momentum_cached(_prefetch_cache["price"], calc_date)
         _LOAD_TIMING_PHASES["indicators"] += _t.time() - _t0
         _load_derived_t0 = _t.time()  # 이후 derived phase 측정용 (함수 끝에서 합산)
     else:
@@ -1353,6 +1387,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
         mfi_df = _calc_mfi(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "mfi"])
         obv_df = _calc_obv_slope(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "obv_slope"])
         beta_df = _calc_beta_cached(_ma_price_all, calc_date) if not _ma_price_all.empty else pd.DataFrame(columns=["stock_code", "beta"])
+        idr_df = pd.DataFrame(columns=["stock_code", "idr_mom"])   # 비프리페치 경로: idr_mom 미가용(open 미로드)
 
         # calc_date에 맞는 snapshot 사용 (월별 스냅샷: YYYY-MM)
         _snap_month = calc_date[:7]
@@ -1369,7 +1404,7 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # ─── 병합 ───
     merged = fin_df.merge(price_df, on="stock_code", how="inner")
     merged = merged.merge(master_df, on="stock_code", how="inner")
-    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, mfi_df, obv_df, beta_df]:
+    for df_extra in [fwd_df, prev_rev_df, fwd_3m_df, price_3m_df, ma_rev_df, mfi_df, obv_df, beta_df, idr_df]:
         if not df_extra.empty:
             merged = merged.merge(df_extra, on="stock_code", how="left")
     merged = merged[(merged["market_cap"] > 0) & (merged["close"] > 0)].copy()
@@ -1516,6 +1551,10 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
     # 가점 적용: 현재가 <= MA선인 종목은 이탈도 20% 강화
     m_below = merged["below_ma"] == 1
     merged.loc[m_below, "price_ma_rev"] = merged.loc[m_below, "price_ma_rev"] * 1.2
+
+    # IDR_MOM (일중 12개월 모멘텀; rule2 높을수록 좋음). 결측=NaN → 사분위 0점
+    if "idr_mom" not in merged.columns:
+        merged["idr_mom"] = np.nan
 
     # MFI (Money Flow Index 기반 자금 유입 팩터)
     if "mfi" not in merged.columns:

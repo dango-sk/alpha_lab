@@ -232,6 +232,7 @@ GROUP BY h->>'섹터' ORDER BY weight_pct DESC
 밸류(rule1, 낮을수록 좋음): T_PER→t_per_score, F_PER→f_per_score, T_PBR→pbr_score, F_PBR→f_pbr_score, T_EVEBITDA→t_ev_ebitda_score, F_EVEBITDA→f_ev_ebitda_score, T_PCF→t_pcf_score
 성장/모멘텀(rule2, 높을수록 좋음): T_SPSG→t_spsg_score, F_SPSG→f_spsg_score, F_EPS_M→f_eps_m_score
 가격모멘텀(rule3, 낮을수록 좋음): PRICE_M→price_m_score
+일중모멘텀(rule2, 높을수록 좋음): IDR_MOM→idr_mom_score  (일중수익=종가/시가-1의 12개월 모멘텀, 논문 day/night signals)
 회귀매력도(rule2, 높을수록 좋음): ATT_PBR→pbr_roe_attractiveness_score, ATT_EVIC→evic_roic_attractiveness_score, ATT_PER→fper_epsg_attractiveness_score, ATT_EVEBIT→fevebit_ebitg_attractiveness_score
 퀄리티(rule3): NDEBT_EBITDA→ndebt_ebitda_score, CURRENT→current_ratio_score
 
