@@ -669,6 +669,51 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         cumulative *= (1 + net_return)
         portfolio_values.append(cumulative)
 
+    # ── 마지막(예정/forward) 리밸 날짜 holdings 기록 ──
+    # 성능 루프는 rebalance_dates[-1]을 종료 경계로만 쓰고 holdings에 안 넣는다.
+    # 이 날짜가 실제 예정 리밸(예: 2026-07-01)이면 편입종목을 보여줘야 하므로
+    # 종목 선정 + 비중만 계산해 기록한다 (수익률/턴오버/성능에는 영향 없음).
+    if stock_selector and rebalance_dates:
+        _fwd = rebalance_dates[-1]
+        if _fwd not in holdings_by_date:
+            if regime_enabled:
+                _rg = _get_regime(_fwd)
+                BACKTEST_CONFIG["weight_cap_pct"] = regime_bull_cap if _rg == "Bull" else regime_bear_cap
+            _fwd_stocks = stock_selector(conn, _fwd, top_n)
+            if _fwd_stocks:
+                _fc = [c for c, _ in _fwd_stocks]
+                _fph = ",".join(["?"] * len(_fc))
+                _fr = conn.execute(f"""
+                    SELECT dp.stock_code, dp.market_cap FROM daily_price dp
+                    INNER JOIN (
+                        SELECT stock_code, MIN(trade_date) as d
+                        FROM daily_price WHERE stock_code IN ({_fph}) AND trade_date >= ?
+                        GROUP BY stock_code
+                    ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.d
+                """, (*_fc, _fwd)).fetchall()
+                _fm = {r[0]: r[1] or 0 for r in _fr}
+                # 예정일이라 그날 이후 시세가 없으면 직전 최신 시총으로 fallback
+                _miss = [c for c in _fc if c not in _fm]
+                if _miss:
+                    _mph = ",".join(["?"] * len(_miss))
+                    _fr2 = conn.execute(f"""
+                        SELECT dp.stock_code, dp.market_cap FROM daily_price dp
+                        INNER JOIN (
+                            SELECT stock_code, MAX(trade_date) as d
+                            FROM daily_price WHERE stock_code IN ({_mph}) AND trade_date <= ? AND market_cap > 0
+                            GROUP BY stock_code
+                        ) t ON dp.stock_code = t.stock_code AND dp.trade_date = t.d
+                    """, (*_miss, _fwd)).fetchall()
+                    for r in _fr2:
+                        _fm.setdefault(r[0], r[1] or 0)
+                _fraw = [_fm.get(c, 0) for c in _fc]
+                _fcap = BACKTEST_CONFIG.get("weight_cap_pct", 10) / 100
+                _fw = _apply_mcap_cap(_fraw, cap=_fcap)
+                holdings_by_date[_fwd] = [
+                    (code, score, _fw[j], _fraw[j])
+                    for j, (code, score) in enumerate(_fwd_stocks)
+                ]
+
     # ── 단계별 성능 측정 결과 출력 ──
     _t_loop_total = time.time() - _t_loop_start
     _t_other = _t_loop_total - sum(_t_phases.values())

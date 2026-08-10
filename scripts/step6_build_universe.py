@@ -85,6 +85,26 @@ def build_universe(rebuild_all: bool = False):
             PRIMARY KEY (rebal_date, rebal_type, stock_code)
         )
     """)
+    # freeze 테이블: 여기에 등록된 (rebal_date, rebal_type)는 확정본으로 간주하여
+    # 이후 실행에서 DELETE/재계산하지 않는다. (수동 --freeze 로 등록)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS alpha_lab.universe_frozen (
+            rebal_date  TEXT,
+            rebal_type  TEXT,
+            frozen_at   TEXT,
+            PRIMARY KEY (rebal_date, rebal_type)
+        )
+    """)
+    conn.commit()
+
+    # freeze 집합 로드
+    cur.execute("SELECT rebal_date, rebal_type FROM alpha_lab.universe_frozen")
+    frozen = {(r[0], r[1]) for r in cur.fetchall()}
+    frozen_months = {rd[:7] for (rd, rt) in frozen if rt == "monthly"}
+    if frozen:
+        print(f"  [freeze] 확정 리밸 {len(frozen)}건 (재계산 제외): "
+              f"{sorted(rd for rd, _ in frozen)}")
+
     if rebuild_all:
         print("  [rebuild_all=True] 기존 universe 전체 삭제 후 재구축")
         cur.execute("DELETE FROM alpha_lab.universe")
@@ -107,6 +127,11 @@ def build_universe(rebuild_all: bool = False):
 
     rebal_dates = []
     for ym, first_day in monthly_dates:
+        # freeze된 월은 확정 리밸이 이미 그 달을 대표하므로 새 리밸을 만들지 않는다.
+        # (예: 2026-08-01(토) freeze 후 8월 데이터 도착 시 실제 첫거래일 2026-08-03이
+        #  중복 생성되는 것을 방지 → 8월 리밸이 2개가 되지 않는다)
+        if ym in frozen_months and (first_day, "monthly") not in frozen:
+            continue
         rebal_dates.append((first_day, "monthly"))
 
     # ── 예정(forward) 리밸: 최신 데이터 다음 달 1일 ──
@@ -117,18 +142,29 @@ def build_universe(rebuild_all: bool = False):
         ly, lm = int(latest_first[:4]), int(latest_first[5:7])
         fy, fm = (ly + 1, 1) if lm == 12 else (ly, lm + 1)
         forward_rebal = f"{fy:04d}-{fm:02d}-01"      # 예: 2026-07-01
-        if (forward_rebal, "monthly") not in rebal_dates:
+        forward_month = forward_rebal[:7]
+        # forward 달이 이미 freeze돼 있으면(확정본 존재) 재생성하지 않는다.
+        if forward_month not in frozen_months and (forward_rebal, "monthly") not in rebal_dates:
             rebal_dates.append((forward_rebal, "monthly"))
 
         # 최신 월 + 예정 리밸은 데이터가 아직 갱신될 수 있으므로 매 실행 시 재구축한다.
         # (지난달에 6/30 데이터로 만든 7/1 forward → 7/1 실데이터 도착 시 자동 갱신)
+        # 단, freeze된 리밸은 확정본이므로 DELETE 대상에서 제외한다.
         if not rebuild_all:
             cur.execute(
-                "DELETE FROM alpha_lab.universe WHERE rebal_type='monthly' AND rebal_date >= %s",
+                """DELETE FROM alpha_lab.universe u
+                   WHERE u.rebal_type='monthly' AND u.rebal_date >= %s
+                     AND NOT EXISTS (
+                         SELECT 1 FROM alpha_lab.universe_frozen f
+                         WHERE f.rebal_date = u.rebal_date AND f.rebal_type = u.rebal_type
+                     )""",
                 (latest_first,),
             )
             conn.commit()
-            existing = {e for e in existing if not (e[1] == "monthly" and e[0] >= latest_first)}
+            existing = {
+                e for e in existing
+                if e in frozen or not (e[1] == "monthly" and e[0] >= latest_first)
+            }
 
     todo_rebal_dates = [rd for rd in rebal_dates if rd not in existing]
     print(f"리밸런싱 날짜: 전체 {len(rebal_dates)}건 / 추가 대상 {len(todo_rebal_dates)}건")
@@ -273,12 +309,98 @@ def build_universe(rebuild_all: bool = False):
     conn.close()
 
 
+def set_freeze(rebal_date, rebal_type="monthly", unfreeze=False):
+    """리밸 확정/해제. freeze된 리밸은 이후 build_universe 실행에서 DELETE/재계산되지 않는다."""
+    import psycopg2
+    conn = psycopg2.connect(PG_URL)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS alpha_lab.universe_frozen (
+            rebal_date TEXT, rebal_type TEXT, frozen_at TEXT,
+            PRIMARY KEY (rebal_date, rebal_type)
+        )
+    """)
+    if unfreeze:
+        cur.execute(
+            "DELETE FROM alpha_lab.universe_frozen WHERE rebal_date=%s AND rebal_type=%s",
+            (rebal_date, rebal_type),
+        )
+        conn.commit()
+        print(f"  [unfreeze] {rebal_date} ({rebal_type}) 확정 해제 ({cur.rowcount}건)")
+    else:
+        # 확정 전 universe에 실제로 종목이 있는지 검증 (빈 리밸 freeze 방지)
+        cur.execute(
+            "SELECT COUNT(*) FROM alpha_lab.universe WHERE rebal_date=%s AND rebal_type=%s",
+            (rebal_date, rebal_type),
+        )
+        n = cur.fetchone()[0]
+        if n == 0:
+            print(f"  [freeze] ✗ {rebal_date} ({rebal_type}) universe에 종목 없음 → freeze 취소. "
+                  f"먼저 build_universe로 생성하세요.")
+            conn.close()
+            return
+        cur.execute("""
+            INSERT INTO alpha_lab.universe_frozen (rebal_date, rebal_type, frozen_at)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (rebal_date, rebal_type) DO UPDATE SET frozen_at = EXCLUDED.frozen_at
+        """, (rebal_date, rebal_type, datetime.now().strftime("%Y-%m-%d %H:%M")))
+        conn.commit()
+        print(f"  [freeze] ✓ {rebal_date} ({rebal_type}) 확정 ({n}종목). "
+              f"이후 실행에서 재계산되지 않습니다.")
+    conn.close()
+
+
+def list_frozen():
+    import psycopg2
+    conn = psycopg2.connect(PG_URL)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS alpha_lab.universe_frozen (
+            rebal_date TEXT, rebal_type TEXT, frozen_at TEXT,
+            PRIMARY KEY (rebal_date, rebal_type)
+        )
+    """)
+    conn.commit()
+    cur.execute("""
+        SELECT f.rebal_date, f.rebal_type, f.frozen_at,
+               (SELECT COUNT(*) FROM alpha_lab.universe u
+                WHERE u.rebal_date=f.rebal_date AND u.rebal_type=f.rebal_type) AS n
+        FROM alpha_lab.universe_frozen f
+        ORDER BY f.rebal_date
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    if not rows:
+        print("  확정(freeze)된 리밸 없음")
+        return
+    print("  확정(freeze)된 리밸:")
+    for rd, rt, at, n in rows:
+        print(f"    {rd} ({rt})  {n}종목  frozen_at={at}")
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="유니버스 테이블 채우기 (기본: incremental)")
     parser.add_argument("--rebuild-all", action="store_true",
                         help="기존 universe 전체 삭제 후 재구축 (주의: 도중 끊기면 데이터 손실)")
+    parser.add_argument("--freeze", type=str, metavar="YYYY-MM-DD",
+                        help="해당 리밸을 확정. 이후 실행에서 재계산/삭제되지 않음 (예: --freeze 2026-08-01)")
+    parser.add_argument("--unfreeze", type=str, metavar="YYYY-MM-DD",
+                        help="확정 해제 (다시 재계산 대상이 됨)")
+    parser.add_argument("--list-frozen", action="store_true", help="확정된 리밸 목록 출력")
+    parser.add_argument("--rebal-type", type=str, default="monthly",
+                        help="freeze/unfreeze 대상 rebal_type (기본: monthly)")
     args = parser.parse_args()
+
+    if args.list_frozen:
+        list_frozen()
+        return
+    if args.freeze:
+        set_freeze(args.freeze, args.rebal_type, unfreeze=False)
+        return
+    if args.unfreeze:
+        set_freeze(args.unfreeze, args.rebal_type, unfreeze=True)
+        return
 
     print(f"=== Step 6: 유니버스 생성 ({datetime.now():%Y-%m-%d %H:%M}) ===")
     build_universe(rebuild_all=args.rebuild_all)

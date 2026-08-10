@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>KOSPI 레짐 판정 리포트</title>
+<style>
+  body { font-family: 'Pretendard', sans-serif; background:#0f0f1a; color:#e0e0e0; margin:0; padding:24px }
+  h1 { color:#fff; font-size:1.6em; margin-bottom:4px }
+  .subtitle { color:#888; margin-bottom:24px }
+  .summary-bar { display:flex; gap:24px; margin-bottom:24px }
+  .kpi { background:#1e1e2e; border-radius:8px; padding:16px 24px; text-align:center }
+  .kpi .val { font-size:2em; font-weight:bold; color:#7c9fff }
+  .kpi .lbl { color:#888; font-size:0.85em }
+  table { width:100%; border-collapse:collapse; background:#1e1e2e; border-radius:8px; overflow:hidden }
+  th { background:#2a2a3e; padding:12px 16px; text-align:left; color:#aaa; font-size:0.85em }
+  td { padding:12px 16px; border-bottom:1px solid #2a2a3e; font-size:0.9em }
+  tr:hover > td { background:#252535 }
+  .agent-card { background:#0f0f1a; border-radius:6px; padding:12px }
+  .agent-card pre { white-space:pre-wrap; font-size:0.8em; color:#ccc; margin:8px 0 0 }
+  .agent-label { font-size:0.8em; font-weight:bold; color:#888 }
+  .technical .agent-label { color:#7c9fff }
+  .fundamental .agent-label { color:#a29bfe }
+  .news .agent-label { color:#fdcb6e }
+  .bull .agent-label { color:#2ecc71 }
+  .bear .agent-label { color:#e74c3c }
+</style>
+</head>
+<body>
+<h1>KOSPI 레짐 판정 리포트</h1>
+<div class="subtitle">Trading Agent — 2023-11 ~ 2026-02 | 각 행 클릭 시 상세 내용 확인</div>
+<div class="summary-bar">
+  <div class="kpi"><div class="val">7</div><div class="lbl">분석 개월</div></div>
+  <div class="kpi"><div class="val">71.4%</div><div class="lbl">판정 정확도</div></div>
+  <div class="kpi"><div class="val">0</div><div class="lbl">Bull 판정</div></div>
+  <div class="kpi"><div class="val">0</div><div class="lbl">Bear 판정</div></div>
+</div>
+<table>
+  <thead><tr><th>기준월</th><th>판정</th><th>신뢰도</th><th>실제 다음달 수익률</th><th>정확</th><th>요약</th></tr></thead>
+  <tbody>
+        <tr onclick="toggleDetail('detail_202003')" style="cursor:pointer">
+            <td>2020-03</td>
+            <td style="color:#e74c3c;font-weight:bold">-4.1%</td>
+            <td>70</td>
+            <td style="color:#e74c3c">-12.3%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">기술적 지표는 KOSPI가 두 달 연속 하락하고 RSI 27.0으로 과매도 구간에 진입했으며 MACD도 악화되어 약세 모멘텀을 강하게 나타냅니다</td>
+        </tr>
+        <tr id="detail_202003" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI는 2020년 2월 월간 수익률이 -5.8%를 기록하며 전월 -3.1%에 이어 두 달 연속 하락세를 보였습니다. 이는 2019년 12월 +7.5%의 상승세를 반납하는 움직임입니다.
+포인트2: 2020년 2월 KOSPI RSI는 27.0으로 과매도 구간에 진입했으며, 이는 전월 38.8 대비 11.8 감소, 3개월 변화량으로는 43.5 감소한 수치입니다. 이는 시장의 단기적인 급락과 과도한 매도 압력을 시사합니다.
+포인트3: KOSPI MACD는 2020년 2월 -451.9를 기록하며 전월 124.9 대비 크게 감소, 모멘텀 악화를 나타냈습니다. 이는 상승 추세의 약화와 하락 추세로의 전환 가능성을 보여줍니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 경기 선행지수 및 기업 심리지표는 긍정적이나, 소비자 심리와 유가는 하락 추세입니다. 선행종합지수는 2020년 1월 98.30으로 지속 상승했으나, 경기전망CSI는 2020년 2월 76.00으로 전월 대비 하락했습니다.
+포인트2: 시장의 불확실성이 급증하며 안전자산 선호 심리가 강화되고 있습니다. VIX는 2020년 2월 19.63으로 전월 대비 40.8% 급등했고, 원/달러 환율은 2020년 2월 1193.79원으로 원화 약세가 심화되었습니다.
+포인트3: 외국인 순매도가 가속화되는 가운데, 개인 투자자들의 매수세가 확대되고 있습니다. 외국인은 2020년 2월 -301억원을 순매도하며 매도 가속도를 보였고, 개인은 같은 기간 478억원을 순매수하며 시장에 유입되었습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 코로나19 확진자 급증 및 재확진 사례 발생으로 감염병 확산 우려가 심화되고 있습니다. 경기도 신천지 신도 중 600명 이상의 확진자 발생 가능성이 제기되었으며, 국내 첫 완치 후 재확진자가 나타나 방역의 불확실성이 커졌습니다.
+포인트2: 한국은행 금융통화위원회가 기준금리를 연 1.25%로 동결했습니다. 코로나19 사태로 내수 경기 침체 우려가 컸음에도 금리를 동결하여 금융 시장은 일단 안도했으나, 향후 금리 인하 가능성은 여전하다는 관측이 많습니다.
+포인트3: 정부가 경기도 수원시 3구와 안양시 만안구, 의왕시를 조정대상지역으로 지정하며 19번째 부동산 규제 대책을 내놓았습니다. 이는 '12·16 주택시장 안정화 방안' 이후 나타난 '풍선 효과'를 억제하기 위한 조치입니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 약세 / 신뢰도: 70
+기술적 지표는 KOSPI가 두 달 연속 하락하고 RSI 27.0으로 과매도 구간에 진입했으며 MACD도 악화되어 약세 모멘텀을 강하게 나타냅니다. 코로나19 확산 및 외국인 순매도 가속화로 불확실성이 증폭되어 월간 수익률 -7% ~ -3%인 약세 레짐에 45%의 확률을 부여합니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202011')" style="cursor:pointer">
+            <td>2020-11</td>
+            <td style="color:#e74c3c;font-weight:bold">-2.2%</td>
+            <td>75</td>
+            <td style="color:#2ecc71">+13.3%</td>
+            <td>❌</td>
+            <td style="font-size:0.85em;color:#aaa">코스피는 전월 대비 -3.0% 하락했으며, RSI 과매도 및 MACD 모멘텀 악화로 인해 하방 압력이 강합니다. 경기 개선 기대감에도 불구하고 </td>
+        </tr>
+        <tr id="detail_202011" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: 코스피는 10월 종가가 30,140으로 전월대비 -3.0% 하락했으며, MA50과 MA200은 여전히 상승 추세를 유지하고 있습니다. MA50은 +332, MA200은 +199 상승하며 장기 이동평균선 위에 위치해 있습니다.
+포인트2: RSI 지표는 10월에 33.7을 기록하며 과매도 구간에 진입했으며, 전월대비 -15.9, 3개월 변화량 -16.8로 급격히 하락했습니다. 이는 시장의 과매도 상태를 나타내며, 매도 압력이 강해졌음을 시사합니다.
+포인트3: MACD 지표는 9월부터 마이너스 값으로 전환되어 10월에는 -105.4를 기록하며 모멘텀 악화가 지속되고 있습니다. 이는 MACD 변화량 전월대비 -47.3으로도 확인할 수 있으며, 단기 이동평균선이 장기 이동평균선 아래로 내려오면서 하락 모멘텀이 강해지고 있음을 보여줍니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 경기 개선 기대감이 지속되고 있으나, 물가 상승 압력도 나타나고 있습니다. 선행종합지수는 2020년 9월 101.10으로 꾸준히 상승했으며, CPI와 PPI도 각각 100.18, 100.38로 상승했습니다.
+포인트2: 장단기 금리차 확대와 유가 상승은 경기 회복 신호로 해석될 수 있으나, 동시에 불확실성도 내포하고 있습니다. 장단기 금리차는 2020년 9월 0.64%p로 확대되었고, WTI유가는 2020년 10월 39.41$를 기록했습니다.
+포인트3: 시장의 투자심리는 회복되는 모습을 보이고 있으나, 외국인 및 기관의 순매도 기조는 유지되고 있습니다. 경기전망CSI는 2020년 10월 83.00으로 크게 상승했지만, 외국인과 기관은 2020년 10월 각각 -57억, -109억 순매도를 기록했습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 2020년 9월 전산업생산, 소비, 설비투자 모두 증가하여 국내 경제 지표가 긍정적인 흐름을 보였다. 특히 광공업 생산은 자동차, 반도체를 중심으로 증가했고, 서비스업은 도소매, 운수·창고 등이 늘었다.
+포인트2: 미국과 중국이 반도체 산업에 적극적으로 투자 및 지원하며 미중 반도체 전쟁이 심화되고 있다. 미국은 2021년도 예산에 250억 달러 규모의 반도체 보조금 항목을 신설하고 기금 조성을 추진하고 있다.
+포인트3: 정부가 양도소득세 과세 대상 대주주 기준을 10억원에서 3억원으로 하향 조정하는 방침을 유지하며, 주식시장 투자 심리에 부정적인 영향을 줄 가능성이 있다. 이는 국회 기획재정위원회 국정감사에서 핵심 쟁점으로 떠올랐다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 약세 / 신뢰도: 75
+코스피는 전월 대비 -3.0% 하락했으며, RSI 과매도 및 MACD 모멘텀 악화로 인해 하방 압력이 강합니다. 경기 개선 기대감에도 불구하고 물가 상승 압력, 장단기 금리차 확대, 유가 상승 및 외국인/기관 순매도 지속으로 약세 가능성이 높습니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202103')" style="cursor:pointer">
+            <td>2021-03</td>
+            <td style="color:#2ecc71;font-weight:bold">+0.2%</td>
+            <td>35</td>
+            <td style="color:#2ecc71">+0.0%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI는 장기 상승 추세에 있으나 단기 모멘텀 둔화와 물가 상승 압력 및 금리 상승으로 중립 레짐의 확률이 35%로 가장 높습니다. 경기 회</td>
+        </tr>
+        <tr id="detail_202103" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: 코스피는 장기적 상승 추세에 있으나, 단기 모멘텀은 약화되고 있습니다. KOSPI가 MA200(33,310) 위에 위치하여 상승 추세를 유지하고 있으나, MACD 변화량은 전월 대비 -901.0으로 크게 감소하며 단기적인 모멘텀 둔화를 시사합니다.
+포인트2: RSI 지표는 중립 구간에 위치하며, 매수 또는 매도 압력이 강하지 않은 상태입니다. 현재 RSI는 47.1이며, 이는 2021년 1월의 49.1과 유사한 수준으로 과매수/과매도 구간이 아닌 중립적인 시장 심리를 나타냅니다.
+포인트3: 거래대금은 높은 수준을 유지하고 있으나, 전월 대비 감소하며 시장 참여도에 변화가 있습니다. 2021년 2월 거래대금은 4354억으로 12개월 평균 대비 1.3배에 달하지만, 1월의 5178억 대비 감소하여 시장 활력의 둔화를 나타냅니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 전반적인 경기 회복 기대감이 확산되고 있습니다. 선행종합지수는 2021년 1월 103.80으로 꾸준히 상승하고 있으며, 전산업BSI 또한 2021년 1월 77.00으로 개선세를 보이고 있습니다.
+
+포인트2: 물가 상승 압력이 커지고 있습니다. CPI는 2021년 2월 101.58로 상승했으며, PPI 또한 2021년 1월 101.96으로 상승하여 생산자 물가와 소비자 물가 모두 오름세를 보입니다.
+
+포인트3: 채권 시장은 장기 금리 상승과 함께 강달러 현상을 보이고 있습니다. 국고채 10y 금리는 2021년 2월 1.85%로 상승했고, 원/달러 환율도 2021년 2월 1111.72원으로 원화 약세가 진행되고 있습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 미국 정부의 경기부양책 추진 및 반도체 산업 지원 움직임이 나타나고 있습니다. 조 바이든 행정부의 1조 9000억 달러 규모 경기부양책에 150여 개 대기업이 지지를 선언했으며, 반도체 생산 및 연구에 370억 달러 예산 확보를 추진하고 있습니다.
+포인트2: 국제 원자재 가격 상승이 확인됩니다. 미국 텍사스 한파의 여파로 국제유가가 배럴당 4.10% 폭등하여 61.70달러에 거래를 마쳤고, 구리 가격은 10년 만에 최고치를 기록하며 글로벌 경기 회복의 신호로 해석되고 있습니다.
+포인트3: 비트코인 등 암호화폐 시장의 변동성이 확대되고 있습니다. 비트코인은 연이틀 폭락하여 투자금 상환 압박에 대한 분석이 나왔고, 전기차 스타트업 루시드모터스의 스팩 주가는 40% 가까이 추락하는 등 일부 신흥 기술주의 급락도 발생했습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 35
+KOSPI는 장기 상승 추세에 있으나 단기 모멘텀 둔화와 물가 상승 압력 및 금리 상승으로 중립 레짐의 확률이 35%로 가장 높습니다. 경기 회복 기대감과 미국발 경기부양책은 강세 요인이지만, 암호화폐 및 일부 기술주 변동성 확대는 약세 리스크로 작용합니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202209')" style="cursor:pointer">
+            <td>2022-09</td>
+            <td style="color:#e74c3c;font-weight:bold">-3.1%</td>
+            <td>45</td>
+            <td style="color:#e74c3c">-10.2%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI는 장기 이동평균선 하락, MACD 약화 등 기술적 지표가 부정적이며, 경제 심리 위축과 원/달러 환율 상승이 겹쳐 약세 레짐에 진입할</td>
+        </tr>
+        <tr id="detail_202209" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: 코스피는 장단기 이동평균선 모두 하락세를 보이며 장기적인 하락 추세에 놓여있습니다. MA50은 전월 대비 -645, MA200은 전월 대비 -734 하락했습니다.
+포인트2: 기술적 모멘텀은 2022년 7월의 반등 이후 다시 약화되었습니다. MACD는 7월 30.2에서 8월 -30.2로 전환되었고, RSI는 7월 58.2에서 8월 48.9로 하락하여 중립 구간에 위치합니다.
+포인트3: 코스피의 월간 수익률은 7월 4.9%로 반등했으나, 8월에는 -0.5%를 기록하며 하락세로 전환되었습니다. 거래대금 또한 7월 2007억, 8월 2014억으로 12개월 평균 대비 0.9배 수준을 유지하며 저조한 편입니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 인플레이션 압력이 지속되고 있으나 일부 둔화 조짐이 나타납니다. 2022년 8월 CPI는 108.63으로 전월 대비 소폭 하락했으나, PPI는 2022년 7월 116.90으로 꾸준히 상승하여 생산자 물가 부담이 여전합니다.
+포인트2: 경제 주체들의 경기 심리는 위축되고 있습니다. 2022년 7월 전산업BSI는 80.00으로 하락했고, 2022년 8월 경기전망CSI는 58.00으로 여전히 낮은 수준입니다.
+포인트3: 시장의 불안정성이 완화되는 가운데 원/달러 환율은 상승했습니다. VIX 지수는 2022년 8월 22.17로 하락하며 변동성이 줄었으나, 원/달러 환율은 2022년 8월 1318.44원으로 전월 대비 11.0원 상승했습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 주택 구입 잠재력 하락 및 가계부채 부담 증가: 최근 금리 인상 여파로 서울의 주택구입잠재력지수(KB-HOI)가 2.8로 1년 전보다 1.1포인트 하락하며 중산층의 주택 구매력이 감소했다. 가계 대출에 대한 부담 증가는 소비 심리 위축으로 이어질 수 있다.
+포인트2: 달러 강세 및 환율 불안정 지속: 달러당 원화 환율이 계속 오르면서 달러를 팔려는 사람이 늘고 중고 거래 사이트까지 등장했다. 이는 원화 가치 하락과 수입 물가 상승 압력으로 작용하여 시장에 부담을 줄 수 있다.
+포인트3: 정부의 반도체 산업 지원 및 재정 지출 확대: 정부는 '반도체산업 경쟁력강화법' 발의를 통해 반도체 산업 지원 의지를 보이고 있으며, 2023년 문체부 예산 편성 등 재정 지출 확대를 추진하고 있다. 이는 특정 산업의 성장을 촉진하고 경제 활성화에 기여할 수 있다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 약세 / 신뢰도: 45
+KOSPI는 장기 이동평균선 하락, MACD 약화 등 기술적 지표가 부정적이며, 경제 심리 위축과 원/달러 환율 상승이 겹쳐 약세 레짐에 진입할 확률이 45%로 가장 높습니다. 정부의 반도체 지원 등 긍정적 신호가 있으나 전반적인 거시경제 지표는 하방 압력을 시사합니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202304')" style="cursor:pointer">
+            <td>2023-04</td>
+            <td style="color:#e74c3c;font-weight:bold">-2.5%</td>
+            <td>70</td>
+            <td style="color:#2ecc71">+0.3%</td>
+            <td>❌</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI는 MA200 위에 있으나 장단기금리차 확대, 환율 상승, 외국인 자금 유출 등 거시 경제 지표는 약세 신호를 보입니다. 기술적 지표의</td>
+        </tr>
+        <tr id="detail_202304" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI의 단기 이동평균선(MA50)은 가파른 상승세를 보이며, 3월에 전월 대비 491포인트 상승했습니다. 반면 장기 이동평균선(MA200)은 전월 대비 310포인트 하락세를 지속하며 단기 추세와 상반되는 흐름을 보이고 있습니다.
+포인트2: KOSPI는 현재 MA200 위에 위치하며 상승 추세에 있지만, MACD는 3월에 61.3으로 전월 대비 33.4포인트 증가하며 모멘텀 개선을 보였습니다. 동시에 RSI는 61.2로 중립 구간에 있으나, 전월 대비 15.1포인트 급등하며 과매수 구간 진입에 대한 가능성을 시사합니다.
+포인트3: SOX 지수는 3월에 3231포인트를 기록하며 6개월간 꾸준히 상승하는 추세를 보였고, MA50 또한 3023포인트로 지속적으로 상승했습니다. 반면 S&P500 지수의 MA200은 3936포인트로 하락세를 유지하며 기술주와 전체 시장 간의 상이한 장기 추세를 보여줍니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 경기 둔화 우려가 지속되고 있으나, 물가 상승 압력은 여전한 상황입니다. 선행종합지수는 2023년 2월 109.20으로 2023년 1월과 동일한 수준을 유지하며 하락세가 멈췄지만, 장단기금리차는 2023년 2월 0.18%p로 전월 대비 0.27%p 추가 하락하여 경기 둔화에 대한 우려가 상존합니다. 또한, CPI는 2023년 3월 110.52로 전월 대비 0.19 상승하여 여전히 물가 상승 압력이 지속되고 있습니다.
+
+포인트2: 기업 심리가 위축되고 있는 가운데, 소비자 심리는 개선되는 흐름을 보입니다. 전산업BSI는 2023년 2월 69.00으로 2023년 1월과 동일한 수준을 유지하며 기업 체감 경기가 낮은 수준에 머물러 있습니다. 반면, 경기전망CSI는 2023년 3월 63.00으로 전월 대비 3.00 상승하며 소비자의 경기 인식이 소폭 개선되었습니다.
+
+포인트3: 환율 상승과 변동성 증가, 그리고 외국인 자금 유출이 관찰됩니다. 원/달러 환율은 2023년 3월 1305.73으로 전월 대비 35.0원 상승하며 원화 약세가 심화되었습니다. VIX는 2023년 3월 21.64로 전월 대비 1.58 상승하여 시장 변동성이 증가하고 있음을 시사합니다. 한편, 외국인 순매수는 2023년 3월 -25억원으로 전월 대비 -27억원 감소하며 유출 흐름을 보였습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 미중 반도체 경쟁 심화 속 한국 반도체 산업의 불확실성이 증가하고 있다. 미국이 한국 기업의 중국 내 공장 운영을 10년간 허용했으나, '탈(脫)중국' 리스크는 여전히 지속되고 있다.
+포인트2: 한국의 경제 성장률 전망이 OECD에 의해 하향 조정되는 등 국내 경제 상황에 대한 우려가 커지고 있다. 또한 야당의 연간 수십조원대 포퓰리즘 법안 추진은 재정 건전성에 대한 부담을 가중시킬 수 있다.
+포인트3: 미국 바이든 대통령의 연기금 ESG 투자 금지 법안 거부권 행사를 통해 글로벌 ESG 투자가 지속될 전망이다. 이는 국내 금융사의 ESG 경영 및 관련 투자의 중요성을 부각시키며 시장에 영향을 미칠 수 있다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 약세 / 신뢰도: 70
+KOSPI는 MA200 위에 있으나 장단기금리차 확대, 환율 상승, 외국인 자금 유출 등 거시 경제 지표는 약세 신호를 보입니다. 기술적 지표의 상반된 흐름과 기업 심리 위축이 복합적으로 작용하여 약세 레짐 확률이 35%로 가장 높습니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202408')" style="cursor:pointer">
+            <td>2024-08</td>
+            <td style="color:#e74c3c;font-weight:bold">N/A</td>
+            <td>40</td>
+            <td style="color:#e74c3c">-4.9%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI는 장기 상승 추세 유지 및 경기회복 기대감이 있으나, 단기 모멘텀 악화, 장단기 금리 역전 심화, 시장 변동성 증가 등 하방 요인이 </td>
+        </tr>
+        <tr id="detail_202408" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: 코스피는 장기 이동평균선인 MA200(35,752) 위에 종가(38,125)가 위치하고 있으며, MA50과 MA200의 기울기가 전월 대비 각각 +952, +619로 모두 상승하고 있어 장기적인 상승 추세는 유지되고 있습니다.
+포인트2: 단기 모멘텀 지표인 RSI는 7월 47.0을 기록하며 중립 구간에 있으나, 전월 대비 -15.9의 하락을 보였고 MACD는 전월 대비 -533.0 감소하며 음수(-144.0)로 전환되어 단기적인 모멘텀 악화를 시사합니다.
+포인트3: KOSPI는 7월 월간수익률 -1.1%를 기록하며 하락했으나, S&P500은 7월 월간수익률 +1.1% (5460 → 5522)를 기록하며 상승 추세를 이어갔고 SOX는 7월 월간수익률 -4.4% (5472 → 5233)를 기록하며 상대적으로 큰 폭으로 하락했습니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 경기회복 기대감과 물가 상승 압력이 공존합니다. 선행종합지수가 2024년 1월 113.20에서 2024년 6월 115.20으로 지속 상승했고, 전산업BSI도 같은 기간 69.00에서 74.00으로 개선되어 경기회복에 대한 기대를 나타냅니다. 반면, WTI유가가 2024년 6월 79.91$에서 2024년 7월 81.95$로 상승하고 CPI 또한 2024년 6월 113.84에서 2024년 7월 114.13으로 오르면서 물가 상승 압력이 지속되고 있습니다.
+포인트2: 장단기 금리 역전 현상이 심화되며 경기 하방 위험이 잔존합니다. 장단기금리차는 2024년 1월 -0.06%p에서 2024년 6월 -0.11%p로 확대되었고, 현재 장단기금리차(10y-1y)는 -0.09%p를 기록하여 경기 침체 가능성을 시사합니다. 하지만 국고채 10y 금리가 2024년 5월 3.53%에서 2024년 7월 3.17%로 하락하면서 장기 금리가 안정화되는 추세를 보입니다.
+포인트3: 시장 변동성이 증가하고 환율은 약세를 보이는 가운데, 외국인과 기관의 수급 주도권이 교차하는 모습입니다. VIX 지수가 2024년 6월 12.68에서 2024년 7월 14.47로 상승하여 시장 변동성이 커졌으며, 원/달러 환율은 2024년 6월 1380.13원에서 2024년 7월 1383.38원으로 상승하며 원화 약세가 지속되고 있습니다. 외국인 수급은 2024년 6월 +442억원에서 2024년 7월 +176억원으로 매도 가속이 감지되는 반면, 기관 수급은 2024년 6월 -189억원에서 2024년 7월 +186억원으로 매수 가속이 나타나 투자 주체 간 동향이 엇갈립니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 부동산 시장의 불안정성 심화. 서울 인기 지역 아파트 값 상승세가 경기도 과천·성남·하남·용인 등으로 확산되고, 신규 아파트 공급 부족으로 전셋값과 매매 가격이 동반 상승하고 있다. 일부 지역에서는 대규모 주택 공급 우려와 민간 개발 반려 후 공공 개발 추진에 대한 토지주 반발 등 정책 불확실성도 나타나고 있다.
+포인트2: 정부의 수출 확대 정책 및 산업 육성 노력. 정부는 상반기 역대 2위 수출 실적을 바탕으로 올해 수출 목표를 100억 달러 이상 상향하고, 무역금융 370조 원을 지원할 계획이다. 특히 K-뷰티 전용 펀드 조성 등 K-뷰티 수출 확대 지원과 AI-반도체 등 3대 게임 체인저 기술 선도를 통한 글로벌 경쟁력 확보를 추진하고 있다.
+포인트3: AI의 경제 성장에 대한 불확실성. 챗GPT 이후 생성형 AI에 대한 관심이 높아졌지만, 골드만삭스는 AI가 향후 10년간 세계 GDP 7%(100조 달러)를 가속화할 것이라고 전망하면서도, 실제 경제성장 가속화는 당장 보기 어려울 것이라는 신중론을 제시했다. </pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 40
+KOSPI는 장기 상승 추세 유지 및 경기회복 기대감이 있으나, 단기 모멘텀 악화, 장단기 금리 역전 심화, 시장 변동성 증가 등 하방 요인이 공존하여 중립 레짐 확률이 40%로 가장 높습니다. 다만 약세 레짐 20% 등 다른 레짐에도 확률이 분산되어 불확실성이 상존합니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202506')" style="cursor:pointer">
+            <td>2025-06</td>
+            <td style="color:#2ecc71;font-weight:bold">+2.5%</td>
+            <td>70</td>
+            <td style="color:#2ecc71">+15.4%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI는 5월 +6.5% 상승하며 강한 기술적 모멘텀을 보였고, 경기 개선 기대감과 환율 안정으로 외국인 수급이 개선되고 있습니다. 다만 장</td>
+        </tr>
+        <tr id="detail_202506" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI는 2025년 5월 월간수익률이 +6.5%를 기록하며 직전 3개월간의 낮은 수익률(0.2%~0.3%) 대비 크게 상승했습니다. 이는 MACD 변화량 +496.3과 RSI 변화량 +13.5에서 나타나듯이 강한 상승 모멘텀과 매수 강도 개선이 동반된 것으로 보입니다.
+포인트2: 2025년 5월 KOSPI 종가 36,140은 MA50(34,301)과 MA200(34,220)을 모두 상회하고 있으며, 특히 MA50 기울기가 전월 대비 +150으로 상승하여 단기 추세의 긍정적 전환을 시사합니다. 하지만 MA200 기울기는 -373으로 여전히 하락 중이며, 이는 장기 추세에 대한 주의가 필요함을 나타냅니다.
+포인트3: 글로벌 주요 지수들은 2025년 5월에 긍정적인 반등을 보였습니다. S&P500 종가는 5,912로 MA50(5,605)과 MA200(5,785)을 모두 상회했으며, SOX 종가 4,758은 MA50(4,367)을 상회하고 MACD가 139.2로 크게 상승하며 강한 회복세를 나타냈습니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 경기 개선 기대감과 동시에 물가 상승 압력이 지속될 가능성이 있습니다. 선행종합지수는 202411월 116.50에서 202504월 118.10으로 1.60 상승하며 경기 개선 기대감을 나타내고 있습니다. 반면, CPI는 202412월 114.91에서 202505월 116.27로 1.36 상승하며 물가 상승 압력이 지속되고 있음을 보여줍니다.
+
+포인트2: 장단기금리차가 확대되며 경기 침체 우려가 완화되는 모습이나, 기업 체감 경기는 여전히 위축되어 있습니다. 장단기금리차는 202411월 -0.43%p에서 202504월 -0.21%p로 0.22%p 상승하며 역전폭이 줄어들어 경기 침체 우려가 완화되고 있습니다. 하지만 전산업BSI는 202411월 69.00에서 202504월 65.00으로 4.00 하락하여 기업들의 체감 경기가 여전히 부진함을 시사합니다.
+
+포인트3: 환율이 안정되고 외국인 투자심리가 개선되고 있으나, 개인 투자자들은 매도 우위를 보이고 있습니다. 원/달러 환율은 2025-04월 1444.31원에서 2025-05월 1394.49원으로 -49.8원 하락하며 원화 강세 흐름을 보입니다. 외국인 수급은 2025-04월 -896억원 순매도에서 2025-05월 +133억원 순매수로 전환하며 매수 가속도를 보인 반면, 개인은 2025-05월 -320억원을 순매도했습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 미국 연방국제통상법원이 트럼프 전 대통령의 상호관세 부과를 위법하다고 판결했으나, 트럼프 측은 이를 맹비난하며 대법원 번복을 희망하고 백악관 또한 "사법 쿠데타"라며 관세 카드를 포기하지 않을 뜻을 밝혔다. 이는 트럼프 당선 직후 달러 초강세 기조와 함께 환율 변동성 확대 및 무역 불확실성 증대로 코스피에 영향을 줄 수 있다.
+포인트2: 2025년 1분기 대외채무는 6834억달러로 지난해 말 대비 1.6% 증가했으며, 외채 건전성 지표는 소폭 악화되었으나 정부는 양호하다고 평가했다. 이는 국내 금융 시장의 안정성 및 외환 유동성에 대한 지속적인 모니터링이 필요함을 시사한다.
+포인트3: 6월 대통령 선거를 앞두고 이재명 후보의 '코스피 5000시대' 공약과 김문수 후보의 '박스피 탈출' 공약이 제시되었으며, 두 후보 모두 기업지배구조 개선을 통한 코리아 디스카운트 해소를 주장하고 있다. 이는 국내 증시 부양에 대한 정책 기대감을 높일 수 있다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre></pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 강세 / 신뢰도: 70
+KOSPI는 5월 +6.5% 상승하며 강한 기술적 모멘텀을 보였고, 경기 개선 기대감과 환율 안정으로 외국인 수급이 개선되고 있습니다. 다만 장기 추세 하락, 기업 체감 경기 부진 및 트럼프 관세 정책 불확실성으로 인해 랠리보다는 강세장 유지에 무게를 두는 것이 적절합니다.</pre>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+</table>
+<script>
+function toggleDetail(id) {
+  var el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+</script>
+</body>
+</html>

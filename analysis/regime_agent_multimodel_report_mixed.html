@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>KOSPI 레짐 판정 리포트</title>
+<style>
+  body { font-family: 'Pretendard', sans-serif; background:#0f0f1a; color:#e0e0e0; margin:0; padding:24px }
+  h1 { color:#fff; font-size:1.6em; margin-bottom:4px }
+  .subtitle { color:#888; margin-bottom:24px }
+  .summary-bar { display:flex; gap:24px; margin-bottom:24px }
+  .kpi { background:#1e1e2e; border-radius:8px; padding:16px 24px; text-align:center }
+  .kpi .val { font-size:2em; font-weight:bold; color:#7c9fff }
+  .kpi .lbl { color:#888; font-size:0.85em }
+  table { width:100%; border-collapse:collapse; background:#1e1e2e; border-radius:8px; overflow:hidden }
+  th { background:#2a2a3e; padding:12px 16px; text-align:left; color:#aaa; font-size:0.85em }
+  td { padding:12px 16px; border-bottom:1px solid #2a2a3e; font-size:0.9em }
+  tr:hover > td { background:#252535 }
+  .agent-card { background:#0f0f1a; border-radius:6px; padding:12px }
+  .agent-card pre { white-space:pre-wrap; font-size:0.8em; color:#ccc; margin:8px 0 0 }
+  .agent-label { font-size:0.8em; font-weight:bold; color:#888 }
+  .technical .agent-label { color:#7c9fff }
+  .fundamental .agent-label { color:#a29bfe }
+  .news .agent-label { color:#fdcb6e }
+  .bull .agent-label { color:#2ecc71 }
+  .bear .agent-label { color:#e74c3c }
+</style>
+</head>
+<body>
+<h1>KOSPI 레짐 판정 리포트</h1>
+<div class="subtitle">Trading Agent — 2023-11 ~ 2026-02 | 각 행 클릭 시 상세 내용 확인</div>
+<div class="summary-bar">
+  <div class="kpi"><div class="val">3</div><div class="lbl">분석 개월</div></div>
+  <div class="kpi"><div class="val">33.3%</div><div class="lbl">판정 정확도</div></div>
+  <div class="kpi"><div class="val">0</div><div class="lbl">Bull 판정</div></div>
+  <div class="kpi"><div class="val">0</div><div class="lbl">Bear 판정</div></div>
+</div>
+<table>
+  <thead><tr><th>기준월</th><th>판정</th><th>신뢰도</th><th>실제 다음달 수익률</th><th>정확</th><th>요약</th></tr></thead>
+  <tbody>
+        <tr onclick="toggleDetail('detail_202003')" style="cursor:pointer">
+            <td>2020-03</td>
+            <td style="color:#2ecc71;font-weight:bold">+2.1%</td>
+            <td>55</td>
+            <td style="color:#e74c3c">-12.3%</td>
+            <td>❌</td>
+            <td style="font-size:0.85em;color:#aaa">RSI 27.0 극단적 과매도 + 거래대금 1.7배 폭증으로 단기 기술적 반등 통계(상승확률 90%, 평균 +2.8%)가 우세하나, 코로나19 </td>
+        </tr>
+        <tr id="detail_202003" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI 종가(27,190)가 MA200(27,806) 아래로 이탈하고, MACD가 +124.9에서 -451.9로 급전환되며 추세 훼손이 확인됨. 동시에 S&P500·SOX도 각각 MA50 하회 및 MACD 음전환으로 글로벌 증시 전반의 모멘텀이 동반 악화된 상태.
+
+포인트2: KOSPI RSI(14)가 27.0으로 과매도 구간 진입(3개월 변화량 -43.5). 과거 통계상 RSI&lt;35 + MA200 하회 동시 충족 시 해당월 평균 +2.8%, 상승확률 90%(10회 중 9회)로 단기 기술적 반등 가능성이 높음.
+
+포인트3: 2월 거래대금 월평균 2,753억으로 12개월 평균의 1.7배까지 급증. KOSPI 월간 -5.8% 급락 국면에서 거래대금이 폭증한 것은 패닉셀 또는 단기 저점 탐색 과정의 수급 과열 신호로 해석 가능.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 경기 선행지수 및 기업 심리는 개선되고 있으나, 소비자 심리는 둔화 조짐을 보인다. 선행종합지수는 2020년 1월 98.30으로 상승세를 유지하며 경기 회복 기대를 나타내고, 전산업BSI도 2020년 1월 75.00으로 긍정적인 추세를 보였다. 반면 경기전망CSI는 2020년 2월 76.00으로 전월 87.00 대비 크게 하락하며 소비 심리가 위축되고 있음을 시사한다.
+
+포인트2: 인플레이션 압력은 소폭 증가하고 있으며, 장단기금리차는 확대되어 경기 회복 기대감을 반영한다. CPI는 2020년 2월 100.16으로 소폭 상승했으며, PPI도 2020년 1월 101.02로 상승세를 보였다. 장단기금리차는 2020년 1월 0.24%p로 플러스 전환 및 확대되어 향후 경기 개선에 대한 기대가 있음을 나타낸다.
+
+포인트3: 시장 변동성이 급증하고 있으며, 외국인 자금 이탈과 원화 약세가 동시에 나타나고 있다. VIX는 2020년 2월 19.63으로 전월 대비 +40.8% 급등하며 시장 불확실성이 커졌다. 또한, 외국인 순매수는 2020년 2월 -301억 원으로 대규모 매도세로 전환되었고, 원/달러 환율은 2020년 2월 1193.79원으로 원화 약세가 심화되었다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 코로나19 국내 확진자 급증 및 사망자 발생으로 불안감이 커지고 있습니다. 국내 확진자는 2337명으로 늘고 사망자도 16명이 발생했습니다.
+포인트2: 한국은행이 기준금리를 1.25%로 동결했지만, 시장에서는 추가 인하 가능성을 예상하고 있습니다. 코로나19 사태로 내수 경기가 직격탄을 맞으며 한은은 올해 성장 전망치를 2.3%에서 2.1%로 하향 조정했습니다.
+포인트3: 정부는 부동산 시장 안정화를 위해 수원시 3개 구, 안양시 만안구, 의왕시를 조정대상지역으로 지정하며 대출·청약·세제 규제를 강화했습니다. 이는 용인·수원·성남 지역의 풍선효과를 줄이기 위한 19번째 부동산 대책입니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre># KOSPI 향후 1개월 강세 논거
+
+---
+
+## 논거 1 [기술적] — 극단적 과매도 후 통계적 반등 확률 90%
+
+KOSPI RSI(14)가 27.0으로 과매도 구간에 진입한 상태에서, 과거 RSI&lt;35 + MA200 하회 동시 충족 시 해당월 평균 수익률 **+2.8%, 상승확률 90%(10회 중 9회)**로 집계된다. 통계적 우위가 명확한 구간에 현재 KOSPI가 정확히 위치해 있다.
+
+---
+
+## 논거 2 [기술적] — 거래대금 폭증은 단기 저점 탐색 완료 신호
+
+2월 거래대금 월평균이 **2,753억원으로 12개월 평균의 1.7배**까지 급증하며 수급 과열이 확인된다. 급락 국면에서의 거래대금 폭증은 패닉셀이 소진되고 저점 매수세가 유입되는 저점 탐색 완료 신호로, 이후 수급 안정과 함께 반등 동력이 형성된다.
+
+---
+
+## 논거 3 [펀더멘털] — 선행지수 상승세 + 장단기 금리차 플러스 전환
+
+선행종합지수가 **98.30으로 상승세**를 유지하며 경기 회복 기대를 뒷받침하고 있다. 장단기 금리차 역시 **+0.24%p로 플러스 전환·확대**되어 채권시장이 향후 경기 개선을 선반영하고 있음을 나타낸다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre>투자 심리 위축 및 추세 하락 전환: KOSPI 종가가 MA200(27,806)을 하회하고 MACD가 -451.9로 급전환되며 기술적 추세 하락이 확인되어 매도 압력이 강화될 것입니다.
+
+소비 심리 위축과 시장 불확실성 증대: 경기전망CSI가 2020년 2월 76.00으로 전월 대비 크게 하락하며 소비 심리가 위축되었고, VIX가 2월 19.63으로 전월 대비 +40.8% 급등하여 시장 불확실성이 커져 KOSPI 하락을 부추길 것입니다.
+
+코로나19 확산과 외국인 자금 이탈: 국내 코로나19 확진자가 2337명으로 급증하고, 외국인 순매수가 2월 -301억 원으로 대규모 매도세로 전환되며 투자 심리가 위축되어 KOSPI 하락을 심화시킬 것입니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre># 2라운드 반박 (강세론)
+
+---
+
+## 반박 1 — MACD 급락은 이미 RSI 27 과매도에 반영된 노이즈
+
+상대방은 MACD -451.9를 추세 하락 근거로 제시하나, MACD 급락은 RSI 27.0이라는 극단적 과매도의 **결과**이지 추가 하락의 독립적 원인이 아니다. 과거 RSI&lt;35 + MA200 하회 동시 충족 시 상승확률 90%(10회 중 9회)로, MACD 음전환 상태에서도 이 통계는 성립한다.
+
+---
+
+## 반박 2 — VIX 급등은 공포 정점 신호이지 추가 하락 예고가 아니다
+
+VIX +40.8% 급등을 하락 근거로 삼지만, 극단적 공포 지수 급등은 오히려 패닉셀 소진의 반증이다. 2월 거래대금이 12개월 평균의 **1.7배**까지 폭증한 것은 공포 극대화 국면에서 저점 매수세가 동시에 유입됐음을 수급으로 확인해준다.
+
+---
+
+## 반박 3 — 외국인 순매도 -301억은 선행지수 상승 추세를 뒤집을 규모가 아니다
+
+외국인 순매도 -301억을 자금 이탈 근거로 제시하나, 선행종합지수 98.30 상승세·장단기 금리차 **+0.24%p 플러스 전환**이 이미 경기 바닥 통과를 선반영하고 있다. 펀더멘털 개선 추세가 유효한 상황에서 단월 외국인 소규모 순매도는 추세 반전 근거로 불충분하다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre>[반박 (1라운드)]
+
+**상대방 논거 1 [기술적] - 극단적 과매도 후 통계적 반등 확률 90%**
+
+RSI&lt;35 및 MA200 하회 시 과거 통계적 반등 확률 90%는 단기적인 현상에 불과합니다. KOSPI 종가가 MA200(27,806)을 하회하고 MACD가 -451.9로 급전환되며 추세 하락이 이미 확인되어 매도 압력이 강화될 것입니다.
+
+**상대방 논거 2 [기술적] - 거래대금 폭증은 단기 저점 탐색 완료 신호**
+
+2월 거래대금 폭증이 저점 탐색 완료 신호라는 주장은 현재 투자 심리 위축을 간과한 것입니다. KOSPI 종가가 MA200(27,806)을 하회하고 MACD가 -451.9로 급전환되며 기술적 추세 하락이 확인되어 거래량 증가가 매도 압력 강화로 해석될 여지가 큽니다.
+
+**상대방 논거 3 [펀더멘털] - 선행지수 상승세 + 장단기 금리차 플러스 전환**
+
+선행종합지수 상승 및 장단기 금리차 플러스 전환은 소비 심리 위축과 상반되는 주장입니다. 경기전망CSI가 2월 76.00으로 전월 대비 크게 하락하며 소비 심리가 위축되었고, 이는 KOSPI 하락을 부추길 것입니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 55
+RSI 27.0 극단적 과매도 + 거래대금 1.7배 폭증으로 단기 기술적 반등 통계(상승확률 90%, 평균 +2.8%)가 우세하나, 코로나19 확산·외국인 매도·MA200 하회 등 하방 압력이 상존해 반등 강도는 제한적. 강세·약세 양방 리스크를 균형 고려 시 소폭 플러스 수익률(+2.1%)로 추정하며 보수적 운용 유지.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202209')" style="cursor:pointer">
+            <td>2022-09</td>
+            <td style="color:#e74c3c;font-weight:bold">-2.1%</td>
+            <td>58</td>
+            <td style="color:#e74c3c">-10.2%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">MA200 대비 10% 이상 하회·MACD 음전환·글로벌 위험자산 동반 약화 등 기술적 하방 압력이 우세하나, 외국인 순매수 가속·WTI 18%</td>
+        </tr>
+        <tr id="detail_202209" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI(32,230)는 MA50(31,844) 위에 있으나 MA200(35,644)을 크게 하회하며 중장기 하락추세 지속. MA50·MA200 기울기 모두 음수(-645, -734)로 이동평균선 자체도 우하향 중.
+
+포인트2: RSI(48.9)는 중립 구간이나 전월 대비 -9.2 하락했고, MACD도 전월 대비 -60.5 악화되며 단기 모멘텀이 7월 반등(+4.9%) 이후 재차 약화. 8월 월간수익률 -0.5%로 반등 동력 소진 신호.
+
+포인트3: S&P500(3,955)·SOX(2,677) 모두 8월 말 MA50·MA200 하회 및 RSI 30대 후반으로 급락, MACD 음전환(-5.6, -34.1)하며 글로벌 위험자산 지표가 동반 약화되어 외부 환경도 우호적이지 않음.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 인플레이션 압력이 지속되고 있으나, 원자재 가격은 하락세를 보이고 있습니다. 2022년 8월 CPI는 108.63으로 전년 대비 높은 수준을 유지하고 있으며, PPI는 2022년 7월 116.90으로 높은 상승률을 보였습니다. 반면, WTI 유가는 2022년 6월 114.68$에서 2022년 8월 93.69$로 하락세를 보이고 있습니다.
+포인트2: 기업 및 소비자 심리가 위축되고 있으나, 선행종합지수는 상승세를 유지하고 있습니다. 전산업 BSI는 2022년 7월 80.00으로 하락했고, 경기전망 CSI는 2022년 8월 58.00으로 낮은 수준을 기록하며 경기 비관론이 우세합니다. 그럼에도 불구하고 선행종합지수는 2022년 7월 108.90으로 꾸준히 상승하는 모습을 보였습니다.
+포인트3: 환율이 상승하며 원화 약세가 지속되는 가운데, 외국인 순매수가 가속화되고 있습니다. 원/달러 환율은 2022년 8월 1318.44원으로 전월 대비 +11.0원 상승하여 원화 약세가 심화되었습니다. 그러나 외국인 투자자는 2022년 8월 352억을 순매수하며 매수 가속도가 +85억을 기록했습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 주택 구입 잠재력 하락 및 부동산 시장 불안정성 심화. 서울의 주택구입잠재력지수(KB-HOI)가 1년 전 3.9에서 2.8로 1.1포인트 하락하여 중산층의 주택 구매력이 감소했다. 이는 금리 인상 여파로 집값 하락세에도 불구하고 중산층의 부동산 시장 접근성이 낮아지고 있음을 시사한다.
+포인트2: 고령화 및 사회보장 시스템 개혁 필요성 대두. 국민연금 개혁 특위 구성과 사적 연금의 건보료 부과 검토 등의 논의는 한국의 급격한 인구 감소(50년 뒤 인구 1400만명 감소 예상)와 고령화에 따른 사회보장 시스템의 지속 가능성에 대한 우려를 반영한다. 이는 장기적으로 재정 건전성 및 소비 여력에 영향을 미칠 수 있다.
+포인트3: 강달러 현상 심화 및 환율 변동성 확대. 달러 환율이 계속 오르면서 달러를 팔려는 개인 간 거래까지 활발해지는 등 강달러 현상이 심화되고 있다. 이는 원화 가치 하락과 수입 물가 상승 압력으로 이어져 국내 기업 실적 및 전반적인 경제에 부담을 줄 수 있다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre># KOSPI 향후 1개월 상승 논거
+
+---
+
+## 1. 🟢 [펀더멘털] 원자재 가격 하락 → 기업 마진 회복 기대
+
+WTI 유가가 2022년 6월 114.68달러에서 8월 93.69달러로 **약 18% 급락**하며 비용 압력이 완화되고 있다. 이는 제조업 중심의 KOSPI 구성 기업들의 원가 부담 경감으로 직결되어 실적 개선 기대감을 자극할 수 있다.
+
+---
+
+## 2. 🟢 [펀더멘털] 선행지수 상승 + 외국인 순매수 가속
+
+선행종합지수가 2022년 7월 **108.90**으로 꾸준한 상승세를 유지하며 경기 저점 통과 신호를 발신 중이다. 외국인은 8월에만 **352억 원 순매수**하며 전월 대비 +85억 원 가속화, 수급 측면에서 강력한 매수 주체가 유입되고 있다.
+
+---
+
+## 3. 🟢 [기술적] MA50 위 안착으로 단기 지지 구조 확인
+
+KOSPI(32,230)는 MA50(31,844)을 **386포인트 상회**하며 단기 지지선 위에 안착한 상태다. 이는 단기 하방을 방어하는 기술적 버퍼로 작용하며, 추가 매수세 유입 시 반등의 발판이 될 수 있다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre>제공된 데이터를 바탕으로 KOSPI 하락 논거 3가지를 약세 관점에서 제시합니다.
+
+1.  **기술적 추세 악화:** KOSPI(32,230)는 MA200(35,644)을 크게 하회하고 MA50·MA200 기울기 모두 음수(-645, -734)로 중장기 하락추세가 지속되고 있습니다. MACD가 전월 대비 -60.5 악화되고 8월 월간수익률 -0.5%를 기록하며 단기 반등 동력이 소진되고 있습니다.
+2.  **경기 심리 위축 및 물가 압력 지속:** 전산업 BSI(80.00)와 경기전망 CSI(58.00)가 낮은 수준을 기록하며 경기 비관론이 우세합니다. CPI(108.63) 및 PPI(116.90)는 높은 상승률을 유지하며 인플레이션 압력이 지속되고 있습니다.
+3.  **부동산 시장 불안 및 강달러 심화:** 서울 주택구입잠재력지수(KB-HOI)가 2.8로 1.1포인트 하락하며 부동산 시장 불안정성이 심화되고 있습니다. 원/달러 환율이 1318.44원으로 전월 대비 +11.0원 상승하며 강달러 현상이 심화되어 국내 기업 실적에 부담을 줄 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre># KOSPI 강세 반박 (2라운드)
+
+---
+
+## 반박 1. MA200 하회는 "추세"가 아닌 "출발점" 문제다
+
+상대방은 MA200(35,644) 하회를 근거로 중장기 하락추세를 주장하나, **현재 KOSPI(32,230)는 MA50(31,844)을 386포인트 상회하며 단기 지지 구조를 이미 회복**한 상태다. MA200 회귀는 단기 1개월 논쟁의 프레임 밖이며, MA50 위 안착이 향후 1개월 반등의 직접적 기술적 근거다.
+
+---
+
+## 반박 2. CPI·PPI 압력은 이미 WTI 하락으로 선행 완화 중이다
+
+CPI(108.63)·PPI(116.90)의 높은 수준을 지적하나, **WTI는 6월 114.68달러 → 8월 93.69달러로 이미 18% 급락**했다. 원자재 가격은 물가지수에 1~2개월 시차로 반영되므로, 현재 PPI·CPI 수치는 후행 데이터이며 향후 완화 방향을 선행 시사한다.
+
+---
+
+## 반박 3. 외국인 순매수 가속이 환율·심리 악재를 상쇄한다
+
+원/달러 환율 상승(1,318.44원)과 BSI(80)·CSI(58) 위축을 지적하나, **외국인은 8월에만 352억 원 순매수하며 전월 대비 +85억 원 가속화**했다. 강달러 환경에서도 외국인이 순매수를 확대했다는 사실 자체가 심리·환율 악재가 수급을 역전시키지 못했음을 데이터로 입증한다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre>강세론자의 주장에 대해 다음 약점들을 반박합니다.
+
+1.  **원자재 가격 하락 → 기업 마진 회복 기대**: WTI 유가 하락에도 불구하고 CPI(108.63) 및 PPI(116.90)는 높은 수준을 유지하여 여전히 인플레이션 압력이 심합니다. 이는 원가 부담 완화가 즉각적인 기업 마진 개선으로 이어지기 어렵다는 것을 보여줍니다.
+
+2.  **선행지수 상승 + 외국인 순매수 가속**: 선행종합지수가 상승 중이나 전산업 BSI(80.00)와 경기전망 CSI(58.00)는 낮은 수준으로 경기 비관론이 우세합니다. 또한, 외국인 순매수가 가속화되었다고는 하나, KOSPI 8월 월간수익률이 -0.5%를 기록하며 시장 전반의 매수 심리는 여전히 약합니다.
+
+3.  **MA50 위 안착으로 단기 지지 구조 확인**: KOSPI는 MA50(31,844) 위에 있으나 MA200(35,644)을 크게 하회하고 MA50·MA200 기울기 모두 음수(-645, -734)로 중장기 하락 추세가 명확합니다. RSI(-9.2) 및 MACD(-60.5) 악화는 단기 반등 동력 소진을 시사하며, MA50 상회만으로 지지 구조를 논하기 어렵습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 58
+MA200 대비 10% 이상 하회·MACD 음전환·글로벌 위험자산 동반 약화 등 기술적 하방 압력이 우세하나, 외국인 순매수 가속·WTI 18% 급락·MA50 지지 등 단기 반등 요인이 혼재. 강달러·BSI/CSI 위축·부동산 불안이 지속되어 소폭 하락 우세 구간으로 판단, 보수적 운용 권고.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202408')" style="cursor:pointer">
+            <td>2024-08</td>
+            <td style="color:#2ecc71;font-weight:bold">+1.2%</td>
+            <td>52</td>
+            <td style="color:#e74c3c">-4.9%</td>
+            <td>❌</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI는 MA50·MA200 상회로 중장기 구조는 유지되나, MACD 389→-144 급전환·RSI 47.0 하락으로 단기 모멘텀 약화가 뚜</td>
+        </tr>
+        <tr id="detail_202408" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI는 38,125로 MA50(38,044)·MA200(35,752) 모두 상회하며 중장기 상승추세를 유지 중이나, 7월 월간수익률 -1.1%로 6월(+7.0%) 급등 후 되돌림이 진행 중이다.
+
+포인트2: MACD가 389.0→-144.0으로 급전환되고 RSI도 62.9→47.0으로 15.9p 하락하며 단기 모멘텀이 뚜렷하게 약화되었다. S&P500·SOX도 MACD가 각각 1.9·-108.7로 동반 악화되어 글로벌 모멘텀 둔화가 함께 나타나고 있다.
+
+포인트3: 7월 거래대금 월평균 1,987억원(12개월 평균 대비 1.0x)으로 5~6월 연속 평균 이하(0.9x)에서 소폭 회복됐으나, 6월 1,920억원 대비 미미한 수준으로 거래 참여 회복이 뚜렷하지 않다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 경기 개선 기대감 지속 및 물가 상승 압력: 선행종합지수가 2024년 6월 115.20으로 꾸준히 상승하며 경기 개선 기대감을 나타내고 있다. 동시에 WTI 유가와 CPI, PPI 또한 상승세를 보여 물가 상승 압력이 지속될 가능성이 있다.
+포인트2: 기업 심리 및 소비자 심리 개선: 전산업BSI가 2024년 6월 74.00으로 상승하고, 경기전망CSI도 2024년 7월 84.00으로 상승하여 기업과 소비자의 경제 상황에 대한 긍정적인 인식이 확산되고 있다.
+포인트3: 채권 시장 안정화와 외국인 매수세 유입: 국고채 10년물 금리가 2024년 7월 3.17%로 하락하며 채권 시장의 안정화를 보여주고 있으며, 외국인 수급이 2024년 7월 176억 원 순매수로 전환되어 국내 시장으로의 자금 유입이 나타나고 있다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 정부가 2024년 세법개정안을 발표했으며, 민관 합동 수출확대 대책회의를 통해 수출 5대 핵심업종(반도체, 자동차·부품, 석유제품·화학, K-뷰티, K-푸드)의 수출 목표를 100억 달러 이상 상향 조정했다. 또한 K-뷰티 전용 펀드를 조성하고 무역금융 370조 원을 공급하여 수출 확대에 힘쓸 예정이다.
+포인트2: AI의 경제성장 기여에 대한 기대와 우려가 공존한다. 골드만삭스는 생성형 AI가 앞으로 10년간 세계 GDP의 7% 성장을 이끌 것으로 전망했지만, 동시에 경제성장 가속화는 당장 보기 어려울 것이라는 의견도 있다. 한편 정부는 AI-반도체를 3대 게임 체인저 기술로 선정하고 저전력 AI반도체 기술 선도를 위한 이니셔티브를 심의·의결했다.
+포인트3: 수도권 부동산 시장은 서울 집값 상승세가 경기 과천·성남·하남·용인 등으로 확산하는 조짐을 보이고 있다. 그러나 안산시 89블록의 대규모 주택공급 우려와 김포시 민간개발 반려 후 공공개발 용역 추진 소식은 지역별 주택 공급 방식 변화와 이에 따른 시장의 반응이 주목된다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre>## KOSPI 향후 1개월 상승 논거 3가지
+
+---
+
+**① 기술적: MA50·MA200 상회로 중장기 상승추세 견고**
+KOSPI 38,125는 MA50(38,044)·MA200(35,752)을 모두 상회하며 중장기 상승추세의 구조적 토대를 유지하고 있다. 7월 거래대금이 12개월 평균 대비 1.0x로 5~6월 연속 평균 이하(0.9x)에서 회복 전환되며 점진적 참여 확대가 감지된다.
+
+---
+
+**② 펀더멘털: 선행지수 상승·채권 안정·외국인 순매수 동시 포착**
+선행종합지수가 115.20으로 꾸준히 상승하는 가운데 국고채 10년물 금리가 3.17%로 하락해 밸류에이션 환경이 개선되고 있다. 외국인 수급이 7월 176억 원 순매수로 전환되며 실수요 자금의 국내 시장 유입이 본격화되고 있다.
+
+---
+
+**③ 뉴스: 정부 수출 드라이브·AI반도체 정책으로 이익 모멘텀 강화**
+정부가 반도체·자동차 등 5대 핵심업종 수출 목표를 100억 달러 이상 상향하고 무역금융 370조 원을 공급해 대형 수출주의 실적 기대감이 높아졌다. AI반도체를 3대 게임 체인저 기술로 선정·지원함으로써 반도체 섹터의 정책 프리미엄이 추가로 부여된다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre>약세론자의 관점에서 KOSPI 하락 논거 3가지를 제시합니다.
+
+1.  **기술적 모멘텀 약화:** KOSPI는 7월 월간수익률 -1.1%로 6월 급등 후 되돌림이 진행 중이며, MACD가 389.0에서 -144.0으로 급전환되고 RSI도 62.9에서 47.0으로 하락하여 단기 하락 모멘텀이 뚜렷하게 약화되고 있습니다.
+2.  **물가 상승 압력 지속:** 선행종합지수 상승에도 불구하고 WTI 유가, CPI, PPI가 모두 상승세를 보이며 물가 상승 압력이 지속될 가능성이 있어, 이는 시장의 불확실성을 가중시키고 투자 심리를 위축시킬 수 있습니다.
+3.  **부동산 시장 불안정성:** 수도권 부동산 시장의 일부 지역으로 집값 상승세가 확산되는 조짐이 있으나, 안산시 89블록 대규모 주택공급 우려와 김포시 공공개발 용역 추진 소식은 지역별 주택 공급 방식 변화로 인한 시장의 불안정성을 야기할 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre>## 2라운드 반박 (강세론)
+
+---
+
+**① 기술적 약화 주장 반박**
+MACD·RSI 단기 하락은 6월 +7.0% 급등 이후의 자연스러운 기술적 조정일 뿐, KOSPI는 여전히 MA50(38,044)·MA200(35,752)을 모두 상회하는 중장기 상승구조를 유지하고 있다. 7월 거래대금이 12개월 평균 대비 1.0x로 5~6월 연속 0.9x에서 회복된 점은 조정 속에서도 참여 심리가 살아있음을 보여준다.
+
+---
+
+**② 물가 압력 주장 반박**
+물가 상승이 문제라면 선행종합지수 115.20 상승과 국고채 10년물 3.17% 하락은 동시에 설명되지 않는다. 채권시장이 금리 인하 방향을 선반영하며 안정화되고 있다는 사실 자체가 물가 우려가 밸류에이션을 훼손할 수준이 아님을 시사한다.
+
+---
+
+**③ 부동산 불안정성 주장 반박**
+안산·김포 등 일부 지역의 공급 변화는 KOSPI 전체 방향성과 직결되지 않으며, 외국인이 7월 176억 원 순매수로 전환한 실수요 자금 유입이 이를 상쇄한다. 기업·소비자 심리지수(BSI 74, CSI 84) 동반 상승은 내수 위축 우려보다 회복 기대가 더 강하다는 시장 내부 신호다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre>[System]
+당신은 약세·변동성론자입니다. 상대방(강세론자)의 주장을 읽고 핵심 약점을 반박하세요. 반드시 제공된 데이터만 사용하고, 외부 지식이나 학습 데이터는 사용하지 마세요. 각 근거는 핵심 수치 1~2개를 포함해 2문장 이내로 간결하게 작성하세요. 군더더기 없이 핵심만 쓰세요.
+
+[User]
+상대방의 주장에 대한 약세론자의 반박 3가지입니다.
+
+1.  **기술적 모멘텀 약화 간과:** 상대방은 KOSPI가 MA50, MA200을 상회하며 중장기 상승 추세가 견고하다고 주장하나, 7월 월간수익률이 -1.1%로 6월 급등 후 되돌림이 진행 중인 점과 MACD가 389.0에서 -144.0으로 급전환된 단기 모멘텀 약화는 간과하고 있습니다.
+2.  **물가 상승 압력의 영향력 경시:** 선행종합지수 상승을 긍정적으로 평가하지만, WTI 유가, CPI, PPI가 모두 상승세를 보여 물가 상승 압력이 지속될 가능성이 크며 이는 밸류에이션 환경 개선을 저해할 수 있습니다.
+3.  **정책 효과의 불확실성:** 정부의 수출 드라이브 및 AI반도체 정책은 긍정적이나, 글로벌 모멘텀 둔화(S&P500·SOX MACD 동반 악화) 속에서 이러한 정책의 실제 실적 개선 효과는 불확실하며, 오히려 단기 모멘텀 약화를 심화시킬 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 52
+KOSPI는 MA50·MA200 상회로 중장기 구조는 유지되나, MACD 389→-144 급전환·RSI 47.0 하락으로 단기 모멘텀 약화가 뚜렷하다. 외국인 순매수 전환·채권 안정 등 펀더멘털 지지요인과 글로벌 모멘텀 둔화·물가 압력이 상충되어 소폭 상승 예상하나 불확실성 높다.</pre>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+</table>
+<script>
+function toggleDetail(id) {
+  var el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+</script>
+</body>
+</html>

@@ -41,10 +41,7 @@ for env_path in [
                 key, val = line.split("=", 1)
                 os.environ.setdefault(key.strip(), val.strip().strip('"'))
 
-PG_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:NgHDMsgiGwbvMpWHLUgTQguaedbGoxvv@metro.proxy.rlwy.net:50087/railway",
-)
+PG_URL = os.environ["DATABASE_URL"]
 FNSPACE_API_KEY = os.environ.get("FNSPACE_API_KEY", "")
 API_DELAY = 0.5
 

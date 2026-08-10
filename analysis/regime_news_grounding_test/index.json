@@ -1,0 +1,84 @@
+[
+  {
+    "as_of": "2018-04-01",
+    "path": "/Users/namsugyeong/Desktop/alpha_lab/analysis/regime_news_grounding_test/2018-04.json",
+    "trust_ratio": 0.562,
+    "trusted_domains": [
+      "yna.co.kr",
+      "newsis.com",
+      "yna.co.kr",
+      "kdi.re.kr",
+      "newsis.com",
+      "yna.co.kr",
+      "news1.kr",
+      "ytn.co.kr",
+      "hani.co.kr",
+      "einfomax.co.kr",
+      "einfomax.co.kr",
+      "hankyung.com",
+      "yna.co.kr",
+      "chosun.com",
+      "mk.co.kr",
+      "yna.co.kr",
+      "donga.com",
+      "sbs.co.kr"
+    ],
+    "flagged_domains": [
+      "ajunews.com",
+      "gscaltexmediahub.com",
+      "sisunnews.co.kr",
+      "namu.wiki",
+      "korea.kr",
+      "pa.go.kr",
+      "wikipedia.org",
+      "ltoss.co.kr",
+      "huffingtonpost.kr",
+      "munhwa.com",
+      "voakorea.com",
+      "korea.kr",
+      "korea.kr",
+      "youtube.com"
+    ],
+    "manual_check": "Verify every citation URL publication date <= as_of."
+  },
+  {
+    "as_of": "2020-03-01",
+    "path": "/Users/namsugyeong/Desktop/alpha_lab/analysis/regime_news_grounding_test/2020-03.json",
+    "trust_ratio": 0.455,
+    "trusted_domains": [
+      "kdi.re.kr",
+      "bok.or.kr",
+      "kdi.re.kr",
+      "hankyung.com",
+      "einfomax.co.kr",
+      "hankyung.com",
+      "ytn.co.kr",
+      "news1.kr",
+      "chosun.com",
+      "edaily.co.kr"
+    ],
+    "flagged_domains": [
+      "youtube.com",
+      "kiri.or.kr",
+      "wikipedia.org",
+      "korea.kr",
+      "m-i.kr",
+      "kita.net",
+      "daum.net",
+      "namu.wiki",
+      "goodnews1.com",
+      "daum.net",
+      "daum.net",
+      "daum.net"
+    ],
+    "manual_check": "Verify every citation URL publication date <= as_of."
+  },
+  {
+    "as_of": "2024-08-01",
+    "path": "/Users/namsugyeong/Desktop/alpha_lab/analysis/regime_news_grounding_test/2024-08.json",
+    "trust_ratio": 0.0,
+    "trusted_domains": [],
+    "flagged_domains": [],
+    "manual_check": "Verify every citation URL publication date <= as_of."
+  }
+]

@@ -2,13 +2,19 @@
 Trading Agent - KOSPI 강세/약세 판정
 2023-11 ~ 현재까지 매월 실행 후 실제 KOSPI 수익률과 비교
 
-실행: python analysis/regime_agent.py
+실행:
+  python analysis/regime_agent.py                          # 디폴트(GPT), regime_agent_results.json (웹뷰용)
+  python analysis/regime_agent.py --model claude --start 2018-04 --end 2026-05
+  python analysis/regime_agent.py --model gemini --start 2018-04 --end 2026-05
 """
+import argparse
 import os
 import sys
 import json
 import anthropic
 import openai
+from google import genai
+from google.genai import types as genai_types
 import psycopg2
 import pandas as pd
 import numpy as np
@@ -33,8 +39,13 @@ def get_conn():
 _conn = psycopg2.connect(os.environ['DATABASE_URL'])
 claude_client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
 openai_client = openai.OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+gemini_client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
 CLAUDE_MODEL = "claude-sonnet-4-6"
 GPT_MODEL = "gpt-4o"
+GEMINI_MODEL = "gemini-2.5-flash"
+
+# 모델 선택 (CLI에서 --model로 덮어씀). "gpt"|"claude"|"gemini"
+MODEL = "gpt"
 
 # ── 시작 시 전체 데이터 메모리 로드 ─────────────────────────────
 print("데이터 사전 로딩 중...")
@@ -445,11 +456,13 @@ def build_fundamental_summary(as_of: date) -> str:
 
 # ── Agent 호출 ────────────────────────────────────────────────
 
-def call_agent(system_prompt: str, user_content: str, max_tokens: int = 400, use_gpt: bool = False) -> str:
+def call_agent(system_prompt: str, user_content: str, max_tokens: int = 400, model: str | None = None) -> str:
+    """LLM 호출. model 미지정 시 모듈 전역 MODEL 사용."""
     import time
+    m = model or MODEL
     for attempt in range(5):
         try:
-            if use_gpt:
+            if m == "gpt":
                 resp = openai_client.chat.completions.create(
                     model=GPT_MODEL,
                     max_tokens=max_tokens,
@@ -460,7 +473,7 @@ def call_agent(system_prompt: str, user_content: str, max_tokens: int = 400, use
                     ]
                 )
                 return resp.choices[0].message.content
-            else:
+            elif m == "claude":
                 msg = claude_client.messages.create(
                     model=CLAUDE_MODEL,
                     max_tokens=max_tokens,
@@ -468,10 +481,24 @@ def call_agent(system_prompt: str, user_content: str, max_tokens: int = 400, use
                     messages=[{"role": "user", "content": user_content}]
                 )
                 return msg.content[0].text
+            elif m == "gemini":
+                prompt = f"[System]\n{system_prompt}\n\n[User]\n{user_content}"
+                resp = gemini_client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        max_output_tokens=max_tokens,
+                        temperature=1,
+                        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                    )
+                )
+                return resp.text
+            else:
+                raise ValueError(f"Unknown model: {m}")
         except Exception as e:
-            if attempt < 4 and ('overloaded' in str(e).lower() or '529' in str(e) or '500' in str(e)):
+            if attempt < 4 and ('overloaded' in str(e).lower() or '529' in str(e) or '500' in str(e) or '503' in str(e)):
                 wait = 30 * (attempt + 1)
-                print(f"    ⏳ API 오류, {wait}초 후 재시도 ({attempt+1}/5)...")
+                print(f"    ⏳ API 오류 ({m}), {wait}초 후 재시도 ({attempt+1}/5)...")
                 time.sleep(wait)
             else:
                 raise
@@ -541,11 +568,11 @@ MANAGER_SYSTEM = (
 
 
 def run_technical_agent(summary: str) -> str:
-    return call_agent(system_prompt=TECH_SYSTEM, user_content=summary, max_tokens=2048, use_gpt=True)
+    return call_agent(system_prompt=TECH_SYSTEM, user_content=summary, max_tokens=2048)
 
 
 def run_fundamental_agent(summary: str) -> str:
-    return call_agent(system_prompt=FUND_SYSTEM, user_content=summary, max_tokens=2048, use_gpt=True)
+    return call_agent(system_prompt=FUND_SYSTEM, user_content=summary, max_tokens=2048)
 
 
 NEWS_SYSTEM = (
@@ -562,26 +589,26 @@ def run_news_agent(as_of: date) -> tuple[str, str]:
     if not news:
         return None, None
     news_input = f"[{as_of.strftime('%Y-%m')} 직전월 매크로 뉴스]\n{news}"
-    result = call_agent(system_prompt=NEWS_SYSTEM, user_content=news_input, max_tokens=2048, use_gpt=True)
+    result = call_agent(system_prompt=NEWS_SYSTEM, user_content=news_input, max_tokens=2048)
     return result, news_input
 
 
 def run_bull1(tech: str, fund: str) -> str:
-    """1라운드: Bull 독립 주장 (GPT-4o)"""
+    """1라운드: Bull 독립 주장"""
     return call_agent(system_prompt=BULL1_SYSTEM,
                       user_content=f"[기술적 분석]\n{tech}\n\n[펀더멘털 분석]\n{fund}",
-                      max_tokens=2048, use_gpt=True)
+                      max_tokens=2048)
 
 
 def run_bear1(tech: str, fund: str) -> str:
-    """1라운드: Bear 독립 주장 (GPT-4o)"""
+    """1라운드: Bear 독립 주장"""
     return call_agent(system_prompt=BEAR1_SYSTEM,
                       user_content=f"[기술적 분석]\n{tech}\n\n[펀더멘털 분석]\n{fund}",
-                      max_tokens=2048, use_gpt=True)
+                      max_tokens=2048)
 
 
 def run_bull2(tech: str, fund: str, bull1: str, bear1: str) -> str:
-    """2라운드: Bull이 Bear 주장 보고 재반박 (GPT-4o)"""
+    """2라운드: Bull이 Bear 주장 보고 재반박"""
     return call_agent(
         system_prompt=BULL2_SYSTEM,
         user_content=(
@@ -589,12 +616,12 @@ def run_bull2(tech: str, fund: str, bull1: str, bear1: str) -> str:
             f"[상대방 Bear 주장]\n{bear1}\n\n"
             f"[참고 데이터]\n기술적: {tech[:300]}\n펀더멘털: {fund[:300]}"
         ),
-        max_tokens=1024, use_gpt=True
+        max_tokens=1024
     )
 
 
 def run_bear2(tech: str, fund: str, bull1: str, bear1: str) -> str:
-    """2라운드: Bear가 Bull 주장 보고 재반박 (GPT-4o)"""
+    """2라운드: Bear가 Bull 주장 보고 재반박"""
     return call_agent(
         system_prompt=BEAR2_SYSTEM,
         user_content=(
@@ -602,14 +629,14 @@ def run_bear2(tech: str, fund: str, bull1: str, bear1: str) -> str:
             f"[상대방 Bull 주장]\n{bull1}\n\n"
             f"[참고 데이터]\n기술적: {tech[:300]}\n펀더멘털: {fund[:300]}"
         ),
-        max_tokens=1024, use_gpt=True
+        max_tokens=1024
     )
 
 
 def run_manager_agent(manager_user: str) -> dict:
     import re
     for attempt in range(3):
-        result = call_agent(system_prompt=MANAGER_SYSTEM, user_content=manager_user, max_tokens=2048, use_gpt=True)
+        result = call_agent(system_prompt=MANAGER_SYSTEM, user_content=manager_user, max_tokens=2048)
         try:
             m = re.search(r'\{.*\}', result, re.DOTALL)
             if m:
@@ -724,20 +751,22 @@ def run_month(as_of: date, past_results: list = None) -> dict:
         print(f"  [응답]\n  {response}")
         print(f"  {'─'*60}")
 
-    print("  [1/6] Technical Agent...")
-    prompts['technical'] = {"system": TECH_SYSTEM, "user": tech_input, "model": "GPT-4o"}
+    model_label = {"gpt": "GPT-4o", "claude": "Claude", "gemini": "Gemini"}[MODEL]
+
+    print(f"  [1/6] Technical Agent ({model_label})...")
+    prompts['technical'] = {"system": TECH_SYSTEM, "user": tech_input, "model": model_label}
     tech = run_technical_agent(tech_input)
     log_agent("Technical", TECH_SYSTEM, tech_input, tech)
 
-    print("  [2/6] Fundamental Agent...")
-    prompts['fundamental'] = {"system": FUND_SYSTEM, "user": fund_input, "model": "GPT-4o"}
+    print(f"  [2/6] Fundamental Agent ({model_label})...")
+    prompts['fundamental'] = {"system": FUND_SYSTEM, "user": fund_input, "model": model_label}
     fund = run_fundamental_agent(fund_input)
     log_agent("Fundamental", FUND_SYSTEM, fund_input, fund)
 
-    print("  [3/6] News Agent...")
+    print(f"  [3/6] News Agent ({model_label})...")
     news_analysis, news_input = run_news_agent(as_of)
     if news_analysis:
-        prompts['news'] = {"system": NEWS_SYSTEM, "user": news_input, "model": "GPT-4o"}
+        prompts['news'] = {"system": NEWS_SYSTEM, "user": news_input, "model": model_label}
         log_agent("News", NEWS_SYSTEM, news_input, news_analysis)
     else:
         news_analysis = ""
@@ -752,23 +781,23 @@ def run_month(as_of: date, past_results: list = None) -> dict:
     bull1_user = debate_input
     bear1_user = debate_input
 
-    print("  [4/6] 1라운드: Bull/Bear 독립 주장...")
-    prompts['bull1'] = {"system": BULL1_SYSTEM, "user": bull1_user, "model": "GPT-4o"}
-    bull1 = call_agent(system_prompt=BULL1_SYSTEM, user_content=bull1_user, max_tokens=2048, use_gpt=True)
+    print(f"  [4/6] 1라운드: Bull/Bear 독립 주장 ({model_label})...")
+    prompts['bull1'] = {"system": BULL1_SYSTEM, "user": bull1_user, "model": model_label}
+    bull1 = call_agent(system_prompt=BULL1_SYSTEM, user_content=bull1_user, max_tokens=2048)
     log_agent("강세론자 1R", BULL1_SYSTEM, bull1_user, bull1)
-    prompts['bear1'] = {"system": BEAR1_SYSTEM, "user": bear1_user, "model": "GPT-4o"}
-    bear1 = call_agent(system_prompt=BEAR1_SYSTEM, user_content=bear1_user, max_tokens=2048, use_gpt=True)
+    prompts['bear1'] = {"system": BEAR1_SYSTEM, "user": bear1_user, "model": model_label}
+    bear1 = call_agent(system_prompt=BEAR1_SYSTEM, user_content=bear1_user, max_tokens=2048)
     log_agent("약세론자 1R", BEAR1_SYSTEM, bear1_user, bear1)
 
     bull2_user = f"[내 주장 (1라운드)]\n{bull1}\n\n[상대방 Bear 주장]\n{bear1}\n\n[참고 데이터]\n기술적: {tech[:300]}\n펀더멘털: {fund[:300]}"
     bear2_user = f"[내 주장 (1라운드)]\n{bear1}\n\n[상대방 Bull 주장]\n{bull1}\n\n[참고 데이터]\n기술적: {tech[:300]}\n펀더멘털: {fund[:300]}"
 
-    print("  [5/6] 2라운드: Bull/Bear 재반박...")
-    prompts['bull2'] = {"system": BULL2_SYSTEM, "user": bull2_user, "model": "GPT-4o"}
-    bull2 = call_agent(system_prompt=BULL2_SYSTEM, user_content=bull2_user, max_tokens=1024, use_gpt=True)
+    print(f"  [5/6] 2라운드: Bull/Bear 재반박 ({model_label})...")
+    prompts['bull2'] = {"system": BULL2_SYSTEM, "user": bull2_user, "model": model_label}
+    bull2 = call_agent(system_prompt=BULL2_SYSTEM, user_content=bull2_user, max_tokens=1024)
     log_agent("강세론자 2R", BULL2_SYSTEM, bull2_user, bull2)
-    prompts['bear2'] = {"system": BEAR2_SYSTEM, "user": bear2_user, "model": "GPT-4o"}
-    bear2 = call_agent(system_prompt=BEAR2_SYSTEM, user_content=bear2_user, max_tokens=1024, use_gpt=True)
+    prompts['bear2'] = {"system": BEAR2_SYSTEM, "user": bear2_user, "model": model_label}
+    bear2 = call_agent(system_prompt=BEAR2_SYSTEM, user_content=bear2_user, max_tokens=1024)
     log_agent("약세론자 2R", BEAR2_SYSTEM, bear2_user, bear2)
 
     news_section = f"\n\n[뉴스 분석]\n{news_analysis}" if news_analysis else ""
@@ -782,15 +811,19 @@ def run_month(as_of: date, past_results: list = None) -> dict:
         f"{lessons}\n\n"
         'JSON 출력 (반드시 {"expected_return": 으로 시작):'
     )
-    prompts['manager'] = {"system": MANAGER_SYSTEM, "user": manager_user, "model": "Claude"}
+    prompts['manager'] = {"system": MANAGER_SYSTEM, "user": manager_user, "model": model_label}
 
-    print("  [6/6] Manager 최종 판정...")
+    print(f"  [6/6] Manager 최종 판정 ({model_label})...")
     result = run_manager_agent(manager_user)
     log_agent("Manager", MANAGER_SYSTEM, manager_user[:300], json.dumps(result, ensure_ascii=False))
 
     # 해당 월 KOSPI 수익률 (6월 판정 → 6월 수익률)
     month_end = (as_of + relativedelta(months=1)) - relativedelta(days=1)
-    kospi_ret = get_kospi_return(as_of, month_end)
+    # 진행 중 월(월말이 오늘 이후)은 평가 보류 — 부분 월 수익률을 실제값으로 박지 않음
+    if month_end >= date.today():
+        kospi_ret = None
+    else:
+        kospi_ret = get_kospi_return(as_of, month_end)
 
     er = result.get("expected_return", 0)
     j = result["judgment"]
@@ -836,22 +869,68 @@ def run_month(as_of: date, past_results: list = None) -> dict:
     }
 
 
-def main():
-    # 5월만 재실행 (기존 결과 유지, 5월만 교체)
-    test_months = [date(2026, 5, 1)]
+def _parse_month(s: str) -> date:
+    return datetime.strptime(s, "%Y-%m").date().replace(day=1)
 
-    # 기존 결과 로드 (테스트 대상은 제거 → 재실행)
-    out_path = Path(__file__).parent / "regime_agent_results.json"
+
+def _month_range(start: date, end: date) -> list[date]:
+    months = []
+    cur = start
+    while cur <= end:
+        months.append(cur)
+        cur = cur + relativedelta(months=1)
+    return months
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description="KOSPI 레짐 ER 점추정. --model로 LLM 선택.")
+    p.add_argument("--model", choices=["gpt", "claude", "gemini"], default=None,
+                   help="LLM 선택. 미지정시 GPT 디폴트 + 기존 regime_agent_results.json 유지(웹뷰용).")
+    p.add_argument("--start", default=None, help="시작 월 YYYY-MM (예: 2018-04)")
+    p.add_argument("--end", default=None, help="종료 월 YYYY-MM (예: 2026-05)")
+    p.add_argument("--months", default=None, help="콤마 구분 월 리스트 (예: 2018-04,2020-03)")
+    p.add_argument("--force", action="store_true", help="이미 결과 있는 월도 재실행")
+    return p.parse_args()
+
+
+def main():
+    global MODEL
+    args = parse_args()
+    MODEL = args.model or "gpt"
+
+    # 출력 경로: --model 지정 시 모델별 분기, 미지정 시 기존 경로 유지(웹뷰 보호)
+    if args.model:
+        out_path = Path(__file__).parent / f"regime_agent_results_{args.model}.json"
+        html_path = Path(__file__).parent / f"regime_agent_report_{args.model}.html"
+    else:
+        out_path = Path(__file__).parent / "regime_agent_results.json"
+        html_path = Path(__file__).parent / "regime_agent_report.html"
+
+    # 대상 월 결정
+    if args.months:
+        test_months = [_parse_month(m.strip()) for m in args.months.split(",") if m.strip()]
+    elif args.start or args.end:
+        start = _parse_month(args.start) if args.start else date(2018, 4, 1)
+        end = _parse_month(args.end) if args.end else date(2026, 5, 1)
+        test_months = _month_range(start, end)
+    else:
+        # 디폴트: 기존 동작 유지 — 5월만 재실행
+        test_months = [date(2026, 5, 1)]
+
+    print(f"[Model: {MODEL}] output={out_path.name}, months={len(test_months)}건 ({test_months[0]} ~ {test_months[-1]})")
+
+    # 기존 결과 로드
     existing = []
     if out_path.exists():
         with open(out_path, 'r', encoding='utf-8') as f:
             existing = json.load(f)
     test_date_strs = {str(d) for d in test_months}
-    existing = [r for r in existing if r['as_of'] not in test_date_strs]
+    if args.force:
+        existing = [r for r in existing if r['as_of'] not in test_date_strs]
     existing_dates = {r['as_of'] for r in existing}
 
     # 시간순으로 돌리면서 결과 누적 (few-shot 메모리용)
-    all_results = list(existing)  # 기존 결과 = 과거 교훈 소스
+    all_results = list(existing)
     new_results = []
     for current in test_months:
         if str(current) in existing_dates:
@@ -860,14 +939,13 @@ def main():
         try:
             r = run_month(current, past_results=all_results)
             new_results.append(r)
-            all_results.append(r)  # 다음 월 판정 시 교훈으로 활용
+            all_results.append(r)
             all_results.sort(key=lambda r: r.get('as_of', ''))
-            # 중간 저장
             _interim = existing + new_results
             _interim.sort(key=lambda x: x.get('as_of', ''))
-            with open(Path(__file__).parent / "regime_agent_results.json", 'w', encoding='utf-8') as _f:
+            with open(out_path, 'w', encoding='utf-8') as _f:
                 json.dump(_interim, _f, ensure_ascii=False, indent=2)
-            print(f"  💾 중간 저장 완료 ({len(_interim)}건)")
+            print(f"  💾 중간 저장 완료: {out_path.name} ({len(_interim)}건)")
         except Exception as e:
             print(f"  ❌ {current} 오류: {e}")
             try:
@@ -881,7 +959,6 @@ def main():
     results.sort(key=lambda r: r.get('as_of', ''))
 
     # 결과 저장
-    out_path = Path(__file__).parent / "regime_agent_results.json"
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
@@ -900,8 +977,7 @@ def main():
             dc_str = "✅" if dc else ("❌" if dc is False else "-")
             print(f"  {r['as_of'][:7]}  예상:{er:+.1f}%  실제:{ret_str:7s}  방향:{dc_str}")
 
-    # HTML 리포트 생성
-    html_path = Path(__file__).parent / "regime_agent_report.html"
+    # HTML 리포트 생성 (out_path와 같은 모델 접미사 사용)
     generate_html(results, html_path)
 
     print(f"\n결과 저장: {out_path}")

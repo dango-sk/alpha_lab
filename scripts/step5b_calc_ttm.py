@@ -160,6 +160,9 @@ def calc_ttm():
 
     # 시가총액 로드
     mcap_map = load_mcap_map(conn)
+    # 아래 계산 루프가 3분+ 동안 DB를 안 건드려 idle 연결이 끊기므로
+    # 읽기용 연결은 여기서 닫고, 쓰기 직전에 새로 연결한다.
+    conn.close()
 
     total_saved = 0
     batch = []
@@ -240,6 +243,7 @@ def calc_ttm():
     if pg_rows:
         col_list = ", ".join(ALL_FIN_COLS)
         set_clause = ", ".join(f"{c}=EXCLUDED.{c}" for c in ALL_FIN_COLS)
+        conn = get_conn()  # 계산 동안 idle로 죽었을 수 있으니 새 연결로 쓴다
         raw_conn = conn._conn if hasattr(conn, '_conn') else conn
         cur = raw_conn.cursor()
         execute_values(cur, f"""
@@ -252,8 +256,8 @@ def calc_ttm():
         """, pg_rows)
         cur.close()
         conn.commit()
+        conn.close()
 
-    conn.close()
     print(f"\n=== TTM 계산 완료: {total_saved:,}건 저장 (TTM_1Q~4Q) ===")
 
 

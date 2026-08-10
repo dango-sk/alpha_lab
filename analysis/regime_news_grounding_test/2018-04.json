@@ -1,0 +1,1087 @@
+{
+  "as_of": "2018-04-01",
+  "prompt": "\n역할: 너는 KOSPI 백테스트의 lookahead-bias 감사관이다.\n본 작업은 미래 예측이 아니라, \"2018-04-01 시점의 정보만으로 의사결정 재료를 정리할 수 있는지\"를 검증하는 절차다.\n\n【시간 정의 — 절대 혼동 금지】\n- 정보 컷오프(knowledge cutoff): 2018-04-01\n    · 이 날짜 이전(< 2018-04-01)에 공개된 뉴스만 사용 가능.\n    · 이 날짜 이후(> 2018-04-01)에 게재·업데이트된 모든 기사·블로그·회고·실적 발표·통계 자료는 사용 금지.\n- 재료(material) 기간: 2018-03 한 달간 발간된 한국 시장·거시 경제 뉴스.\n- 예측 대상(prediction target) 기간: 2018-04 한 달간의 KOSPI 흐름.\n    · 너는 예측을 수행하지 않는다. 오직 2018-04 흐름에 영향을 줄 만한 2018-03 뉴스 재료를 정리할 뿐이다.\n    · 2018-04 또는 그 이후의 실제 시세·실적·결과·회고 분석은 절대 인용 금지.\n\n【출력 — 반드시 한국어, 아래 양식 그대로】\n\n(1) 첫 문장은 반드시 다음 양식으로 시작:\n\"정보 컷오프 2018-04-01 기준, 2018-03 발간 뉴스 중 2018-04 KOSPI 흐름에 영향을 줄 수 있는 항목:\"\n\n(2) 핵심 이벤트 3~5개\n    · 각 항목 2~4줄, 발간일(YYYY-MM-DD) 명시.\n    · 이벤트가 2018-04 KOSPI에 어떤 채널(금리·환율·수급·심리·정책 등)로 영향을 줄 수 있는지 한 줄 부연.\n\n(3) 각 이벤트의 출처\n    · 매체명 · 기사 제목 · 발간일(YYYY-MM-DD) · URL.\n    · 발간일이 모호하면 \"발간일 불확실\"로 명시.\n\n(4) LOOKAHEAD_CONTAMINATION 의심 항목\n    · grounded search가 끌어온 출처 중 발간/업데이트 일자가 2018-04-01보다 이후인 모든 항목을 빠짐없이 나열.\n    · 각 항목에 (게재일, 컷오프 대비 며칠/몇 달 미래인지) 함께 표기.\n    · 의심 항목이 없으면 \"해당 없음\"이라고만 적는다.\n",
+  "text": "정보 컷오프 2018-04-01 기준, 2018-03 발간 뉴스 중 2018-04 KOSPI 흐름에 영향을 줄 수 있는 항목:\n\n(2) 핵심 이벤트 3~5개\n\n*   **미중 무역분쟁 심화 우려** (2018-03-23)\n    도널드 트럼프 미국 대통령이 500억 달러 규모의 중국산 수입품에 25% 관세 부과를 지시하는 행정명령에 서명하면서 미중 무역전쟁이 본격화될 조짐을 보였다. 이는 한국의 최대 교역국인 중국과의 무역량 감소로 이어져 한국 수출에 부정적인 영향을 미칠 수 있다는 우려를 낳았다.\n    *   영향 채널: 심리 (투자 심리 위축), 수급 (외국인 투자자 이탈 가능성), 환율 (원화 약세 압력), 거시경제 (수출 감소 우려).\n\n*   **국민연금 인상 및 제조업 창업기업 부담금 면제 연장** (2018-03-05)\n    보건복지부는 4월부터 국민연금이 월 평균 7,000원 인상된다고 발표했으며, 중소벤처기업부는 창업하는 제조업 중소기업에게 전력산업기반기금부담금 등 12개 부담금을 2022년 8월 2일까지 면제한다고 밝혔다.\n    *   영향 채널: 정책 (정부 정책에 따른 소비 및 기업 투자 심리 변화), 수급 (국민연금 인상으로 인한 가계 가처분 소득 변화).\n\n*   **3월 금융시장 동향 및 KOSPI 변동성 확대** (2018-03-23)\n    3월 중 국고채(3년) 금리는 보호무역주의 확산 우려 등으로 하락했으며, KOSPI는 보호무역주의 확산 등 대외 요인에 따라 큰 폭으로 등락했다. 특히 3월 23일에는 미중 무역전쟁 우려로 KOSPI가 3.18% 하락하고 원/달러 환율이 9.5원 상승하는 등 증시가 크게 출렁였다.\n    *   영향 채널: 심리 (투자 심리 불안정), 환율 (원/달러 환율 변동성 확대), 금리 (국고채 금리 하락).\n\n(3) 각 이벤트의 출처\n\n*   **미중 무역분쟁 심화 우려**\n    *   연합뉴스 · [미중 무역전쟁] '샌드위치' 신세에 '불똥' 걱정하는 국가들 · 2018-03-23 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHg5q78SxeoJXPqRqy3Pshp7rpX7nyb4sSmqCl0Snxfy5UvFbKFaokeHf3FG8RLEd1LwX8BUhgYD8dyI7OCJfIFFV16oJZVMDEaAzu3gRzEqtvIt1sDVmL_MnD5KPxcqN3kLqhlmoWaoA4=\n\n*   **국민연금 인상 및 제조업 창업기업 부담금 면제 연장**\n    *   시선뉴스 · [정책브리핑] 2018년 3월 5일 월요일 주요 정책 · 2018-03-05 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxLxH69NU2npMQYX7GOI963kZfwHt3C98d5DiFzorr8h5ALZmwoXgDoj4ucx50N-5lXbEWUiuS2ojmsj4YiKuoQmLqcoxO6bRic0IYpBf8rFVBcPrvk3EvrebXBRiJYwsxfGk3_7M0xHgchgnb254HflQjsEdW\n\n*   **3월 금융시장 동향 및 KOSPI 변동성 확대**\n    *   KDI 경제교육·정보센터 · 2018년 3월중 금융시장 동향 · 발간일 불확실 (한국은행 4.12 발표 자료 인용) · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH0gXBMMGtz_NKM9DXdt1wkXzCn0Gjm8McSe_EBzSBb1auG3ulJh7Mw6qYPeGkdppIjYkhqQxHPzaxzQWgPn8Du1b88cWIWzK7cigdR3plPuOM2J1eaxw5HUvZ9rd1Y_vyftvIAgqFKqCD0KPQqyDw8aJo=\n    *   뉴시스 · 미국발 악재에 증시 '패닉'…코스피 3%·코스닥 4%대 폭락 · 2018-03-23 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnLaGNEnt9X10mTAoNKiOJIxEkNM6FTGL_QV5WwspMl5pOT3mutJZtIKk8KPvMQW4DAXND0it66yPImGkaw5K3HALDIu0NHPYO0EJt4zkZdbIBT0IU3kk6-Y6OJbA-aUqHuMAOedOKS-exdhrNaEse\n\n(4) LOOKAHEAD_CONTAMINATION 의심 항목\n\n*   GS칼텍스 미디어허브 · 미중 무역전쟁 등 보호무역 확산에 따른 한국 수출입 환경 변화 · 2018-11-14 (컷오프 대비 7개월 13일 미래)\n*   뉴시스 · [2018 국제 10대뉴스]②미중,총성없는 무역전쟁 · 2018-12-11 (컷오프 대비 8개월 10일 미래)\n*   연합뉴스 · [일지] 미중 1차 무역전쟁부터 트럼프 2기 '맞불 관세' 재개까지 · 2025-02-04 (컷오프 대비 6년 10개월 3일 미래)\n*   아주경제 · [2018년 국제 10대뉴스]미·중 무역전쟁, 북·미 정상회담 등 장기변수 속출 · 2018-12-30 (컷오프 대비 8개월 29일 미래)\n*   나무위키 · 북한 관련 뉴스/2018년 · 발간일 불확실 (2018년 전체를 다루는 문서)\n*   대한민국 정책브리핑 · 2018년 3월 월간 수출입 현황(확정치) · 2018-04-16 (컷오프 대비 15일 미래)\n*   연합뉴스 · [마이더스] 2018년 증시, 정체 또는 완만한 조정 · 2017-12-02 (컷오프 대비 4개월 1일 과거)\n*   뉴스1 · 중동戰이 할퀸 3월 코스피, 시총 1000조 증발…4월 대반등 '주목' · 2026-04-01 (컷오프 대비 8년 미래)\n*   대통령기록관 · 3차 남북정상회담 > 2018 남북정상회담 · 발간일 불확실 (2018년 전체를 다루는 문서)\n*   위키백과 · 2018년 제3차 남북정상회담 · 발간일 불확실 (2018년 전체를 다루는 문서)\n*   YTN · [중점] 되돌아본 2018년 한국 경제...\"고단했던 1년\" · 2018-12-31 (컷오프 대비 8개월 30일 미래)\n*   한겨레 · 2018년 주식시장 '상고 하저' 전망 · 2019-10-19 (컷오프 대비 1년 6개월 18일 미래)\n*   연합인포맥스 · '원화강세'에 힘 받는 코스피…2018년 장세 '닮은 꼴' · 2020-09-21 (컷오프 대비 2년 5개월 20일 미래)\n*   KPMG International · 2018년 국내외 10대 경제 트렌드 · 2017-10-13 (컷오프 대비 5개월 18일 과거)\n*   연합인포맥스 · 3월 한국주식 강세장 예상…매수 늦지 않았다 · 2025-02-19 (컷오프 대비 6년 10개월 18일 미래)\n*   한국경제 · 코스피, 2018년 17% 급락…금융위기 후 최대 낙폭 기록 · 2018-12-28 (컷오프 대비 8개월 27일 미래)\n*   한겨레 · 2018년 주식시장 결산 : 희망적인 출발, 불안한 마감 · 2018-12-29 (컷오프 대비 8개월 28일 미래)\n*   문화일보 · 3월증시 '1000' 지켜낼까 · 2009-03-02 (컷오프 대비 9년 1개월 과거)\n*   VOA 뉴스 · [연말기획: 2018 북한] 1. 역사적인 첫 미-북 정상회담…한반도 긴장 해소, 협상은 '교착' · 2018-12-22 (컷오프 대비 8개월 21일 미래)\n*   연합뉴스 · [2018 증시결산] 코스피 17.28% 하락…10년 만에 최대 낙폭(종합) · 2018-12-28 (컷오프 대비 8개월 27일 미래)\n*   조선일보 · 코스피, 꿈의 3000고지 밟을까...2018년 코스피와 다른 이유 · 2020-11-24 (컷오프 대비 2년 7개월 23일 미래)\n*   매일경제 · 잘나가던 코스피 … 3월 성적은 '13.8% 하락' 세계 최하위 · 2026-03-27 (컷오프 대비 7년 11개월 26일 미래)\n*   연합뉴스 · 빨간불 켜진 한국 경제…올해 3% 성장 의구심 고조 · 2018-07-01 (컷오프 대비 3개월 미래)\n*   대한민국 정책브리핑 · 2018년 3월 산업활동동향 · 2018-04-30 (컷오프 대비 29일 미래)\n*   대한민국 정책브리핑 · 2018년도 경제정책방향 사후 브리핑 · 2017-12-27 (컷오프 대비 3개월 5일 과거)\n*   YouTube · 2018년 증시와 닯았다…공포에 사라? (염승환) / 긴급 진단 / 한국경제TV · 2023-10-23 (컷오프 대비 5년 6개월 22일 미래)\n*   동아일보 · 환율 '심리적 방어선' 1500원 한때 넘어… 유가-환율-금리 3高 경고등 다시 켜져 · 2026-03-05 (컷오프 대비 7년 11개월 4일 미래)\n*   SBS · 환율 검색결과 | 뉴스 · 발간일 불확실",
+  "audit": {
+    "trusted": [
+      {
+        "index": 0,
+        "domain": "yna.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHg5q78SxeoJXPqRqy3Pshp7rpX7nyb4sSmqCl0Snxfy5UvFbKFaokeHf3FG8RLEd1LwX8BUhgYD8dyI7OCJfIFFV16oJZVMDEaAzu3gRzEqtvIt1sDVmL_MnD5KPxcqN3kLqhlmoWaoA4="
+      },
+      {
+        "index": 1,
+        "domain": "newsis.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGi4b8WfahpF3E0IPVMdV68T3LdQl7YvujzCkiV2vKDISekhqQ0JJZzn8081zvZDpKVRFTJp0If8glxCpD_ZTk6LnfR4t5uvxwiI6vSq_s2r-g5VjmD2NVl0jMaMNdgO_a-sK9NaiPhDufvGw3MaO02"
+      },
+      {
+        "index": 2,
+        "domain": "yna.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFYMZTMDB593l_CLuByzTErodTt4ef7bYv2sjfJSKi3UL0IOwBv47LL-zj_mpssRTmwC0l_I-9dZQkkso-40folWFIXUY4pc-amf3zQPX4kpxmU4mt1wlbTr6jrcE3X8kpjzarskCfvilU="
+      },
+      {
+        "index": 6,
+        "domain": "kdi.re.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH0gXBMMGtz_NKM9DXdt1wkXzCn0Gjm8McSe_EBzSBb1auG3ulJh7Mw6qYPeGkdppIjYkhqQxHPzaxzQWgPn8Du1b88cWIWzK7cigdR3plPuOM2J1eaxw5HUvZ9rd1Y_vyftvIAgqFKqCD0KPQqyDw8aJo="
+      },
+      {
+        "index": 7,
+        "domain": "newsis.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnLaGNEnt9X10mTAoNKiOJIxEkNM6FTGL_QV5WwspMl5pOT3mutJZtIKk8KPvMQW4DAXND0it66yPImGkaw5K3HALDIu0NHPYO0EJt4zkZdbIBT0IU3kk6-Y6OJbA-aUqHuMAOedOKS-exdhrNaEse"
+      },
+      {
+        "index": 10,
+        "domain": "yna.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEVWcbK8zCOH-DaJLP3mFIUV-Vw3dSfeXtkED8rF3lsn29TvDrtZpLMHpEVYQzR3NhmO1UA_AdMvgu3ct7WnnwCV-AuK6VCmvBJ4_bdA2NkBO85hBO11oEPmvrx64AvmyyWxDbPX4S2kY0="
+      },
+      {
+        "index": 11,
+        "domain": "news1.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXFKmCRGYiyAVYhiSr422jgSpa5FF-GP0wSdzRBzwOct1LVlCVjSgLlfzifqy6kBcV_OGdp0GIXK15btMKFQ6_5v_Sa1IYCtst52E2YxrpyK94MfdHUuLNgHUR2IUf1Lq0i6oJNWR1bJF5tS4="
+      },
+      {
+        "index": 14,
+        "domain": "ytn.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGu-kUMH-vMou12HU1Bw1m2f-N-V20_ctSI9soVz1zmaz_LK5Xo8XETYbx2R5t0I4ErtIB1tKwr3xLG57J74Sesq7HUGLzEZpUOKmKsouhFYA1QgJQq1nzw3vPqYZ5yOjkbld_uzG7MSBbesA=="
+      },
+      {
+        "index": 15,
+        "domain": "hani.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZoHfa54FZCIZJS6n1IUy9XQtJ9hE82jhalxNf7ZXJf1xXRUlGjsIkaDYGXa26tijHrcWZrq4mIUTx-cfU2b1QOqIzKpmb7RMB713ebx8VEro1QRCZtib2pUH9sJSOqJh0hcRBSvXirEfctPtp_qtDhw=="
+      },
+      {
+        "index": 16,
+        "domain": "einfomax.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHy58w97OD4UWDcEzd8VyL4KTHE9JK3DVTlMsLgX1IHtDksu_LXORf7-UcCSGtazrLAISwruC5R40Mk-VuoJ6owLC_mlDCY86zlqDkyh9VZmuneyGZvNAqyjp4OhdanmskF9T4yPB_gOsBWp2fofNLnBPhNsi0O3bHg"
+      },
+      {
+        "index": 18,
+        "domain": "einfomax.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWLrOw-qKhseLrbc-b24weEoucXTjuQJOLzepcpvHW6EoSWEl6dqG7CwHNia2XcmPZYPn0nI4FtS3cuM3UVBmmyBv62S4MVRBZ3gJaDsDWrthW79SJ12A45AOiZRSw9DFyTOq1u0H-uqohcGmWsme0saohgz8PYM6P"
+      },
+      {
+        "index": 19,
+        "domain": "hankyung.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHjFQuRu8BUxXnRLrY8kuwTm58kZZZ-72TMutJw5WwI5uSGzCDnCqda5-Xm6P4Conf5mKsyPz9n3z4jK-5hlSjHKS8F3ne3y3qBRSIip97IcYfxEq6gOddhje780dke1xzGRmqxVv-27g=="
+      },
+      {
+        "index": 23,
+        "domain": "yna.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGwFFeHR3kLRpYDyb1AapvU4SX1gIQ-6vl4p9ipVcHUJJJPyf6Ktg6Ksib--DCDJVb8iD1yni6UWlUnWawPmFgGqZi6XAIGx7agGB33redN-MZp6oUNo3GDHm53WrDuYEjgJLJwfBWgo6o="
+      },
+      {
+        "index": 24,
+        "domain": "chosun.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF4oztBES2rJDai54aZt55qmjIXQhFp5YoD02kIpa4YCdCPXAUxfVrtO2XCkC1CWJYYhriMvjDpsjRnxB915qhhG4bvZk_4_glhdtL18J819JHKatsSU6O7q64v_jsgJbsM57TCn1tVgkU-mvVEG81tOoOQc1nLdTsdsE_4-udFQFwj3dDWDecC7xO1LGw="
+      },
+      {
+        "index": 25,
+        "domain": "mk.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFaQNT2yj1Pj8sO9B24taDq6zvZgRs-VFI6QGAfLxMV-RqTw-lpU5kOicPF2quac5KMdXKGHVjZIkkE3ND0oqbPc7UuUH7cHf_gxf6jEg3T3TqVjVrBPaXXKOioqbjaA5vF6g=="
+      },
+      {
+        "index": 26,
+        "domain": "yna.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHKJ-BCSn7rzOBGiBfmaOeoyrLtP7h6iRRwoayAd3LBaKQpfRj_4CsGXpha0UHaU6Rz_E9FF18WbfevlqkbGdQw6RGD1xCgVbPlhP0Em_vWcxSoCf20F7lvNQ7td_c7A7lySDTuJB8JTwI="
+      },
+      {
+        "index": 30,
+        "domain": "donga.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEwiw38o_BGXSAX4_utJpHyHQ3T3W5QO8-DJYV-8A1zCdoRvMrbNWUV17f_ctCZN2EXkrkQpvRLiNxMLIxJnTcqmvaYJQtJuki3n_jSB1-ITnHx4-5fnCuGGJuv6Aw6LpDfIBQAln5Kj6FVgLpuqI3ylmzPYU_9XTmAcgCpkg=="
+      },
+      {
+        "index": 31,
+        "domain": "sbs.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkByONE2MhiXlHaMsTRN6f3RQxW1Lrz-4Q85ZCw6ZJmYEK_ZnMpQP2kEEVZT8iyTyvlmWmkFe7kvLlusPzBOtIOgZ86mPLFUlN5lTbA-TcH413ZPGaxojdByTi5ftswUz9dL1XtVmufGD4lD47aHmfOU5qvjWqae0jxudlBkvVzE6OW481KMSkUT7zzPFqADQ6k_4rxOyOwQpBS4t9oALfp3Zj3afQaQYCO-9fN4Cc1B8Kn0m5B3kP5dyTDA=="
+      }
+    ],
+    "flagged": [
+      {
+        "index": 3,
+        "domain": "ajunews.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHmQ_XC4k9iu4Qe4m8M5pp_UymoJYSJwi9oo0hZ6nGLQdCulXWiodibG5eTXqCSwiM7lhvzSDTX7aJFh5QuPHwXVcgUeiB3tMzuMGv82jXenD31dw1l2tkeZF1AGCXRA1gLfHRygZVrkA=="
+      },
+      {
+        "index": 4,
+        "domain": "gscaltexmediahub.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHHaTGY8vpp0xCnUJmejBbqiGyB5WqsL4uAIog-p_-z-JXRiHDmBKNMBV-q3bgr5qIWd1SGyyuxK5RIyJu0OmrpjwCx-_9URdoUPGmeHGjwkD_Or1sJlDt2RJHwxsT67_G00WSvDvtBOdmD4iiEb4330X9dWSkKTDwLcQ=="
+      },
+      {
+        "index": 5,
+        "domain": "sisunnews.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxLxH69NU2npMQYX7GOI963kZfwHt3C98d5DiFzorr8h5ALZmwoXgDoj4ucx50N-5lXbEWUiuS2ojmsj4YiKuoQmLqcoxO6bRic0IYpBf8rFVBcPrvk3EvrebXBRiJYwsxfGk3_7M0xHgchgnb254HflQjsEdW"
+      },
+      {
+        "index": 8,
+        "domain": "namu.wiki",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHfVuetXXCpNwFJ6HoZp1d_hc9J_GMJnxCYy2iU5ZUehaUhhRkJfD50YNuXcobJiGxl2F1wYLmJNAzSsq9d4KucqhdPuDB9Hlr5i7jt7jzgkGWC-iFs15Go4Q8QKvrQfOEZIPRWBIgKfxJeLN8JxWS0m-O2jKlHHP3qnmY8ybrMW7KktkYyagJtc_0tE9GMl7M-o2a2itGSKg=="
+      },
+      {
+        "index": 9,
+        "domain": "korea.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHyNIvK3xgUEw6OQs8SmSmNW1ggpsW8L3U7P-TICnlKFF4KpV-QPkUkoXoP_FrXYtd2nX0x3X-3t9RxqWAiase232gz6VNNtgzOt50eR2w3ZbKfWtfGa2P4HfMnciTILRrpBwPj776KAqYfYaRQ9tkFgdI2gYdG897A"
+      },
+      {
+        "index": 12,
+        "domain": "pa.go.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFdcnpHZgrsWscajfV3d3qtOzn1pj75O0wTMbJDYP6MewgNWC5yvxJEdDyDo6pfXGqvtrhIg4dk1NSie9MRslYr7hMlDGvABgTtKIb9dmYpEnVjPr_4oDcIaF4HZv4coTI9Likwzs8VgRwv1IAZG24nTMo-1GBQ7VHFvbfe"
+      },
+      {
+        "index": 13,
+        "domain": "wikipedia.org",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHfaXOl4NjCbTtH4en589Q37SAzYeWLC_pi4vZyLASVIA2oe75EoRPsOOGM-HYgKj2ep42apWX9HgI-ijJi1BiZpTUVdA_wTth7ougd0z-9Lak4o-WpkA9QU1Ck4Nsp0XWgp8lizlU2NtPqvB14b0djdCRZU4bZa3CPhVOQ4FxB-K4g1aekCQMvLifeKWxLPFuairtU5RlNeDp10avkZTlUogRrXnR03hpAgd2U1RPeXw=="
+      },
+      {
+        "index": 17,
+        "domain": "ltoss.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGMn6b8VibbhUYoEpRqEXDqDMWFQALpPMJjePYzzs4umiIxgp3lm_yX0vLy34Mf49rOHi3Lc3tD-C6quqSit10lX1D4vPzFd9q1w3IakB1G6aJY8Bht0EGswZZ8wBQsUhrZy5b-JG-wzPxtEjxIa1X61RHYLvbMLQ9suducc8rZZR9gX5ZuoocQsBHBTK698fuVhqE-wORkBsThhV_zuoLjjNyL4MzzXlO25kROrm1H6jLrnDcBsnl4Zo9TG9CVaZxe2Nxez09yiZwVlKpyLHhvL55001YGb1C-JmhSGAs9mTn4H40iyKR8gN2oQap39PINkucIy9D1hLuGMHJczw=="
+      },
+      {
+        "index": 20,
+        "domain": "huffingtonpost.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFsrzENwd2QaU3AKk_HM7Gi6tzc7ee9ABXFY3TgD3vDTkP6-1qpYwgMTyvSGJKv79oNUZqHlvRGv7Rcw8SbHmY9MLtsA_ErMOzPuNE67s8eM62IBgViOpK4PrVF_FPx2Rep1oUPKQ=="
+      },
+      {
+        "index": 21,
+        "domain": "munhwa.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDCbdEVLphssmI-q1nd8JZrRn1cR61lotkVj6j3CiUekvh2NdWmlLQMyWlCM8drQFxJjsxIW_VsPbAeETP_HcJY2L9L21xLCaB_pfYLuCLocfUqBmCNFXjrSAk60Y0KOKP"
+      },
+      {
+        "index": 22,
+        "domain": "voakorea.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHSs_UzyQDy_G2kO7FwS8psNeqb0bahO0ifxGAJEFzosh7yt3OWGXjHqPpVLsP9ya3g7YwKDYex26HFSvr1i_H2I0axCjbkpRBmd0hYCq4b6X4dflyUN1h9PN8sw6IYt-bm"
+      },
+      {
+        "index": 27,
+        "domain": "korea.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHgBUluqUcBN0Qm2StjpmLIUzd-J_JBj5V-QVBYC_WiJ0m0o7ZBn4qN5_MW6lkpeQ7gNEbnLmVbKJt8YczpB6pIqnVbdI61JxkUYt-Pd4l9AGyfqkzSntd13TNAqQZstmSmkUMunW5AchdgHdIEnYlTKFdiI6O6QG1k127m"
+      },
+      {
+        "index": 28,
+        "domain": "korea.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG5bwfW0hNbxjswebk_hO8eNVTs-JwPo2fd4ZLQNhHecK6o40TBKqeh2MCqGf9rJ1hxMr-FbY8axrSKnEnyNbIvoygVUlmFgksC0cUNkzULLenTCCCFOy6hoBeWXNIe_WwPhS8nIju7bAh8L_sxsXwYhcMuj2ap1h0LYgyKERw="
+      },
+      {
+        "index": 29,
+        "domain": "youtube.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFsO25IeWVnel7Jr_eOpP3U8FsNOFweb7j2dRkgXS7uD3UNzx38PxPeEJCMPOBClum_eeUYue_r10-K-j1pgi8a7d1TQ48JPTwq4UnARphkT5nAhIg4oGQEGdt1Ze93hO3iDLg45w=="
+      }
+    ],
+    "trust_ratio": 0.562,
+    "total_sources": 32
+  },
+  "raw": {
+    "sdk_http_response": {
+      "headers": {
+        "x-gemini-service-tier": "standard",
+        "content-type": "application/json; charset=UTF-8",
+        "vary": "Origin, X-Origin, Referer",
+        "content-encoding": "gzip",
+        "date": "Wed, 27 May 2026 10:56:53 GMT",
+        "server": "scaffolding on HTTPServer2",
+        "x-xss-protection": "0",
+        "x-frame-options": "SAMEORIGIN",
+        "x-content-type-options": "nosniff",
+        "server-timing": "gfet4t7; dur=16319",
+        "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+        "transfer-encoding": "chunked"
+      },
+      "body": null
+    },
+    "candidates": [
+      {
+        "content": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": null,
+              "function_response": null,
+              "inline_data": null,
+              "text": "정보 컷오프 2018-04-01 기준, 2018-03 발간 뉴스 중 2018-04 KOSPI 흐름에 영향을 줄 수 있는 항목:\n\n(2) 핵심 이벤트 3~5개\n\n*   **미중 무역분쟁 심화 우려** (2018-03-23)\n    도널드 트럼프 미국 대통령이 500억 달러 규모의 중국산 수입품에 25% 관세 부과를 지시하는 행정명령에 서명하면서 미중 무역전쟁이 본격화될 조짐을 보였다. 이는 한국의 최대 교역국인 중국과의 무역량 감소로 이어져 한국 수출에 부정적인 영향을 미칠 수 있다는 우려를 낳았다.\n    *   영향 채널: 심리 (투자 심리 위축), 수급 (외국인 투자자 이탈 가능성), 환율 (원화 약세 압력), 거시경제 (수출 감소 우려).\n\n*   **국민연금 인상 및 제조업 창업기업 부담금 면제 연장** (2018-03-05)\n    보건복지부는 4월부터 국민연금이 월 평균 7,000원 인상된다고 발표했으며, 중소벤처기업부는 창업하는 제조업 중소기업에게 전력산업기반기금부담금 등 12개 부담금을 2022년 8월 2일까지 면제한다고 밝혔다.\n    *   영향 채널: 정책 (정부 정책에 따른 소비 및 기업 투자 심리 변화), 수급 (국민연금 인상으로 인한 가계 가처분 소득 변화).\n\n*   **3월 금융시장 동향 및 KOSPI 변동성 확대** (2018-03-23)\n    3월 중 국고채(3년) 금리는 보호무역주의 확산 우려 등으로 하락했으며, KOSPI는 보호무역주의 확산 등 대외 요인에 따라 큰 폭으로 등락했다. 특히 3월 23일에는 미중 무역전쟁 우려로 KOSPI가 3.18% 하락하고 원/달러 환율이 9.5원 상승하는 등 증시가 크게 출렁였다.\n    *   영향 채널: 심리 (투자 심리 불안정), 환율 (원/달러 환율 변동성 확대), 금리 (국고채 금리 하락).\n\n(3) 각 이벤트의 출처\n\n*   **미중 무역분쟁 심화 우려**\n    *   연합뉴스 · [미중 무역전쟁] '샌드위치' 신세에 '불똥' 걱정하는 국가들 · 2018-03-23 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHg5q78SxeoJXPqRqy3Pshp7rpX7nyb4sSmqCl0Snxfy5UvFbKFaokeHf3FG8RLEd1LwX8BUhgYD8dyI7OCJfIFFV16oJZVMDEaAzu3gRzEqtvIt1sDVmL_MnD5KPxcqN3kLqhlmoWaoA4=\n\n*   **국민연금 인상 및 제조업 창업기업 부담금 면제 연장**\n    *   시선뉴스 · [정책브리핑] 2018년 3월 5일 월요일 주요 정책 · 2018-03-05 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxLxH69NU2npMQYX7GOI963kZfwHt3C98d5DiFzorr8h5ALZmwoXgDoj4ucx50N-5lXbEWUiuS2ojmsj4YiKuoQmLqcoxO6bRic0IYpBf8rFVBcPrvk3EvrebXBRiJYwsxfGk3_7M0xHgchgnb254HflQjsEdW\n\n*   **3월 금융시장 동향 및 KOSPI 변동성 확대**\n    *   KDI 경제교육·정보센터 · 2018년 3월중 금융시장 동향 · 발간일 불확실 (한국은행 4.12 발표 자료 인용) · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH0gXBMMGtz_NKM9DXdt1wkXzCn0Gjm8McSe_EBzSBb1auG3ulJh7Mw6qYPeGkdppIjYkhqQxHPzaxzQWgPn8Du1b88cWIWzK7cigdR3plPuOM2J1eaxw5HUvZ9rd1Y_vyftvIAgqFKqCD0KPQqyDw8aJo=\n    *   뉴시스 · 미국발 악재에 증시 '패닉'…코스피 3%·코스닥 4%대 폭락 · 2018-03-23 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnLaGNEnt9X10mTAoNKiOJIxEkNM6FTGL_QV5WwspMl5pOT3mutJZtIKk8KPvMQW4DAXND0it66yPImGkaw5K3HALDIu0NHPYO0EJt4zkZdbIBT0IU3kk6-Y6OJbA-aUqHuMAOedOKS-exdhrNaEse\n\n(4) LOOKAHEAD_CONTAMINATION 의심 항목\n\n*   GS칼텍스 미디어허브 · 미중 무역전쟁 등 보호무역 확산에 따른 한국 수출입 환경 변화 · 2018-11-14 (컷오프 대비 7개월 13일 미래)\n*   뉴시스 · [2018 국제 10대뉴스]②미중,총성없는 무역전쟁 · 2018-12-11 (컷오프 대비 8개월 10일 미래)\n*   연합뉴스 · [일지] 미중 1차 무역전쟁부터 트럼프 2기 '맞불 관세' 재개까지 · 2025-02-04 (컷오프 대비 6년 10개월 3일 미래)\n*   아주경제 · [2018년 국제 10대뉴스]미·중 무역전쟁, 북·미 정상회담 등 장기변수 속출 · 2018-12-30 (컷오프 대비 8개월 29일 미래)\n*   나무위키 · 북한 관련 뉴스/2018년 · 발간일 불확실 (2018년 전체를 다루는 문서)\n*   대한민국 정책브리핑 · 2018년 3월 월간 수출입 현황(확정치) · 2018-04-16 (컷오프 대비 15일 미래)\n*   연합뉴스 · [마이더스] 2018년 증시, 정체 또는 완만한 조정 · 2017-12-02 (컷오프 대비 4개월 1일 과거)\n*   뉴스1 · 중동戰이 할퀸 3월 코스피, 시총 1000조 증발…4월 대반등 '주목' · 2026-04-01 (컷오프 대비 8년 미래)\n*   대통령기록관 · 3차 남북정상회담 > 2018 남북정상회담 · 발간일 불확실 (2018년 전체를 다루는 문서)\n*   위키백과 · 2018년 제3차 남북정상회담 · 발간일 불확실 (2018년 전체를 다루는 문서)\n*   YTN · [중점] 되돌아본 2018년 한국 경제...\"고단했던 1년\" · 2018-12-31 (컷오프 대비 8개월 30일 미래)\n*   한겨레 · 2018년 주식시장 '상고 하저' 전망 · 2019-10-19 (컷오프 대비 1년 6개월 18일 미래)\n*   연합인포맥스 · '원화강세'에 힘 받는 코스피…2018년 장세 '닮은 꼴' · 2020-09-21 (컷오프 대비 2년 5개월 20일 미래)\n*   KPMG International · 2018년 국내외 10대 경제 트렌드 · 2017-10-13 (컷오프 대비 5개월 18일 과거)\n*   연합인포맥스 · 3월 한국주식 강세장 예상…매수 늦지 않았다 · 2025-02-19 (컷오프 대비 6년 10개월 18일 미래)\n*   한국경제 · 코스피, 2018년 17% 급락…금융위기 후 최대 낙폭 기록 · 2018-12-28 (컷오프 대비 8개월 27일 미래)\n*   한겨레 · 2018년 주식시장 결산 : 희망적인 출발, 불안한 마감 · 2018-12-29 (컷오프 대비 8개월 28일 미래)\n*   문화일보 · 3월증시 '1000' 지켜낼까 · 2009-03-02 (컷오프 대비 9년 1개월 과거)\n*   VOA 뉴스 · [연말기획: 2018 북한] 1. 역사적인 첫 미-북 정상회담…한반도 긴장 해소, 협상은 '교착' · 2018-12-22 (컷오프 대비 8개월 21일 미래)\n*   연합뉴스 · [2018 증시결산] 코스피 17.28% 하락…10년 만에 최대 낙폭(종합) · 2018-12-28 (컷오프 대비 8개월 27일 미래)\n*   조선일보 · 코스피, 꿈의 3000고지 밟을까...2018년 코스피와 다른 이유 · 2020-11-24 (컷오프 대비 2년 7개월 23일 미래)\n*   매일경제 · 잘나가던 코스피 … 3월 성적은 '13.8% 하락' 세계 최하위 · 2026-03-27 (컷오프 대비 7년 11개월 26일 미래)\n*   연합뉴스 · 빨간불 켜진 한국 경제…올해 3% 성장 의구심 고조 · 2018-07-01 (컷오프 대비 3개월 미래)\n*   대한민국 정책브리핑 · 2018년 3월 산업활동동향 · 2018-04-30 (컷오프 대비 29일 미래)\n*   대한민국 정책브리핑 · 2018년도 경제정책방향 사후 브리핑 · 2017-12-27 (컷오프 대비 3개월 5일 과거)\n*   YouTube · 2018년 증시와 닯았다…공포에 사라? (염승환) / 긴급 진단 / 한국경제TV · 2023-10-23 (컷오프 대비 5년 6개월 22일 미래)\n*   동아일보 · 환율 '심리적 방어선' 1500원 한때 넘어… 유가-환율-금리 3高 경고등 다시 켜져 · 2026-03-05 (컷오프 대비 7년 11개월 4일 미래)\n*   SBS · 환율 검색결과 | 뉴스 · 발간일 불확실",
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "model"
+        },
+        "citation_metadata": null,
+        "finish_message": null,
+        "token_count": null,
+        "finish_reason": "STOP",
+        "grounding_metadata": {
+          "image_search_queries": null,
+          "grounding_chunks": [
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "yna.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHg5q78SxeoJXPqRqy3Pshp7rpX7nyb4sSmqCl0Snxfy5UvFbKFaokeHf3FG8RLEd1LwX8BUhgYD8dyI7OCJfIFFV16oJZVMDEaAzu3gRzEqtvIt1sDVmL_MnD5KPxcqN3kLqhlmoWaoA4="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "newsis.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGi4b8WfahpF3E0IPVMdV68T3LdQl7YvujzCkiV2vKDISekhqQ0JJZzn8081zvZDpKVRFTJp0If8glxCpD_ZTk6LnfR4t5uvxwiI6vSq_s2r-g5VjmD2NVl0jMaMNdgO_a-sK9NaiPhDufvGw3MaO02"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "yna.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFYMZTMDB593l_CLuByzTErodTt4ef7bYv2sjfJSKi3UL0IOwBv47LL-zj_mpssRTmwC0l_I-9dZQkkso-40folWFIXUY4pc-amf3zQPX4kpxmU4mt1wlbTr6jrcE3X8kpjzarskCfvilU="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "ajunews.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHmQ_XC4k9iu4Qe4m8M5pp_UymoJYSJwi9oo0hZ6nGLQdCulXWiodibG5eTXqCSwiM7lhvzSDTX7aJFh5QuPHwXVcgUeiB3tMzuMGv82jXenD31dw1l2tkeZF1AGCXRA1gLfHRygZVrkA=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "gscaltexmediahub.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHHaTGY8vpp0xCnUJmejBbqiGyB5WqsL4uAIog-p_-z-JXRiHDmBKNMBV-q3bgr5qIWd1SGyyuxK5RIyJu0OmrpjwCx-_9URdoUPGmeHGjwkD_Or1sJlDt2RJHwxsT67_G00WSvDvtBOdmD4iiEb4330X9dWSkKTDwLcQ=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "sisunnews.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxLxH69NU2npMQYX7GOI963kZfwHt3C98d5DiFzorr8h5ALZmwoXgDoj4ucx50N-5lXbEWUiuS2ojmsj4YiKuoQmLqcoxO6bRic0IYpBf8rFVBcPrvk3EvrebXBRiJYwsxfGk3_7M0xHgchgnb254HflQjsEdW"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "kdi.re.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH0gXBMMGtz_NKM9DXdt1wkXzCn0Gjm8McSe_EBzSBb1auG3ulJh7Mw6qYPeGkdppIjYkhqQxHPzaxzQWgPn8Du1b88cWIWzK7cigdR3plPuOM2J1eaxw5HUvZ9rd1Y_vyftvIAgqFKqCD0KPQqyDw8aJo="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "newsis.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnLaGNEnt9X10mTAoNKiOJIxEkNM6FTGL_QV5WwspMl5pOT3mutJZtIKk8KPvMQW4DAXND0it66yPImGkaw5K3HALDIu0NHPYO0EJt4zkZdbIBT0IU3kk6-Y6OJbA-aUqHuMAOedOKS-exdhrNaEse"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "namu.wiki",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHfVuetXXCpNwFJ6HoZp1d_hc9J_GMJnxCYy2iU5ZUehaUhhRkJfD50YNuXcobJiGxl2F1wYLmJNAzSsq9d4KucqhdPuDB9Hlr5i7jt7jzgkGWC-iFs15Go4Q8QKvrQfOEZIPRWBIgKfxJeLN8JxWS0m-O2jKlHHP3qnmY8ybrMW7KktkYyagJtc_0tE9GMl7M-o2a2itGSKg=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "korea.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHyNIvK3xgUEw6OQs8SmSmNW1ggpsW8L3U7P-TICnlKFF4KpV-QPkUkoXoP_FrXYtd2nX0x3X-3t9RxqWAiase232gz6VNNtgzOt50eR2w3ZbKfWtfGa2P4HfMnciTILRrpBwPj776KAqYfYaRQ9tkFgdI2gYdG897A"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "yna.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEVWcbK8zCOH-DaJLP3mFIUV-Vw3dSfeXtkED8rF3lsn29TvDrtZpLMHpEVYQzR3NhmO1UA_AdMvgu3ct7WnnwCV-AuK6VCmvBJ4_bdA2NkBO85hBO11oEPmvrx64AvmyyWxDbPX4S2kY0="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "news1.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXFKmCRGYiyAVYhiSr422jgSpa5FF-GP0wSdzRBzwOct1LVlCVjSgLlfzifqy6kBcV_OGdp0GIXK15btMKFQ6_5v_Sa1IYCtst52E2YxrpyK94MfdHUuLNgHUR2IUf1Lq0i6oJNWR1bJF5tS4="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "pa.go.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFdcnpHZgrsWscajfV3d3qtOzn1pj75O0wTMbJDYP6MewgNWC5yvxJEdDyDo6pfXGqvtrhIg4dk1NSie9MRslYr7hMlDGvABgTtKIb9dmYpEnVjPr_4oDcIaF4HZv4coTI9Likwzs8VgRwv1IAZG24nTMo-1GBQ7VHFvbfe"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "wikipedia.org",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHfaXOl4NjCbTtH4en589Q37SAzYeWLC_pi4vZyLASVIA2oe75EoRPsOOGM-HYgKj2ep42apWX9HgI-ijJi1BiZpTUVdA_wTth7ougd0z-9Lak4o-WpkA9QU1Ck4Nsp0XWgp8lizlU2NtPqvB14b0djdCRZU4bZa3CPhVOQ4FxB-K4g1aekCQMvLifeKWxLPFuairtU5RlNeDp10avkZTlUogRrXnR03hpAgd2U1RPeXw=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "ytn.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGu-kUMH-vMou12HU1Bw1m2f-N-V20_ctSI9soVz1zmaz_LK5Xo8XETYbx2R5t0I4ErtIB1tKwr3xLG57J74Sesq7HUGLzEZpUOKmKsouhFYA1QgJQq1nzw3vPqYZ5yOjkbld_uzG7MSBbesA=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "hani.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZoHfa54FZCIZJS6n1IUy9XQtJ9hE82jhalxNf7ZXJf1xXRUlGjsIkaDYGXa26tijHrcWZrq4mIUTx-cfU2b1QOqIzKpmb7RMB713ebx8VEro1QRCZtib2pUH9sJSOqJh0hcRBSvXirEfctPtp_qtDhw=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "einfomax.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHy58w97OD4UWDcEzd8VyL4KTHE9JK3DVTlMsLgX1IHtDksu_LXORf7-UcCSGtazrLAISwruC5R40Mk-VuoJ6owLC_mlDCY86zlqDkyh9VZmuneyGZvNAqyjp4OhdanmskF9T4yPB_gOsBWp2fofNLnBPhNsi0O3bHg"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "ltoss.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGMn6b8VibbhUYoEpRqEXDqDMWFQALpPMJjePYzzs4umiIxgp3lm_yX0vLy34Mf49rOHi3Lc3tD-C6quqSit10lX1D4vPzFd9q1w3IakB1G6aJY8Bht0EGswZZ8wBQsUhrZy5b-JG-wzPxtEjxIa1X61RHYLvbMLQ9suducc8rZZR9gX5ZuoocQsBHBTK698fuVhqE-wORkBsThhV_zuoLjjNyL4MzzXlO25kROrm1H6jLrnDcBsnl4Zo9TG9CVaZxe2Nxez09yiZwVlKpyLHhvL55001YGb1C-JmhSGAs9mTn4H40iyKR8gN2oQap39PINkucIy9D1hLuGMHJczw=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "einfomax.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWLrOw-qKhseLrbc-b24weEoucXTjuQJOLzepcpvHW6EoSWEl6dqG7CwHNia2XcmPZYPn0nI4FtS3cuM3UVBmmyBv62S4MVRBZ3gJaDsDWrthW79SJ12A45AOiZRSw9DFyTOq1u0H-uqohcGmWsme0saohgz8PYM6P"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "hankyung.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHjFQuRu8BUxXnRLrY8kuwTm58kZZZ-72TMutJw5WwI5uSGzCDnCqda5-Xm6P4Conf5mKsyPz9n3z4jK-5hlSjHKS8F3ne3y3qBRSIip97IcYfxEq6gOddhje780dke1xzGRmqxVv-27g=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "huffingtonpost.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFsrzENwd2QaU3AKk_HM7Gi6tzc7ee9ABXFY3TgD3vDTkP6-1qpYwgMTyvSGJKv79oNUZqHlvRGv7Rcw8SbHmY9MLtsA_ErMOzPuNE67s8eM62IBgViOpK4PrVF_FPx2Rep1oUPKQ=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "munhwa.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDCbdEVLphssmI-q1nd8JZrRn1cR61lotkVj6j3CiUekvh2NdWmlLQMyWlCM8drQFxJjsxIW_VsPbAeETP_HcJY2L9L21xLCaB_pfYLuCLocfUqBmCNFXjrSAk60Y0KOKP"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "voakorea.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHSs_UzyQDy_G2kO7FwS8psNeqb0bahO0ifxGAJEFzosh7yt3OWGXjHqPpVLsP9ya3g7YwKDYex26HFSvr1i_H2I0axCjbkpRBmd0hYCq4b6X4dflyUN1h9PN8sw6IYt-bm"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "yna.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGwFFeHR3kLRpYDyb1AapvU4SX1gIQ-6vl4p9ipVcHUJJJPyf6Ktg6Ksib--DCDJVb8iD1yni6UWlUnWawPmFgGqZi6XAIGx7agGB33redN-MZp6oUNo3GDHm53WrDuYEjgJLJwfBWgo6o="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "chosun.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF4oztBES2rJDai54aZt55qmjIXQhFp5YoD02kIpa4YCdCPXAUxfVrtO2XCkC1CWJYYhriMvjDpsjRnxB915qhhG4bvZk_4_glhdtL18J819JHKatsSU6O7q64v_jsgJbsM57TCn1tVgkU-mvVEG81tOoOQc1nLdTsdsE_4-udFQFwj3dDWDecC7xO1LGw="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "mk.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFaQNT2yj1Pj8sO9B24taDq6zvZgRs-VFI6QGAfLxMV-RqTw-lpU5kOicPF2quac5KMdXKGHVjZIkkE3ND0oqbPc7UuUH7cHf_gxf6jEg3T3TqVjVrBPaXXKOioqbjaA5vF6g=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "yna.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHKJ-BCSn7rzOBGiBfmaOeoyrLtP7h6iRRwoayAd3LBaKQpfRj_4CsGXpha0UHaU6Rz_E9FF18WbfevlqkbGdQw6RGD1xCgVbPlhP0Em_vWcxSoCf20F7lvNQ7td_c7A7lySDTuJB8JTwI="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "korea.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHgBUluqUcBN0Qm2StjpmLIUzd-J_JBj5V-QVBYC_WiJ0m0o7ZBn4qN5_MW6lkpeQ7gNEbnLmVbKJt8YczpB6pIqnVbdI61JxkUYt-Pd4l9AGyfqkzSntd13TNAqQZstmSmkUMunW5AchdgHdIEnYlTKFdiI6O6QG1k127m"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "korea.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG5bwfW0hNbxjswebk_hO8eNVTs-JwPo2fd4ZLQNhHecK6o40TBKqeh2MCqGf9rJ1hxMr-FbY8axrSKnEnyNbIvoygVUlmFgksC0cUNkzULLenTCCCFOy6hoBeWXNIe_WwPhS8nIju7bAh8L_sxsXwYhcMuj2ap1h0LYgyKERw="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "youtube.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFsO25IeWVnel7Jr_eOpP3U8FsNOFweb7j2dRkgXS7uD3UNzx38PxPeEJCMPOBClum_eeUYue_r10-K-j1pgi8a7d1TQ48JPTwq4UnARphkT5nAhIg4oGQEGdt1Ze93hO3iDLg45w=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "donga.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEwiw38o_BGXSAX4_utJpHyHQ3T3W5QO8-DJYV-8A1zCdoRvMrbNWUV17f_ctCZN2EXkrkQpvRLiNxMLIxJnTcqmvaYJQtJuki3n_jSB1-ITnHx4-5fnCuGGJuv6Aw6LpDfIBQAln5Kj6FVgLpuqI3ylmzPYU_9XTmAcgCpkg=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "sbs.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkByONE2MhiXlHaMsTRN6f3RQxW1Lrz-4Q85ZCw6ZJmYEK_ZnMpQP2kEEVZT8iyTyvlmWmkFe7kvLlusPzBOtIOgZ86mPLFUlN5lTbA-TcH413ZPGaxojdByTi5ftswUz9dL1XtVmufGD4lD47aHmfOU5qvjWqae0jxudlBkvVzE6OW481KMSkUT7zzPFqADQ6k_4rxOyOwQpBS4t9oALfp3Zj3afQaQYCO-9fN4Cc1B8Kn0m5B3kP5dyTDA=="
+              }
+            }
+          ],
+          "grounding_supports": [
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "segment": {
+                "start_index": 149,
+                "end_index": 417,
+                "part_index": null,
+                "text": "*   **미중 무역분쟁 심화 우려** (2018-03-23)\n    도널드 트럼프 미국 대통령이 500억 달러 규모의 중국산 수입품에 25% 관세 부과를 지시하는 행정명령에 서명하면서 미중 무역전쟁이 본격화될 조짐을 보였다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                4
+              ],
+              "segment": {
+                "start_index": 418,
+                "end_index": 579,
+                "part_index": null,
+                "text": "이는 한국의 최대 교역국인 중국과의 무역량 감소로 이어져 한국 수출에 부정적인 영향을 미칠 수 있다는 우려를 낳았다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                5
+              ],
+              "segment": {
+                "start_index": 750,
+                "end_index": 1119,
+                "part_index": null,
+                "text": "*   **국민연금 인상 및 제조업 창업기업 부담금 면제 연장** (2018-03-05)\n    보건복지부는 4월부터 국민연금이 월 평균 7,000원 인상된다고 발표했으며, 중소벤처기업부는 창업하는 제조업 중소기업에게 전력산업기반기금부담금 등 12개 부담금을 2022년 8월 2일까지 면제한다고 밝혔다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                6
+              ],
+              "segment": {
+                "start_index": 1291,
+                "end_index": 1553,
+                "part_index": null,
+                "text": "*   **3월 금융시장 동향 및 KOSPI 변동성 확대** (2018-03-23)\n    3월 중 국고채(3년) 금리는 보호무역주의 확산 우려 등으로 하락했으며, KOSPI는 보호무역주의 확산 등 대외 요인에 따라 큰 폭으로 등락했다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                7
+              ],
+              "segment": {
+                "start_index": 1554,
+                "end_index": 1711,
+                "part_index": null,
+                "text": "특히 3월 23일에는 미중 무역전쟁 우려로 KOSPI가 3.18% 하락하고 원/달러 환율이 9.5원 상승하는 등 증시가 크게 출렁였다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                0
+              ],
+              "segment": {
+                "start_index": 1878,
+                "end_index": 2251,
+                "part_index": null,
+                "text": "*   **미중 무역분쟁 심화 우려**\n    *   연합뉴스 · [미중 무역전쟁] '샌드위치' 신세에 '불똥' 걱정하는 국가들 · 2018-03-23 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHg5q78SxeoJXPqRqy3Pshp7rpX7nyb4sSmqCl0Snxfy5UvFbKFaokeHf3FG8RLEd1LwX8BUhgYD8dyI7OCJfIFFV16oJZVMDEaAzu3gRzEqtvIt1sDVmL_MnD5KPxcqN3kLqhlmoWaoA4="
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                5
+              ],
+              "segment": {
+                "start_index": 2253,
+                "end_index": 2660,
+                "part_index": null,
+                "text": "*   **국민연금 인상 및 제조업 창업기업 부담금 면제 연장**\n    *   시선뉴스 · [정책브리핑] 2018년 3월 5일 월요일 주요 정책 · 2018-03-05 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxLxH69NU2npMQYX7GOI963kZfwHt3C98d5DiFzorr8h5ALZmwoXgDoj4ucx50N-5lXbEWUiuS2ojmsj4YiKuoQmLqcoxO6bRic0IYpBf8rFVBcPrvk3EvrebXBRiJYwsxfGk3_7M0xHgchgnb254HflQjsEdW"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                6
+              ],
+              "segment": {
+                "start_index": 2662,
+                "end_index": 3090,
+                "part_index": null,
+                "text": "*   **3월 금융시장 동향 및 KOSPI 변동성 확대**\n    *   KDI 경제교육·정보센터 · 2018년 3월중 금융시장 동향 · 발간일 불확실 (한국은행 4.12 발표 자료 인용) · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH0gXBMMGtz_NKM9DXdt1wkXzCn0Gjm8McSe_EBzSBb1auG3ulJh7Mw6qYPeGkdppIjYkhqQxHPzaxzQWgPn8Du1b88cWIWzK7cigdR3plPuOM2J1eaxw5HUvZ9rd1Y_vyftvIAgqFKqCD0KPQqyDw8aJo="
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                7
+              ],
+              "segment": {
+                "start_index": 3150,
+                "end_index": 3423,
+                "part_index": null,
+                "text": "코스피 3%·코스닥 4%대 폭락 · 2018-03-23 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnLaGNEnt9X10mTAoNKiOJIxEkNM6FTGL_QV5WwspMl5pOT3mutJZtIKk8KPvMQW4DAXND0it66yPImGkaw5K3HALDIu0NHPYO0EJt4zkZdbIBT0IU3kk6-Y6OJbA-aUqHuMAOedOKS-exdhrNaEse"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                4
+              ],
+              "segment": {
+                "start_index": 3468,
+                "end_index": 3641,
+                "part_index": null,
+                "text": "*   GS칼텍스 미디어허브 · 미중 무역전쟁 등 보호무역 확산에 따른 한국 수출입 환경 변화 · 2018-11-14 (컷오프 대비 7개월 13일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                1
+              ],
+              "segment": {
+                "start_index": 3642,
+                "end_index": 3773,
+                "part_index": null,
+                "text": "*   뉴시스 · [2018 국제 10대뉴스]②미중,총성없는 무역전쟁 · 2018-12-11 (컷오프 대비 8개월 10일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                2
+              ],
+              "segment": {
+                "start_index": 3774,
+                "end_index": 3936,
+                "part_index": null,
+                "text": "*   연합뉴스 · [일지] 미중 1차 무역전쟁부터 트럼프 2기 '맞불 관세' 재개까지 · 2025-02-04 (컷오프 대비 6년 10개월 3일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                3
+              ],
+              "segment": {
+                "start_index": 3937,
+                "end_index": 4107,
+                "part_index": null,
+                "text": "*   아주경제 · [2018년 국제 10대뉴스]미·중 무역전쟁, 북·미 정상회담 등 장기변수 속출 · 2018-12-30 (컷오프 대비 8개월 29일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                8
+              ],
+              "segment": {
+                "start_index": 4108,
+                "end_index": 4216,
+                "part_index": null,
+                "text": "*   나무위키 · 북한 관련 뉴스/2018년 · 발간일 불확실 (2018년 전체를 다루는 문서)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                9
+              ],
+              "segment": {
+                "start_index": 4217,
+                "end_index": 4346,
+                "part_index": null,
+                "text": "*   대한민국 정책브리핑 · 2018년 3월 월간 수출입 현황(확정치) · 2018-04-16 (컷오프 대비 15일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                10
+              ],
+              "segment": {
+                "start_index": 4347,
+                "end_index": 4481,
+                "part_index": null,
+                "text": "*   연합뉴스 · [마이더스] 2018년 증시, 정체 또는 완만한 조정 · 2017-12-02 (컷오프 대비 4개월 1일 과거)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                11
+              ],
+              "segment": {
+                "start_index": 4557,
+                "end_index": 4625,
+                "part_index": null,
+                "text": "4월 대반등 '주목' · 2026-04-01 (컷오프 대비 8년 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                12
+              ],
+              "segment": {
+                "start_index": 4626,
+                "end_index": 4761,
+                "part_index": null,
+                "text": "*   대통령기록관 · 3차 남북정상회담 > 2018 남북정상회담 · 발간일 불확실 (2018년 전체를 다루는 문서)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                13
+              ],
+              "segment": {
+                "start_index": 4762,
+                "end_index": 4876,
+                "part_index": null,
+                "text": "*   위키백과 · 2018년 제3차 남북정상회담 · 발간일 불확실 (2018년 전체를 다루는 문서)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                14
+              ],
+              "segment": {
+                "start_index": 4877,
+                "end_index": 5007,
+                "part_index": null,
+                "text": "*   YTN · [중점] 되돌아본 2018년 한국 경제...\"고단했던 1년\" · 2018-12-31 (컷오프 대비 8개월 30일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                15
+              ],
+              "segment": {
+                "start_index": 5008,
+                "end_index": 5127,
+                "part_index": null,
+                "text": "*   한겨레 · 2018년 주식시장 '상고 하저' 전망 · 2019-10-19 (컷오프 대비 1년 6개월 18일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                16
+              ],
+              "segment": {
+                "start_index": 5195,
+                "end_index": 5281,
+                "part_index": null,
+                "text": "2018년 장세 '닮은 꼴' · 2020-09-21 (컷오프 대비 2년 5개월 20일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                17
+              ],
+              "segment": {
+                "start_index": 5282,
+                "end_index": 5402,
+                "part_index": null,
+                "text": "*   KPMG International · 2018년 국내외 10대 경제 트렌드 · 2017-10-13 (컷오프 대비 5개월 18일 과거)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                18
+              ],
+              "segment": {
+                "start_index": 5466,
+                "end_index": 5549,
+                "part_index": null,
+                "text": "매수 늦지 않았다 · 2025-02-19 (컷오프 대비 6년 10개월 18일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                19
+              ],
+              "segment": {
+                "start_index": 5550,
+                "end_index": 5693,
+                "part_index": null,
+                "text": "*   한국경제 · 코스피, 2018년 17% 급락…금융위기 후 최대 낙폭 기록 · 2018-12-28 (컷오프 대비 8개월 27일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                20
+              ],
+              "segment": {
+                "start_index": 5694,
+                "end_index": 5832,
+                "part_index": null,
+                "text": "*   한겨레 · 2018년 주식시장 결산 : 희망적인 출발, 불안한 마감 · 2018-12-29 (컷오프 대비 8개월 28일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                21
+              ],
+              "segment": {
+                "start_index": 5833,
+                "end_index": 5936,
+                "part_index": null,
+                "text": "*   문화일보 · 3월증시 '1000' 지켜낼까 · 2009-03-02 (컷오프 대비 9년 1개월 과거)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                22
+              ],
+              "segment": {
+                "start_index": 6026,
+                "end_index": 6123,
+                "part_index": null,
+                "text": "한반도 긴장 해소, 협상은 '교착' · 2018-12-22 (컷오프 대비 8개월 21일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                23
+              ],
+              "segment": {
+                "start_index": 6190,
+                "end_index": 6278,
+                "part_index": null,
+                "text": "10년 만에 최대 낙폭(종합) · 2018-12-28 (컷오프 대비 8개월 27일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                24
+              ],
+              "segment": {
+                "start_index": 6340,
+                "end_index": 6433,
+                "part_index": null,
+                "text": "2018년 코스피와 다른 이유 · 2020-11-24 (컷오프 대비 2년 7개월 23일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                25
+              ],
+              "segment": {
+                "start_index": 6481,
+                "end_index": 6587,
+                "part_index": null,
+                "text": "3월 성적은 '13.8% 하락' 세계 최하위 · 2026-03-27 (컷오프 대비 7년 11개월 26일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                26
+              ],
+              "segment": {
+                "start_index": 6641,
+                "end_index": 6722,
+                "part_index": null,
+                "text": "올해 3% 성장 의구심 고조 · 2018-07-01 (컷오프 대비 3개월 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                27
+              ],
+              "segment": {
+                "start_index": 6723,
+                "end_index": 6836,
+                "part_index": null,
+                "text": "*   대한민국 정책브리핑 · 2018년 3월 산업활동동향 · 2018-04-30 (컷오프 대비 29일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                28
+              ],
+              "segment": {
+                "start_index": 6837,
+                "end_index": 6972,
+                "part_index": null,
+                "text": "*   대한민국 정책브리핑 · 2018년도 경제정책방향 사후 브리핑 · 2017-12-27 (컷오프 대비 3개월 5일 과거)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                29
+              ],
+              "segment": {
+                "start_index": 7018,
+                "end_index": 7139,
+                "part_index": null,
+                "text": "공포에 사라? (염승환) / 긴급 진단 / 한국경제TV · 2023-10-23 (컷오프 대비 5년 6개월 22일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                30
+              ],
+              "segment": {
+                "start_index": 7214,
+                "end_index": 7322,
+                "part_index": null,
+                "text": "유가-환율-금리 3高 경고등 다시 켜져 · 2026-03-05 (컷오프 대비 7년 11개월 4일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                31
+              ],
+              "segment": {
+                "start_index": 7323,
+                "end_index": 7385,
+                "part_index": null,
+                "text": "*   SBS · 환율 검색결과 | 뉴스 · 발간일 불확실"
+              },
+              "rendered_parts": null
+            }
+          ],
+          "retrieval_metadata": null,
+          "search_entry_point": {
+            "rendered_content": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHB-ojq1rkKkl2NE73HsR8YGLe-C8fCq3y_WY4GDOcwt5F8Fha0_se766t_4DdnNvBxQcwZLD7lOZRpJmZy-jt7v0HCMQbb8TM-Y-4ZaXXTXJKca-9he3wOskV2DaFQrVPwnpica3Wo2Ki64LvuemIMasBDthjHeXS1X1NNxU_N-Qmk_Atk9pt7dTfssKJ-GsBMn_STJF_nqMCshwjXg5Play7cwGtM0CyUHFtzfObHuNuWW2Lp20YYpLZXNV2IV8YeB4-OpxFvLWWCf-hIJMC44sfMAA==\">2018년 3월 북한 관련 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFfLjWCjdQQy9Y6ctvt0S82WpgoUXoBV_8iMpJtiksALTkdX2EZs8s2cWEvQ68wq5X_EyibUL4WRN4DGOORMR_nbh2K1Mg-PZxRX2rP6fl1zruZFrXEHym5RcdtWxzRfNalWER_Gegi32PrdNOR5qNCiLJQVd3GjbRB_o_RteAFvw0TOyPk9fvFKeoO3-JofUkxexE9rdVjqktOiYHWvANxLtnKRliG3bPJNHVfQ0eglSsntQHmgtmUBrA9aQ1uIPNxXXnVLt9mceVv0DfqMawzTWYJBxtnjNe9bUd6SVcdGFcJQK62xQ4=\">2018년 3월 한국 경제 주요 이슈</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFrxKuG1GiEfuLAuvA_Pg-z9CWG0JwlvjhBFrHO1IRHNiLtQPXIHlGf2DCkRwS_ChvPNxabbfXOpYrQLXUqUetyrk1_JpgeyC03gSJkacBgvluaHzNMPS7Z5JG1ckNzBs7mmAVrRqoP0sS4kv0jG8WxRs6uYp2kwIqQJcLEjib0oXN_nlGCKr1y5-VUNtsTaVhPdvcehs2br4YyYqpB7siLrlDl_RneiXABzCMRQKz5YsgRIlNoF12EGVrfD8fCUNCL04vQdu0J\">2018년 3월 KOSPI 영향 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF6LrU3bnYssZokV7f7zRavv4kv0AUjII4Dj5D7MvHRtKc89ThL5dZoYbX3n6xdfEtW4Vom6HbPIYcYe0S-0Jp400zteKilS7qOoaoKn7lfjv-ZPfOlsHrWNw_08giqsjKBSqwuCWacA8Ao2_ZFe69y8QIgfld_2DmrM9sEL8eppBU7noIwogypcGiHsGsTNwidKccT6LImYroi5WB3VPXTXdwGiaoG_jB6oqkChiElfR8gqIKrhNxdNmvjYtksq0cYO4tqNaRRTwAn9AQsc2x36nUTcFeYznyDf8L1ZmFSSyWaIa37Blig1xFWOQFPAvtV4EcbDp67pJzC\">2018년 3월 한국 시장 거시 경제 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHjlC5TcQHZaC3vjM_sOpeywahioZlVd1lyQKzymJkZs0y_I7AA8xHO_SB7jK3ZXqgQFW9ONJIlFeB7K_Ydj5HkSkIYNzlFzVKcxeMFAMvEDQRDIArm0XVMcAgZ1xV5mRIsu7YaOSiCdEcnF6qSvszgWwyZyreuIFPyVKZSrUuF4Y7jJoS3bLGx7AD9HkWXUG5cBEO8cYz-hv0_gCaKXi8YFda2Ok5wXICVH_aAockjhcxIRokkClIYY-sZPYbpS86sQ7M6DL8uQtqcfKicsc4qARA5HjQ5jRrMtt0R_NMBHIaQJeleGzjJPIjxkvumgGV39Wyob51C1EPOKb_vW3i3Zh3EkrmFuH13qlN-xg==\">2018년 3월 금리 환율 수급 심리 정책 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEK3GYeGMWHJ5r5koFWs59uY4-1Q65IjMghix2PET-fXdyS8ZUHKbJpkDBQeGbAwpC8azihdJ_TIPd_ZtNwsT7wEm5NIQ4ax_cB0iHpf_ych92mQxlwkZgGqJPxH-OwE2U2A4UvdXXe-cq8fUTHpafrDb3UuGbSJDMMyUUAAQiewyU4B05Alp8j47HKUrLJtlzj3tiWPysg-n4M7ZWQrE0LOr4nUFQUskwOoz3WsvqwS6X5xkQN0f3i315Ih0sisjMk1aBdU1YGnyHuLt2xmnTH6J_3O6-G1d_V-c0wHQ==\">2018년 3월 코스피 관련 기사</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHin0cAqWYSCPdeOgmcKPQECsKxEm8EDdBSffcm_iOzvWK20rIYccMlTPEpP9rr01UEHm7RHosBI7M83EN8dhcXBjRJV9urei3mwH9pDx8jLDNiHg-KrLyZ_i5xGvehrLJvKpGsXhb8H9Yp2kVEgWO0HbNKE8lgXohW4bak03vcs1dLyK5b6LjYGg4ZnFvLqNZXxq-gekx8oI_jDAvq2yPNFCkFyXrqRnJaDsYanJooNU8-PY_FBfOywSEMqZPAOJO_qoh05kKvwqjRCWgTTeK6SH-LeK7qU0IxDix_gQ12daeCa2r4apY=\">2018년 3월 한국 증시 전망 기사</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFj4yiGRGsa5EYeNOHVFqYCgLVGLGwjUQk9S8wdlisNsIhAQqDt39GvSbSOsQmw5MDkDY_i1LFhyV9oOGiLZsosXKJReo-IWSNOqYYLQOwbq20frg27klgp0ueWQ1Lf3JgQOELbvrlBy-9DdLyCxpWxp-9I7QTULX_dzbibqcVtinl2AakV8Bb2o9WDObEBqAw61JBWvCRGrP21iS29ToUmbgUcJfMSValK-Xqyz91GItn0tS7aiM2iwcXxeQYH6JKTZv1aZDktN2-dkglt-sVWrKO8A1kplmLQNlQ3eg==\">2018년 3월 국내외 경제 동향</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvoLFc58RwhViB48pCUqeCWdvb4R_3X5ysp80QGYqOF-NgGOgKSyQV2K0kIz3yQ9s9Xib5i_ssk-by7LoHZkRFQvGRnZufCFqRCYK55lhid9KfTHZpB2mB_TZZLFrjfJEy3XduyMsariR62yOqLbadeYqwoWSRQUbkTMu6uhUgL-UiL5OQS2BznalFP-zJa_dFVr1507rSAlTRytTzN6kz0GDwpelqrmKRqNXf2DZ2iyDRCiFnFaTI2EqStmC32qZ5qiQnproxWt7NibpwXWntomM1mN4cWf5thZESdWR8ULQh8F9OK7w=\">2018년 3월 한국 정부 정책 발표</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPZ2A0GV3evtPYPCu3aLH8u6ixmXS6Pz__RMFfvzyBZOK9gSK4mM63v02P_j4RJhDdy6V909E1FCFpFC1SyPnoqJWlT5uAGb5bqjSKDMxBN8sOW_5fhpvTiSaYtfPsky5nmKKF9SeKekGNqUSLZgBgrKcLVClU_B5Yhjmopr2lsFL-5NmNy4br4ZTMSgsD8q9KHVdCpPEqWWlAJMF05FLy3TN1o8kCE-y1iDR-Cy0_eLMz5isQy5qJomBY4xN4Eg3AaSn3iYnjkpnyYQUiFCVu3PutxzOe90Zrbu0TG-QV9gFJYkF46-4NF2ItSQSNAPrA4XwLhyvoAsc=\">2018년 3월 미중 무역분쟁 관련 뉴스</a>\n  </div>\n</div>\n",
+            "sdk_blob": null
+          },
+          "web_search_queries": [
+            "2018년 3월 한국 시장 거시 경제 뉴스",
+            "2018년 3월 KOSPI 영향 뉴스",
+            "2018년 3월 금리 환율 수급 심리 정책 뉴스",
+            "2018년 3월 한국 경제 주요 이슈",
+            "2018년 3월 코스피 관련 기사",
+            "2018년 3월 한국 증시 전망 기사",
+            "2018년 3월 국내외 경제 동향",
+            "2018년 3월 북한 관련 뉴스",
+            "2018년 3월 미중 무역분쟁 관련 뉴스",
+            "2018년 3월 한국 정부 정책 발표"
+          ],
+          "google_maps_widget_context_token": null,
+          "retrieval_queries": null,
+          "source_flagging_uris": null
+        },
+        "avg_logprobs": null,
+        "index": 0,
+        "logprobs_result": null,
+        "safety_ratings": null,
+        "url_context_metadata": null
+      }
+    ],
+    "create_time": null,
+    "model_version": "gemini-2.5-flash",
+    "prompt_feedback": null,
+    "response_id": "5c0WaqiPFa-dosUP0Ke48AE",
+    "usage_metadata": {
+      "cache_tokens_details": null,
+      "cached_content_token_count": null,
+      "candidates_token_count": 3070,
+      "candidates_tokens_details": null,
+      "prompt_token_count": 638,
+      "prompt_tokens_details": [
+        {
+          "modality": "TEXT",
+          "token_count": 638
+        }
+      ],
+      "thoughts_token_count": null,
+      "tool_use_prompt_token_count": 805,
+      "tool_use_prompt_tokens_details": [
+        {
+          "modality": "TEXT",
+          "token_count": 805
+        }
+      ],
+      "total_token_count": 4513,
+      "traffic_type": null
+    },
+    "model_status": null,
+    "automatic_function_calling_history": [],
+    "parsed": null
+  }
+}

@@ -37,9 +37,9 @@ for env_path in [
                 key, val = line.split("=", 1)
                 os.environ.setdefault(key.strip(), val.strip().strip('"'))
 
-FNSPACE_API_KEY = os.environ.get("FNSPACE_API_KEY", "6D1C172DBC447A2A47AF")
+FNSPACE_API_KEY = os.environ.get("FNSPACE_API_KEY", "D0E7A9A250B8C43545C5")
 BASE_URL = "https://www.fnspace.com/Api"
-PG_URL = "postgresql://postgres:NgHDMsgiGwbvMpWHLUgTQguaedbGoxvv@metro.proxy.rlwy.net:50087/railway"
+PG_URL = os.environ["DATABASE_URL"]
 
 API_DELAY = 0.5
 MAX_CODES_PER_CALL = 10
@@ -88,28 +88,34 @@ FORWARD_COLS = list(FORWARD_ITEMS.values())
 CONSENSUS_COLS = list(CONSENSUS_DAILY_ITEMS.values())
 
 
-def api_call(endpoint, params, silent=False):
+def api_call(endpoint, params, silent=False, retries=3):
     url = f"{BASE_URL}/{endpoint}"
     params["key"] = FNSPACE_API_KEY
     params["format"] = "json"
-    try:
-        resp = requests.get(url, params=params, timeout=30)
-        data = resp.json()
-        if data.get("success") == "true":
-            return data
-        if not silent:
-            errmsg = data.get("errmsg", "unknown")
-            if not hasattr(api_call, '_err_count'):
-                api_call._err_count = {}
-            key = f"{endpoint}:{errmsg}"
-            api_call._err_count[key] = api_call._err_count.get(key, 0) + 1
-            if api_call._err_count[key] <= 3:
-                print(f"    [WARN] {endpoint}: {errmsg}")
-        return None
-    except Exception as e:
-        if not silent:
-            print(f"    [ERR] {endpoint}: {e}")
-        return None
+    for attempt in range(retries):
+        try:
+            resp = requests.get(url, params=params, timeout=30)
+            data = resp.json()
+            if data.get("success") == "true":
+                return data
+            # success=false 는 재시도해도 결과가 같으므로 즉시 종료
+            if not silent:
+                errmsg = data.get("errmsg", "unknown")
+                if not hasattr(api_call, '_err_count'):
+                    api_call._err_count = {}
+                key = f"{endpoint}:{errmsg}"
+                api_call._err_count[key] = api_call._err_count.get(key, 0) + 1
+                if api_call._err_count[key] <= 3:
+                    print(f"    [WARN] {endpoint}: {errmsg}")
+            return None
+        except Exception as e:
+            # 네트워크 타임아웃 등 일시적 오류는 backoff 후 재시도
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)  # 1s, 2s, 4s
+                continue
+            if not silent:
+                print(f"    [ERR] {endpoint}: {e}")
+            return None
 
 
 def chunk_list(lst, n):

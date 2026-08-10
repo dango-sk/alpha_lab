@@ -1,0 +1,815 @@
+{
+  "as_of": "2020-03-01",
+  "prompt": "\n역할: 너는 KOSPI 백테스트의 lookahead-bias 감사관이다.\n본 작업은 미래 예측이 아니라, \"2020-03-01 시점의 정보만으로 의사결정 재료를 정리할 수 있는지\"를 검증하는 절차다.\n\n【시간 정의 — 절대 혼동 금지】\n- 정보 컷오프(knowledge cutoff): 2020-03-01\n    · 이 날짜 이전(< 2020-03-01)에 공개된 뉴스만 사용 가능.\n    · 이 날짜 이후(> 2020-03-01)에 게재·업데이트된 모든 기사·블로그·회고·실적 발표·통계 자료는 사용 금지.\n- 재료(material) 기간: 2020-02 한 달간 발간된 한국 시장·거시 경제 뉴스.\n- 예측 대상(prediction target) 기간: 2020-03 한 달간의 KOSPI 흐름.\n    · 너는 예측을 수행하지 않는다. 오직 2020-03 흐름에 영향을 줄 만한 2020-02 뉴스 재료를 정리할 뿐이다.\n    · 2020-03 또는 그 이후의 실제 시세·실적·결과·회고 분석은 절대 인용 금지.\n\n【출력 — 반드시 한국어, 아래 양식 그대로】\n\n(1) 첫 문장은 반드시 다음 양식으로 시작:\n\"정보 컷오프 2020-03-01 기준, 2020-02 발간 뉴스 중 2020-03 KOSPI 흐름에 영향을 줄 수 있는 항목:\"\n\n(2) 핵심 이벤트 3~5개\n    · 각 항목 2~4줄, 발간일(YYYY-MM-DD) 명시.\n    · 이벤트가 2020-03 KOSPI에 어떤 채널(금리·환율·수급·심리·정책 등)로 영향을 줄 수 있는지 한 줄 부연.\n\n(3) 각 이벤트의 출처\n    · 매체명 · 기사 제목 · 발간일(YYYY-MM-DD) · URL.\n    · 발간일이 모호하면 \"발간일 불확실\"로 명시.\n\n(4) LOOKAHEAD_CONTAMINATION 의심 항목\n    · grounded search가 끌어온 출처 중 발간/업데이트 일자가 2020-03-01보다 이후인 모든 항목을 빠짐없이 나열.\n    · 각 항목에 (게재일, 컷오프 대비 며칠/몇 달 미래인지) 함께 표기.\n    · 의심 항목이 없으면 \"해당 없음\"이라고만 적는다.\n",
+  "text": "정보 컷오프 2020-03-01 기준, 2020-02 발간 뉴스 중 2020-03 KOSPI 흐름에 영향을 줄 수 있는 항목:\n\n(2) 핵심 이벤트 3~5개\n\n*   **코로나19 팬데믹 우려 확산 및 WHO 위험도 상향 (2020-02-28)**\n    2월 말 세계보건기구(WHO)가 코로나19의 위험도를 '매우 높음'으로 상향 조정하고, 러시아 등 일부 국가에서 한국발 입국 제한 조치를 발표하면서 글로벌 경기 둔화 및 국내 경제 활동 위축에 대한 우려가 증폭되었다. 이는 투자 심리 위축과 외국인 자금 유출을 야기하여 KOSPI에 부정적인 영향을 미칠 수 있다.\n    *   영향 채널: 심리, 수급 (외국인 자금 유출)\n\n*   **한국은행, 2020년 경제성장률 전망치 하향 조정 (2020-02-27)**\n    한국은행은 2월 경제전망에서 2020년 경제성장률 전망치를 기존 2.3%에서 2.1%로 하향 조정했다. 이는 코로나19 확산의 영향을 반영한 것으로, 국내외 여건 변화를 고려할 때 성장세가 일시 위축될 것이라는 전망이 KOSPI에 하방 압력으로 작용할 수 있다.\n    *   영향 채널: 심리, 거시경제 (성장률 둔화 우려)\n\n*   **주요국 증시 급락 및 국제유가 폭락 (2020-02-27)**\n    2월 27일 신종 코로나바이러스의 대확산 우려로 아시아 및 유럽 증시가 3~5% 하락했으며, 북미 3대 지수는 2008년 세계 금융 위기 이후 가장 큰 폭으로 폭락했다. 유가 또한 1년 사이 최저 수준으로 하락하여 글로벌 경기 침체 우려를 키웠다. 이는 국내 증시의 투자 심리를 위축시키고 외국인 매도를 유발하여 KOSPI에 부정적인 영향을 줄 수 있다.\n    *   영향 채널: 심리, 수급 (외국인 매도), 거시경제 (글로벌 경기 침체 우려)\n\n*   **기획재정부, 2월 경제동향 발표 (2020-02-14)**\n    기획재정부는 2월 경제동향에서 12월 산업활동 주요 지표가 전월 대비 광공업 생산, 소매판매, 설비투자, 건설 투자는 증가했으나 서비스업 생산은 감소했다고 밝혔다. 고용은 회복세이며 물가는 상승폭이 확대되었고, 국내 금융시장은 1월 하순 이후 주가와 국고채 금리는 하락, 환율은 상승(원화 약세)하는 모습을 보였다. 이는 경기 개선 흐름 속에서도 코로나19 확산에 따른 제약 가능성을 언급하며 KOSPI에 불확실성을 더할 수 있다.\n    *   영향 채널: 거시경제 (경제 지표 혼조), 심리 (불확실성)\n\n(3) 각 이벤트의 출처\n\n*   **코로나19 팬데믹 우려 확산 및 WHO 위험도 상향**\n    *   매체명: KBS 뉴스\n    *   기사 제목: [다시보기] WHO, 코로나19 위험도 '매우 높음' 상향 - 2020년 2월 29일(토) 특집 KBS 뉴스광장\n    *   발간일: 2020-02-28\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBxqjza26SyIe1PtLS1vJcjDEU9JO1ncuyG_OjpAg4Oxs744ixV9ObT_y09P_H2FdjndSq4-6rpmLxOVvQIL0tfnfGRTCKxn9OLyje3VczbBHuMv17EN9KCGnts65zxhDyBJZE6no=\n\n*   **한국은행, 2020년 경제성장률 전망치 하향 조정**\n    *   매체명: 대한민국 정책브리핑\n    *   기사 제목: 경제전망(2020.2월)\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkeYa3VGldJLfSPkjqh3ExQPT8KCezekGaKinHsO1RTAzVSnumpJNvcaZVzpyE2yGLbksqMcarIDFhXbiG2QJ6QuDUWygou8JovA25-3v4WpQlYj-y6kbfMy_2fslxnXUSYcbNwQvD9wVo4whWTat6g1qPgEOqKtdPAb2hG128RM67isZqZdmUjHSpgtmZF-a3aAiKfVusFQpWQiAxabuZ3tgae4A=\n    *   매체명: KDI 경제교육·정보센터\n    *   기사 제목: 경제전망(2020.2월)\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_6AgA3Wl9TH0spXYoJFnfiTWxY4bDujHJYf8kaWtxDQXczDTM-uKhD8CaOBC1nS6_4pKcQEqJmxYtCL7-NBz65Y72bRPKXPokIxzNLBWAnMhKY2NFVj2Rq9HX5zr-GHfW3NR9r-raiK6yTn8oa9kv42xw\n    *   매체명: 한국은행\n    *   기사 제목: 경제전망(2020년 2월) 기자설명회\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwX3O6fH47bMGPWmZU7-UV9iEUfI7VB-DsgRtVvihV_rSL9_C7cEGxqzD1vJe70ZDhWlP_esmEd_Vu7v5cdvzNJScL1BOVnQYNzp3lqDRwtF8BOhTPproulvP1YWnlY5MsEMVHCJMTGWNVMyrxjGbnKHid1RKUddKAkDJhKJjA4xFuUe_ahSWuHw\n\n*   **주요국 증시 급락 및 국제유가 폭락**\n    *   매체명: 위키백과\n    *   기사 제목: 2020년 주가 대폭락\n    *   발간일: 발간일 불확실 (2020년 2월 20일 시작된 폭락에 대한 내용 포함)\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG4KO9HSvE_MB-Gz-XCc6Ky4d0L1BI5C1d9s4EicwHUu8w0unqkgpr7bxh0FoPzQYnfpzKqgMLJaWeFbvg7fa_1vNhcWCpvJ_TCYchuKSTQGen3K2OxGJDLRSK2zmXK_t7xoJw-HVz77pJo52GPyngg3xItfZasg9MWqF6FxV47FptgXX0cRmveYEgYlBguYt8rm675xg==\n\n*   **기획재정부, 2월 경제동향 발표**\n    *   매체명: KDI 경제교육·정보센터\n    *   기사 제목: 2020년 2월 최근 경제동향\n    *   발간일: 2020-02-14\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdGDi-_9MTyhxTS8QtRpGy7GhshGcKbIVw7dg9Hy4xcKQ3wcQJWUdzNqQyzCTZXF1eGkTJPQCetZV3f9FfsKEZn132_rzENG3gPNqUpcxn1s2k9MG0XdvCdzYjtubldcW1J99oZAEiGYYgmvWfZDqt83myccIaNulfWTp5ubrrO2MCn-HMxH_f2DvuuTdzOi4o6cA7uWU49bMwhQ==\n    *   매체명: 대한민국 정책브리핑\n    *   기사 제목: 2020년 2월 최근경제동향\n    *   발간일: 2020-02-10\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhR4CfDxh793fMe4fZ_JIHF_1YaVTuj32pUXJC16ZeOWW6iOZcr7-USn7b6K815h3pp94D62ER2NPncmWWLKeKZyNROYSF11wFtJQLqXHl4_WQMG2Qyx6taY3MvfkaCPWYwvE9s7GpqmMCiknIYudQeQ==\n\n(4) LOOKAHEAD_CONTAMINATION 의심 항목\n\n*   매일일보 · 2월에만 20% 가까이 오른 코스피… 李, 생산적 금융 전환 가속 · 2026-03-02 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGk0f5kROv9HPyUOLRoUh-HFXppBynTNpaYpG0B2_xJON2dIqnbl9LV5pwh6SXKxmEVTYUwpDyHvFpg-C8sY62zu2oQ9XBa3lELVqTRglxsH7BW9bSroD7q_ijXVsnnOo6m0goeLoTRaTBu3uC0ReLZlw== (게재일: 2026-03-02, 컷오프 대비 6년 1일 미래)\n*   한국무역협회 · 삼성전자 파국 피한 韓경제…고물가·금리·환율 변수는 남아 · 2026-05-21 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0boSqWumLKBEGwjF_EsEX7Ro0kSKOtWGtWdObXt699AT-NBz44n_rCepnysfUjgFviz0MwpHntAwG2aPtnDgRXVEh0TzRefKKdzMieunz3wIo0xBI1iieTLeRyyv2HIQ79P2oi25OINdeOLirpjZ_8tMMdZKw1XFQAXw7SwGpdBCdDA0gqfDJ3E5VeqHCii8PTNb-uT98V3YdZECSYIlSAcANV6jEdlQcLbovWw_yEDMebLnLH7XOMq0Li4eXqLq7Sn6WE (게재일: 2026-05-21, 컷오프 대비 6년 2개월 20일 미래)\n*   Daum · [팩트체크] 김용범 “고환율은 한국경제 성공의 역설적 현상” 사실일까 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFM2eFGSpgHz8Rx4WiQLOrYGKimba66x7h4PZcVmzT0ymYUnQrsknO-JYOayPfJB0tX07PzGkBLu9dFWiU0a-4G-6CKztegzki7WqjfOjJrKysRZnsm9dtGPxl59up6HW1r (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   한국경제 · 거시경제 뉴스 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHFCKS5nQinbNn5YrR50F52k5EQpLSdmXoIuV8S95u5PlsCTcir2n-QfbTLv7THZVMIrarqv7gx4yfptyHE2deKXk43_g3BFvlk5dqm7ycjsETCrkWeLA-7QoVUvSf99MS7 (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   연합인포맥스 · '81.4조' 순매도 외국인, 기계적 리밸런싱 가능성…시총 대비 순매도 작아 · 2026-05-18 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPDb0ODFGke0F3NdmnwdE9YQbLmtg_2zFg1AL2iICUvSOp2GLU69M02673VsDI-5dXposqLNFRMLFXoGWNGQzJS0hU995ghG4jCWTvkO_77RLIO-ruy24ODOmNJiUQARuUJOR6svGlCKI3YJqNJl0oiya504Ql9c1l6g== (게재일: 2026-05-18, 컷오프 대비 6년 2개월 17일 미래)\n*   한국경제 · 한은 올해 성장률 2.5~2.6%대로 상향 전망 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPkEbwLdDzJN0BXlKfEhH14AUYiM3yNJxJNHWzHteKNjGIuyEJmILBr0vN_yZPN69OBr_7RqCHP7zTCqq11Z77QYqh7FcZiSaePyLMmHcXWo029DjtQ5rBo3sjrCV0xV1QEtggQlop0EY= (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   YTN · 새해 20% 넘게 뛴 코스피...2월은 하락 출발 · 2026-02-02 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkxu-QOBDzDVgyT6Vyh_0xtjMwoi_vnReu2E06FGMevCER7s-HCe4yW3i_e00_FpSe1pJ5QvTCmG49lZmbWEkiXDbkQa3_3FyNpijGJLLvsOR-goQ1NgIP-B7SNagM-GvdlT4x_g6Azfkk-DI= (게재일: 2026-02-02, 컷오프 대비 5년 11개월 1일 미래)\n*   나무위키 · 코로나바이러스감염증-19/경과/2020년 2월 · 2025-12-13 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFp6TtD_c8sW9xPlTi0th0ALktNC20lhB0IZeRfOe0GAt4-P6FvOQqyeOWNCZ20FT37WDdau38tFN7_XGx01urdgmDrZYYaYqKZ-crO3EM-D-8A8L_ZXjjP0m2efBxlQp0xEUZI9mfLmu-H_UH62MdQMnvskqx_-f2xofdCxQLocdYB2_pE0LFbiOyV4dm5NQW2XlJNIqrCW1FPSDYORQ0hcnFEU0e6Wr8KzlPS-o4faTkaQsoFr3Brdj4sCu6itGHXOqGN4jqXYOY7P_HYgSz-Y= (게재일: 2025-12-13, 컷오프 대비 5년 9개월 12일 미래)\n*   뉴스1 · 환율·집값에 '발목'…2월 금통위 '금리 만장일치 동결' 유력 [금통위폴]① · 2026-02-22 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXMTV_N5agxuSkX2O-UtGSo7brhDGXaN4k7i9oiyzMz2c-CTKBypK3oGFW4nPrqCP81Xf7umwdWkATtBYyS6RqQpFRWpfLBeT_2Jw02ALXyL3tHvgRlufKA17FsS0C5Vh9JBkpdA== (게재일: 2026-02-22, 컷오프 대비 5년 11개월 21일 미래)\n*   데일리굿뉴스 · 한국은행, 기준금리 6연속 동결…환율·부동산 안정 최우선 · 2026-03-17 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyCyM-Vc4VxK5gBq-v8H2qhQJDtBDZYq1eOlZZjIXuHgq7qBtPcrBdCCbJc5zk52p9K8VBbemRYbj_BtrHzEZNWas7J8JX4LSlyDepnwNA_ad2IKmu-2mfdKzqxIlc4-fglb-xhRXJ-m79Eyr4vRdTu7k8UIcWjQ== (게재일: 2026-03-17, 컷오프 대비 6년 16일 미래)\n*   Daum · 한은 올해 성장률 2.5~2.6%대로 상향 전망 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTb5CMoeHLV3zZite-V3s0u40yQ7IJC8_uxYeMAoPWUcSgUi7VoI5L5vcv27ZFxb9MH__RSFo2YxKEo7t1yn_CUjUylLi3YkhHB7iT_EhngPrSnxrFGRXpxPpyzVUuR-lP (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   Daum · [2월 둘째 주 세계경제동향 브리핑] 코스피 5,500선 돌파…미 증시 조정·달러 약세 · 2026-02-14 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFap19aW-veQjrjVYT629ln_o-pqCEm6FZl_oPfWpuoqUczHKqTvUx_LFq0JwVIVgBnzEnEJDUKgeGGdJG44zk_wC0jmTmRc1yetu19UChXt6BUKFIxyou9SNerPqg8TLH5 (게재일: 2026-02-14, 컷오프 대비 5년 11개월 13일 미래)\n*   Daum · 코스피 외국인 비중 40% 육박, 최고치 경신…매도세 이긴 랠리 · 2026-05-22 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEGA8FzHbOul7RPJ-SFMouGElBfSLOHzgSvBmh0sNNhhoYNxzcs7j7eNnd-TGTpMEBGx81FQ5Fw-65CbDQrtMM5MYaGQixmujMduZxlW-iqbK3ePwNSO0DM5Ulxi3R5EbPP (게재일: 2026-05-22, 컷오프 대비 6년 2개월 21일 미래)\n*   조선일보 · 물가·성장·환율, 금리 인상 여건은 갖춰져…신현송 첫 금통위 선택은? · 2026-05-27 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHuWJLJjHsRGuTeI7szopjVxuOj5t300bnVcbmDif5gu5_KiRrt6pzLYrT8IF6YAXHH411s0Nz5Pu1_YoC3jtdT3Ut7_2C13QjrW59itmo02LcIGw_fD0slsCxiebQibb6uWwbu6lJ3seVraCuIDBNu59KPy45VYvht4EusjS5b-IVm_fdvNbbbDzLfYhqa4Ic= (게재일: 2026-05-27, 컷오프 대비 6년 2개월 26일 미래)\n*   마켓인 · 환율, 심리적 방어선 1500원 돌파…한은 \"시장심리 쏠리지 않도록 정부와 협조\" · 2026-03-04 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE4_sbM2QreMyHyyAZLBRG8qGt_OWke0dfCvRdbuzxYLGQrViNloDaUCHa_nYodDcDFHTk3CbRlBggKxIwIpNuFdNYDS_dxAymz6nESp6G3R5r4BoE3u0frni-IBu8_wPDyVjKSzLgGuJ5VeaCQbPtdGzeYTT5YiutTTWew (게재일: 2026-03-04, 컷오프 대비 6년 3일 미래)",
+  "audit": {
+    "trusted": [
+      {
+        "index": 2,
+        "domain": "kdi.re.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_6AgA3Wl9TH0spXYoJFnfiTWxY4bDujHJYf8kaWtxDQXczDTM-uKhD8CaOBC1nS6_4pKcQEqJmxYtCL7-NBz65Y72bRPKXPokIxzNLBWAnMhKY2NFVj2Rq9HX5zr-GHfW3NR9r-raiK6yTn8oa9kv42xw"
+      },
+      {
+        "index": 3,
+        "domain": "bok.or.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwX3O6fH47bMGPWmZU7-UV9iEUfI7VB-DsgRtVvihV_rSL9_C7cEGxqzD1vJe70ZDhWlP_esmEd_Vu7v5cdvzNJScL1BOVnQYNzp3lqDRwtF8BOhTPproulvP1YWnlY5MsEMVHCJMTGWNVMyrxjGbnKHid1RKUddKAkDJhKJjA4xFuUe_ahSWuHw=="
+      },
+      {
+        "index": 5,
+        "domain": "kdi.re.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdGDi-_9MTyhxTS8QtRpGy7GhshGcKbIVw7dg9Hy4xcKQ3wcQJWUdzNqQyzCTZXF1eGkTJPQCetZV3f9FfsKEZn132_rzENG3gPNqUpcxn1s2k9MG0XdvCdzYjtubldcW1J99oZAEiGYYgmvWfZDqt83myccIaNulfWTp5ubrrO2MCn-HMxH_f2DvuuTdzOi4o6cA7uWU49bMwhQ=="
+      },
+      {
+        "index": 10,
+        "domain": "hankyung.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHFCKS5nQinbNn5YrR50F52k5EQpLSdmXoIuV8S95u5PlsCTcir2n-QfbTLv7THZVMIrarqv7gx4yfptyHE2deKXk43_g3BFvlk5dqm7ycjsETCrkWeLA-7QoVUeSf99MS7"
+      },
+      {
+        "index": 11,
+        "domain": "einfomax.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPDb0ODFGke0F3NdmnwdE9YQbLmtg_2zFg1AL2iICUvSOp2GLU69M02673VsDI-5dXposqLNFRMLFXoGWNGQzJS0hU995ghG4jCWTvkO_77RLIO-ruy24ODOmNJiUQARuUJOR6svGlCKI3YJqNJl0oiya504Ql9c1l6g=="
+      },
+      {
+        "index": 12,
+        "domain": "hankyung.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPkEbwLdDzJN0BXlKfEhH14AUYiM3yNJxJNHWzHteKNyGIuyEJmILBr0vN_yZPN69OBr_7RqCHP7zTCqq11Z77QYqh7FcZiSaePyLMmHcXWo029DjtQ5rBo3sjrCV0xV1QEtggQlop0EY="
+      },
+      {
+        "index": 13,
+        "domain": "ytn.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkxu-QOBDzDVgyT6Vyh_0xtjMwoi_vnReu2E06FGMevCER7s-HCe4yW3i_e00_FpSe1pJ5QvTCmG49lZmbWEkiXDbkQa3_3FyNpijGJLLvsOR-goQ1NgIP-B7SNagM-GvdlT4x_g6Azfkk-DI="
+      },
+      {
+        "index": 15,
+        "domain": "news1.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXMTV_N5agxuSkX2O-UtGSo7brhDGXaN4k7i9oiyzMz2c-CTKBypK3oGFW4nPrqCP81Xf7umwdWkATtBYyS6RqQpFRWpfLBeT_2Jw02ALXyL3tHvgRlufKA17FsS0C5Vh9JBkpdA=="
+      },
+      {
+        "index": 20,
+        "domain": "chosun.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHuWJLJjHsRGuTeI7szopjVxuOj5t300bnVcbmDif5gu5_KiRrt6pzLYrT8IF6YAXHH411s0Nz5Pu1_YoC3jtdT3Ut7_2C13QjrW59itmo02LcIGw_fD0slsCxiebQibb6uWwbu6lJ3seVraCuIDBNu59KPy45VYvht4EusjS5b-IVm_fdvNbbbDzLfYhqa4Ic="
+      },
+      {
+        "index": 21,
+        "domain": "edaily.co.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE4_sbM2QreMyHyyAZLBRG8qGt_OWke0dfCvRdbuzxYLGQrViNloDaUCHa_nYodDcDFHTk3CbRlBggKxIwIpNuFdNYDS_dxAymz6nESp6G3R5r4BoE3u0frni-IBu8_wPDyVjKSzL0guJ5VeaCQbPtdGzeYTT5YiutTTWew"
+      }
+    ],
+    "flagged": [
+      {
+        "index": 0,
+        "domain": "youtube.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBxqjza26SyIe1PtLS1vJcjDEU9JO1ncuyG_OjpAg4Oxs744ixV9ObT_y09P_H2FdjndSq4-6rpmLxOVvQIL0tfnfGRTCKxn9OLyje3VczbBHuMv17EN9KCGnts65zxhDyBJZE6no="
+      },
+      {
+        "index": 1,
+        "domain": "kiri.or.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkeYa3VGldJLfSPkjqh3ExQPT8KCezekGaKinHsO1RTAzVSnumpJNvcaZVzpyE2yGLbksqMcarIDFhXbiG2QJ6QuDUWygou8JovA25-3v4WpQlYj-y6kbfMy_2fslxnXUSYcbNwQvD9wVo4whWTat6g1qPgEOqKtdPAb2hG128RM67isZqZdmUjHSpgtmZF-a3aAiKfVusFQpWQiAxabuZ3tgae4A="
+      },
+      {
+        "index": 4,
+        "domain": "wikipedia.org",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG4KO9HSvE_MB-Gz-XCc6Ky4d0L1BI5C1d9s4EicwHUu8w0unqkgpr7bxh0FoPzQYnfpzKqgMLJaWeFbvg7fa_1vNhcWCpvJ_TCYchuKSTQGen3K2OxGJDLRSK2zmXK_t7xoJw-HVz77pJo52GPyngg3xItfZasg9MWqF6FxV47FptgXX0cRmveYEgYlBguYt8rm675xg=="
+      },
+      {
+        "index": 6,
+        "domain": "korea.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhR4CfDxh793fMe4fZ_JIHF_1YaVTuj32pUXJC16ZeOWW6iOZcr7-USn7b6K815h3pp94D62ER2NPncmWWLKeKZyNROYSF11wFtJQLqXHl4_WQMG2Qyx6taY3MvfkaCPWYwvE9s7GpqmMCiknIYudQeQ=="
+      },
+      {
+        "index": 7,
+        "domain": "m-i.kr",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGk0f5kROv9HPyUOLRoUh-HFXppBynTNpaYpG0B2_xJON2dIqnbl9LV5pwh6SXKxmEVTYUwpDyHvFpg-C8sY62zu2oQ9XBa3lELVqTRglxsH7BW9bSroD7q_ijXVsnnOo6m0goeLoTRaTBu3uC0ReLZlw=="
+      },
+      {
+        "index": 8,
+        "domain": "kita.net",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0boSqWumLKBEGwjF_EsEX7Ro0kSKOtWGtWdObXt699AT-NBz44n_rCepnysfUjgFviz0MwpHntAwG2aPtnDgRXGKVEDh0TzRefKKdzMieunz3wIo0xBI1iieTLeRyyv2HIQ79P2oi25OINdeOLirpjZ_8tMMdZKw1XFQAXw7SwGpdBCdDA0gqfDJ3E5VeqHCii8PTNb-uT98V3YdZECSYIlSAcANV6jEdlQcLbovWw_yEDMebLnLH7XOMq0Li4eXqLq7Sn6WE"
+      },
+      {
+        "index": 9,
+        "domain": "daum.net",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFM2eFGSpgHz8Rx4WiQLOrYGKimba66x7h4PZcVmzT0ymYUnQrsknO-JYOayPfJB0tX07PzGkBLu9dFWiU0a-4G-6CKztegzki7WqjfOjJrKysRZnsm9dtGPxl59up6HW1r"
+      },
+      {
+        "index": 14,
+        "domain": "namu.wiki",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFp6TtD_c8sW9xPlTi0th0ALktNC20lhB0IZeRfOe0GAt4-P6FvOQqyeOWNCZ20FT37WDdau38tFN7_XGx01urdgmDrZYYaYqKZ-crO3EM-D-8A8L_ZXjjP0m2efBxlQp0xEUZI9mfLmu-H_UH62MdQMnvskqx_-f2xofdCxQLocdYB2_pE0LFbiOyV4dm5NQW2XaJw595IKmjk2WrlJNIqrCW1FPSDYORQ0hcnFEU0e6Wr8KzlPS-o4faTkaQsoFr3Brdj4sCu6itGHXOqGN4jqXYOY7P_HYgSz-Y="
+      },
+      {
+        "index": 16,
+        "domain": "goodnews1.com",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyCyM-Vc4VxK5gBq-v8H2qhQJDtBDZYq1eOlZZjIXuHgq7qBtPcrBdCCbJc5zk52p9K8VBbemRYbj_BtrHzEZNWas7J8JX4LSlyDepnwNA_ad2IKmu-2mfdKzqxIlc4-fglb-xhRXJ-m79Eyr4vRdTu7k8UIcWjQ=="
+      },
+      {
+        "index": 17,
+        "domain": "daum.net",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTb5CMoeHLV3zZite-V3s0u40yQ7IJC8_uxYeMAoPWUcSgUi7VoI5L5vcv27ZFxb9MH__RSFo2YxKEo7t1yn_CUjUylLi3YkhHB7iT_EhngPrSnxrFGRXpxPpyzVUuR-lP"
+      },
+      {
+        "index": 18,
+        "domain": "daum.net",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFap19aW-veQjrjVYT629ln_o-pqCEm6FZl_oPfWpuoqUczHKqTvUx_LFq0JwVIVgBnzEnEJDUKgeGGdJG44zk_wC0jmTmRc1yetu19UChXt6BUKFIxyou9SNerPqg8TLH5"
+      },
+      {
+        "index": 19,
+        "domain": "daum.net",
+        "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEGA8FzHbOul7RPJ-SFMouGElBfSLOHzgSvBmh0sNNhhoYNxzcs7j7eNnd-TGTpMEBGx81FQ5Fw-65CbDQrtMM5MYaGQixmujMduZxlW-iqbK3ePwNSO0DM5Ulxi3R5EbPP"
+      }
+    ],
+    "trust_ratio": 0.455,
+    "total_sources": 22
+  },
+  "raw": {
+    "sdk_http_response": {
+      "headers": {
+        "x-gemini-service-tier": "standard",
+        "content-type": "application/json; charset=UTF-8",
+        "vary": "Origin, X-Origin, Referer",
+        "content-encoding": "gzip",
+        "date": "Wed, 27 May 2026 10:57:20 GMT",
+        "server": "scaffolding on HTTPServer2",
+        "x-xss-protection": "0",
+        "x-frame-options": "SAMEORIGIN",
+        "x-content-type-options": "nosniff",
+        "server-timing": "gfet4t7; dur=27235",
+        "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+        "transfer-encoding": "chunked"
+      },
+      "body": null
+    },
+    "candidates": [
+      {
+        "content": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": null,
+              "function_response": null,
+              "inline_data": null,
+              "text": "정보 컷오프 2020-03-01 기준, 2020-02 발간 뉴스 중 2020-03 KOSPI 흐름에 영향을 줄 수 있는 항목:\n\n(2) 핵심 이벤트 3~5개\n\n*   **코로나19 팬데믹 우려 확산 및 WHO 위험도 상향 (2020-02-28)**\n    2월 말 세계보건기구(WHO)가 코로나19의 위험도를 '매우 높음'으로 상향 조정하고, 러시아 등 일부 국가에서 한국발 입국 제한 조치를 발표하면서 글로벌 경기 둔화 및 국내 경제 활동 위축에 대한 우려가 증폭되었다. 이는 투자 심리 위축과 외국인 자금 유출을 야기하여 KOSPI에 부정적인 영향을 미칠 수 있다.\n    *   영향 채널: 심리, 수급 (외국인 자금 유출)\n\n*   **한국은행, 2020년 경제성장률 전망치 하향 조정 (2020-02-27)**\n    한국은행은 2월 경제전망에서 2020년 경제성장률 전망치를 기존 2.3%에서 2.1%로 하향 조정했다. 이는 코로나19 확산의 영향을 반영한 것으로, 국내외 여건 변화를 고려할 때 성장세가 일시 위축될 것이라는 전망이 KOSPI에 하방 압력으로 작용할 수 있다.\n    *   영향 채널: 심리, 거시경제 (성장률 둔화 우려)\n\n*   **주요국 증시 급락 및 국제유가 폭락 (2020-02-27)**\n    2월 27일 신종 코로나바이러스의 대확산 우려로 아시아 및 유럽 증시가 3~5% 하락했으며, 북미 3대 지수는 2008년 세계 금융 위기 이후 가장 큰 폭으로 폭락했다. 유가 또한 1년 사이 최저 수준으로 하락하여 글로벌 경기 침체 우려를 키웠다. 이는 국내 증시의 투자 심리를 위축시키고 외국인 매도를 유발하여 KOSPI에 부정적인 영향을 줄 수 있다.\n    *   영향 채널: 심리, 수급 (외국인 매도), 거시경제 (글로벌 경기 침체 우려)\n\n*   **기획재정부, 2월 경제동향 발표 (2020-02-14)**\n    기획재정부는 2월 경제동향에서 12월 산업활동 주요 지표가 전월 대비 광공업 생산, 소매판매, 설비투자, 건설 투자는 증가했으나 서비스업 생산은 감소했다고 밝혔다. 고용은 회복세이며 물가는 상승폭이 확대되었고, 국내 금융시장은 1월 하순 이후 주가와 국고채 금리는 하락, 환율은 상승(원화 약세)하는 모습을 보였다. 이는 경기 개선 흐름 속에서도 코로나19 확산에 따른 제약 가능성을 언급하며 KOSPI에 불확실성을 더할 수 있다.\n    *   영향 채널: 거시경제 (경제 지표 혼조), 심리 (불확실성)\n\n(3) 각 이벤트의 출처\n\n*   **코로나19 팬데믹 우려 확산 및 WHO 위험도 상향**\n    *   매체명: KBS 뉴스\n    *   기사 제목: [다시보기] WHO, 코로나19 위험도 '매우 높음' 상향 - 2020년 2월 29일(토) 특집 KBS 뉴스광장\n    *   발간일: 2020-02-28\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBxqjza26SyIe1PtLS1vJcjDEU9JO1ncuyG_OjpAg4Oxs744ixV9ObT_y09P_H2FdjndSq4-6rpmLxOVvQIL0tfnfGRTCKxn9OLyje3VczbBHuMv17EN9KCGnts65zxhDyBJZE6no=\n\n*   **한국은행, 2020년 경제성장률 전망치 하향 조정**\n    *   매체명: 대한민국 정책브리핑\n    *   기사 제목: 경제전망(2020.2월)\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkeYa3VGldJLfSPkjqh3ExQPT8KCezekGaKinHsO1RTAzVSnumpJNvcaZVzpyE2yGLbksqMcarIDFhXbiG2QJ6QuDUWygou8JovA25-3v4WpQlYj-y6kbfMy_2fslxnXUSYcbNwQvD9wVo4whWTat6g1qPgEOqKtdPAb2hG128RM67isZqZdmUjHSpgtmZF-a3aAiKfVusFQpWQiAxabuZ3tgae4A=\n    *   매체명: KDI 경제교육·정보센터\n    *   기사 제목: 경제전망(2020.2월)\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_6AgA3Wl9TH0spXYoJFnfiTWxY4bDujHJYf8kaWtxDQXczDTM-uKhD8CaOBC1nS6_4pKcQEqJmxYtCL7-NBz65Y72bRPKXPokIxzNLBWAnMhKY2NFVj2Rq9HX5zr-GHfW3NR9r-raiK6yTn8oa9kv42xw\n    *   매체명: 한국은행\n    *   기사 제목: 경제전망(2020년 2월) 기자설명회\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwX3O6fH47bMGPWmZU7-UV9iEUfI7VB-DsgRtVvihV_rSL9_C7cEGxqzD1vJe70ZDhWlP_esmEd_Vu7v5cdvzNJScL1BOVnQYNzp3lqDRwtF8BOhTPproulvP1YWnlY5MsEMVHCJMTGWNVMyrxjGbnKHid1RKUddKAkDJhKJjA4xFuUe_ahSWuHw\n\n*   **주요국 증시 급락 및 국제유가 폭락**\n    *   매체명: 위키백과\n    *   기사 제목: 2020년 주가 대폭락\n    *   발간일: 발간일 불확실 (2020년 2월 20일 시작된 폭락에 대한 내용 포함)\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG4KO9HSvE_MB-Gz-XCc6Ky4d0L1BI5C1d9s4EicwHUu8w0unqkgpr7bxh0FoPzQYnfpzKqgMLJaWeFbvg7fa_1vNhcWCpvJ_TCYchuKSTQGen3K2OxGJDLRSK2zmXK_t7xoJw-HVz77pJo52GPyngg3xItfZasg9MWqF6FxV47FptgXX0cRmveYEgYlBguYt8rm675xg==\n\n*   **기획재정부, 2월 경제동향 발표**\n    *   매체명: KDI 경제교육·정보센터\n    *   기사 제목: 2020년 2월 최근 경제동향\n    *   발간일: 2020-02-14\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdGDi-_9MTyhxTS8QtRpGy7GhshGcKbIVw7dg9Hy4xcKQ3wcQJWUdzNqQyzCTZXF1eGkTJPQCetZV3f9FfsKEZn132_rzENG3gPNqUpcxn1s2k9MG0XdvCdzYjtubldcW1J99oZAEiGYYgmvWfZDqt83myccIaNulfWTp5ubrrO2MCn-HMxH_f2DvuuTdzOi4o6cA7uWU49bMwhQ==\n    *   매체명: 대한민국 정책브리핑\n    *   기사 제목: 2020년 2월 최근경제동향\n    *   발간일: 2020-02-10\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhR4CfDxh793fMe4fZ_JIHF_1YaVTuj32pUXJC16ZeOWW6iOZcr7-USn7b6K815h3pp94D62ER2NPncmWWLKeKZyNROYSF11wFtJQLqXHl4_WQMG2Qyx6taY3MvfkaCPWYwvE9s7GpqmMCiknIYudQeQ==\n\n(4) LOOKAHEAD_CONTAMINATION 의심 항목\n\n*   매일일보 · 2월에만 20% 가까이 오른 코스피… 李, 생산적 금융 전환 가속 · 2026-03-02 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGk0f5kROv9HPyUOLRoUh-HFXppBynTNpaYpG0B2_xJON2dIqnbl9LV5pwh6SXKxmEVTYUwpDyHvFpg-C8sY62zu2oQ9XBa3lELVqTRglxsH7BW9bSroD7q_ijXVsnnOo6m0goeLoTRaTBu3uC0ReLZlw== (게재일: 2026-03-02, 컷오프 대비 6년 1일 미래)\n*   한국무역협회 · 삼성전자 파국 피한 韓경제…고물가·금리·환율 변수는 남아 · 2026-05-21 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0boSqWumLKBEGwjF_EsEX7Ro0kSKOtWGtWdObXt699AT-NBz44n_rCepnysfUjgFviz0MwpHntAwG2aPtnDgRXVEh0TzRefKKdzMieunz3wIo0xBI1iieTLeRyyv2HIQ79P2oi25OINdeOLirpjZ_8tMMdZKw1XFQAXw7SwGpdBCdDA0gqfDJ3E5VeqHCii8PTNb-uT98V3YdZECSYIlSAcANV6jEdlQcLbovWw_yEDMebLnLH7XOMq0Li4eXqLq7Sn6WE (게재일: 2026-05-21, 컷오프 대비 6년 2개월 20일 미래)\n*   Daum · [팩트체크] 김용범 “고환율은 한국경제 성공의 역설적 현상” 사실일까 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFM2eFGSpgHz8Rx4WiQLOrYGKimba66x7h4PZcVmzT0ymYUnQrsknO-JYOayPfJB0tX07PzGkBLu9dFWiU0a-4G-6CKztegzki7WqjfOjJrKysRZnsm9dtGPxl59up6HW1r (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   한국경제 · 거시경제 뉴스 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHFCKS5nQinbNn5YrR50F52k5EQpLSdmXoIuV8S95u5PlsCTcir2n-QfbTLv7THZVMIrarqv7gx4yfptyHE2deKXk43_g3BFvlk5dqm7ycjsETCrkWeLA-7QoVUvSf99MS7 (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   연합인포맥스 · '81.4조' 순매도 외국인, 기계적 리밸런싱 가능성…시총 대비 순매도 작아 · 2026-05-18 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPDb0ODFGke0F3NdmnwdE9YQbLmtg_2zFg1AL2iICUvSOp2GLU69M02673VsDI-5dXposqLNFRMLFXoGWNGQzJS0hU995ghG4jCWTvkO_77RLIO-ruy24ODOmNJiUQARuUJOR6svGlCKI3YJqNJl0oiya504Ql9c1l6g== (게재일: 2026-05-18, 컷오프 대비 6년 2개월 17일 미래)\n*   한국경제 · 한은 올해 성장률 2.5~2.6%대로 상향 전망 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPkEbwLdDzJN0BXlKfEhH14AUYiM3yNJxJNHWzHteKNjGIuyEJmILBr0vN_yZPN69OBr_7RqCHP7zTCqq11Z77QYqh7FcZiSaePyLMmHcXWo029DjtQ5rBo3sjrCV0xV1QEtggQlop0EY= (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   YTN · 새해 20% 넘게 뛴 코스피...2월은 하락 출발 · 2026-02-02 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkxu-QOBDzDVgyT6Vyh_0xtjMwoi_vnReu2E06FGMevCER7s-HCe4yW3i_e00_FpSe1pJ5QvTCmG49lZmbWEkiXDbkQa3_3FyNpijGJLLvsOR-goQ1NgIP-B7SNagM-GvdlT4x_g6Azfkk-DI= (게재일: 2026-02-02, 컷오프 대비 5년 11개월 1일 미래)\n*   나무위키 · 코로나바이러스감염증-19/경과/2020년 2월 · 2025-12-13 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFp6TtD_c8sW9xPlTi0th0ALktNC20lhB0IZeRfOe0GAt4-P6FvOQqyeOWNCZ20FT37WDdau38tFN7_XGx01urdgmDrZYYaYqKZ-crO3EM-D-8A8L_ZXjjP0m2efBxlQp0xEUZI9mfLmu-H_UH62MdQMnvskqx_-f2xofdCxQLocdYB2_pE0LFbiOyV4dm5NQW2XlJNIqrCW1FPSDYORQ0hcnFEU0e6Wr8KzlPS-o4faTkaQsoFr3Brdj4sCu6itGHXOqGN4jqXYOY7P_HYgSz-Y= (게재일: 2025-12-13, 컷오프 대비 5년 9개월 12일 미래)\n*   뉴스1 · 환율·집값에 '발목'…2월 금통위 '금리 만장일치 동결' 유력 [금통위폴]① · 2026-02-22 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXMTV_N5agxuSkX2O-UtGSo7brhDGXaN4k7i9oiyzMz2c-CTKBypK3oGFW4nPrqCP81Xf7umwdWkATtBYyS6RqQpFRWpfLBeT_2Jw02ALXyL3tHvgRlufKA17FsS0C5Vh9JBkpdA== (게재일: 2026-02-22, 컷오프 대비 5년 11개월 21일 미래)\n*   데일리굿뉴스 · 한국은행, 기준금리 6연속 동결…환율·부동산 안정 최우선 · 2026-03-17 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyCyM-Vc4VxK5gBq-v8H2qhQJDtBDZYq1eOlZZjIXuHgq7qBtPcrBdCCbJc5zk52p9K8VBbemRYbj_BtrHzEZNWas7J8JX4LSlyDepnwNA_ad2IKmu-2mfdKzqxIlc4-fglb-xhRXJ-m79Eyr4vRdTu7k8UIcWjQ== (게재일: 2026-03-17, 컷오프 대비 6년 16일 미래)\n*   Daum · 한은 올해 성장률 2.5~2.6%대로 상향 전망 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTb5CMoeHLV3zZite-V3s0u40yQ7IJC8_uxYeMAoPWUcSgUi7VoI5L5vcv27ZFxb9MH__RSFo2YxKEo7t1yn_CUjUylLi3YkhHB7iT_EhngPrSnxrFGRXpxPpyzVUuR-lP (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)\n*   Daum · [2월 둘째 주 세계경제동향 브리핑] 코스피 5,500선 돌파…미 증시 조정·달러 약세 · 2026-02-14 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFap19aW-veQjrjVYT629ln_o-pqCEm6FZl_oPfWpuoqUczHKqTvUx_LFq0JwVIVgBnzEnEJDUKgeGGdJG44zk_wC0jmTmRc1yetu19UChXt6BUKFIxyou9SNerPqg8TLH5 (게재일: 2026-02-14, 컷오프 대비 5년 11개월 13일 미래)\n*   Daum · 코스피 외국인 비중 40% 육박, 최고치 경신…매도세 이긴 랠리 · 2026-05-22 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEGA8FzHbOul7RPJ-SFMouGElBfSLOHzgSvBmh0sNNhhoYNxzcs7j7eNnd-TGTpMEBGx81FQ5Fw-65CbDQrtMM5MYaGQixmujMduZxlW-iqbK3ePwNSO0DM5Ulxi3R5EbPP (게재일: 2026-05-22, 컷오프 대비 6년 2개월 21일 미래)\n*   조선일보 · 물가·성장·환율, 금리 인상 여건은 갖춰져…신현송 첫 금통위 선택은? · 2026-05-27 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHuWJLJjHsRGuTeI7szopjVxuOj5t300bnVcbmDif5gu5_KiRrt6pzLYrT8IF6YAXHH411s0Nz5Pu1_YoC3jtdT3Ut7_2C13QjrW59itmo02LcIGw_fD0slsCxiebQibb6uWwbu6lJ3seVraCuIDBNu59KPy45VYvht4EusjS5b-IVm_fdvNbbbDzLfYhqa4Ic= (게재일: 2026-05-27, 컷오프 대비 6년 2개월 26일 미래)\n*   마켓인 · 환율, 심리적 방어선 1500원 돌파…한은 \"시장심리 쏠리지 않도록 정부와 협조\" · 2026-03-04 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE4_sbM2QreMyHyyAZLBRG8qGt_OWke0dfCvRdbuzxYLGQrViNloDaUCHa_nYodDcDFHTk3CbRlBggKxIwIpNuFdNYDS_dxAymz6nESp6G3R5r4BoE3u0frni-IBu8_wPDyVjKSzLgGuJ5VeaCQbPtdGzeYTT5YiutTTWew (게재일: 2026-03-04, 컷오프 대비 6년 3일 미래)",
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "model"
+        },
+        "citation_metadata": null,
+        "finish_message": null,
+        "token_count": null,
+        "finish_reason": "STOP",
+        "grounding_metadata": {
+          "image_search_queries": null,
+          "grounding_chunks": [
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "youtube.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBxqjza26SyIe1PtLS1vJcjDEU9JO1ncuyG_OjpAg4Oxs744ixV9ObT_y09P_H2FdjndSq4-6rpmLxOVvQIL0tfnfGRTCKxn9OLyje3VczbBHuMv17EN9KCGnts65zxhDyBJZE6no="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "kiri.or.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkeYa3VGldJLfSPkjqh3ExQPT8KCezekGaKinHsO1RTAzVSnumpJNvcaZVzpyE2yGLbksqMcarIDFhXbiG2QJ6QuDUWygou8JovA25-3v4WpQlYj-y6kbfMy_2fslxnXUSYcbNwQvD9wVo4whWTat6g1qPgEOqKtdPAb2hG128RM67isZqZdmUjHSpgtmZF-a3aAiKfVusFQpWQiAxabuZ3tgae4A="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "kdi.re.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_6AgA3Wl9TH0spXYoJFnfiTWxY4bDujHJYf8kaWtxDQXczDTM-uKhD8CaOBC1nS6_4pKcQEqJmxYtCL7-NBz65Y72bRPKXPokIxzNLBWAnMhKY2NFVj2Rq9HX5zr-GHfW3NR9r-raiK6yTn8oa9kv42xw"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "bok.or.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwX3O6fH47bMGPWmZU7-UV9iEUfI7VB-DsgRtVvihV_rSL9_C7cEGxqzD1vJe70ZDhWlP_esmEd_Vu7v5cdvzNJScL1BOVnQYNzp3lqDRwtF8BOhTPproulvP1YWnlY5MsEMVHCJMTGWNVMyrxjGbnKHid1RKUddKAkDJhKJjA4xFuUe_ahSWuHw=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "wikipedia.org",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG4KO9HSvE_MB-Gz-XCc6Ky4d0L1BI5C1d9s4EicwHUu8w0unqkgpr7bxh0FoPzQYnfpzKqgMLJaWeFbvg7fa_1vNhcWCpvJ_TCYchuKSTQGen3K2OxGJDLRSK2zmXK_t7xoJw-HVz77pJo52GPyngg3xItfZasg9MWqF6FxV47FptgXX0cRmveYEgYlBguYt8rm675xg=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "kdi.re.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdGDi-_9MTyhxTS8QtRpGy7GhshGcKbIVw7dg9Hy4xcKQ3wcQJWUdzNqQyzCTZXF1eGkTJPQCetZV3f9FfsKEZn132_rzENG3gPNqUpcxn1s2k9MG0XdvCdzYjtubldcW1J99oZAEiGYYgmvWfZDqt83myccIaNulfWTp5ubrrO2MCn-HMxH_f2DvuuTdzOi4o6cA7uWU49bMwhQ=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "korea.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhR4CfDxh793fMe4fZ_JIHF_1YaVTuj32pUXJC16ZeOWW6iOZcr7-USn7b6K815h3pp94D62ER2NPncmWWLKeKZyNROYSF11wFtJQLqXHl4_WQMG2Qyx6taY3MvfkaCPWYwvE9s7GpqmMCiknIYudQeQ=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "m-i.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGk0f5kROv9HPyUOLRoUh-HFXppBynTNpaYpG0B2_xJON2dIqnbl9LV5pwh6SXKxmEVTYUwpDyHvFpg-C8sY62zu2oQ9XBa3lELVqTRglxsH7BW9bSroD7q_ijXVsnnOo6m0goeLoTRaTBu3uC0ReLZlw=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "kita.net",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0boSqWumLKBEGwjF_EsEX7Ro0kSKOtWGtWdObXt699AT-NBz44n_rCepnysfUjgFviz0MwpHntAwG2aPtnDgRXGKVEDh0TzRefKKdzMieunz3wIo0xBI1iieTLeRyyv2HIQ79P2oi25OINdeOLirpjZ_8tMMdZKw1XFQAXw7SwGpdBCdDA0gqfDJ3E5VeqHCii8PTNb-uT98V3YdZECSYIlSAcANV6jEdlQcLbovWw_yEDMebLnLH7XOMq0Li4eXqLq7Sn6WE"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "daum.net",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFM2eFGSpgHz8Rx4WiQLOrYGKimba66x7h4PZcVmzT0ymYUnQrsknO-JYOayPfJB0tX07PzGkBLu9dFWiU0a-4G-6CKztegzki7WqjfOjJrKysRZnsm9dtGPxl59up6HW1r"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "hankyung.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHFCKS5nQinbNn5YrR50F52k5EQpLSdmXoIuV8S95u5PlsCTcir2n-QfbTLv7THZVMIrarqv7gx4yfptyHE2deKXk43_g3BFvlk5dqm7ycjsETCrkWeLA-7QoVUeSf99MS7"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "einfomax.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPDb0ODFGke0F3NdmnwdE9YQbLmtg_2zFg1AL2iICUvSOp2GLU69M02673VsDI-5dXposqLNFRMLFXoGWNGQzJS0hU995ghG4jCWTvkO_77RLIO-ruy24ODOmNJiUQARuUJOR6svGlCKI3YJqNJl0oiya504Ql9c1l6g=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "hankyung.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPkEbwLdDzJN0BXlKfEhH14AUYiM3yNJxJNHWzHteKNyGIuyEJmILBr0vN_yZPN69OBr_7RqCHP7zTCqq11Z77QYqh7FcZiSaePyLMmHcXWo029DjtQ5rBo3sjrCV0xV1QEtggQlop0EY="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "ytn.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkxu-QOBDzDVgyT6Vyh_0xtjMwoi_vnReu2E06FGMevCER7s-HCe4yW3i_e00_FpSe1pJ5QvTCmG49lZmbWEkiXDbkQa3_3FyNpijGJLLvsOR-goQ1NgIP-B7SNagM-GvdlT4x_g6Azfkk-DI="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "namu.wiki",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFp6TtD_c8sW9xPlTi0th0ALktNC20lhB0IZeRfOe0GAt4-P6FvOQqyeOWNCZ20FT37WDdau38tFN7_XGx01urdgmDrZYYaYqKZ-crO3EM-D-8A8L_ZXjjP0m2efBxlQp0xEUZI9mfLmu-H_UH62MdQMnvskqx_-f2xofdCxQLocdYB2_pE0LFbiOyV4dm5NQW2XaJw595IKmjk2WrlJNIqrCW1FPSDYORQ0hcnFEU0e6Wr8KzlPS-o4faTkaQsoFr3Brdj4sCu6itGHXOqGN4jqXYOY7P_HYgSz-Y="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "news1.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXMTV_N5agxuSkX2O-UtGSo7brhDGXaN4k7i9oiyzMz2c-CTKBypK3oGFW4nPrqCP81Xf7umwdWkATtBYyS6RqQpFRWpfLBeT_2Jw02ALXyL3tHvgRlufKA17FsS0C5Vh9JBkpdA=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "goodnews1.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyCyM-Vc4VxK5gBq-v8H2qhQJDtBDZYq1eOlZZjIXuHgq7qBtPcrBdCCbJc5zk52p9K8VBbemRYbj_BtrHzEZNWas7J8JX4LSlyDepnwNA_ad2IKmu-2mfdKzqxIlc4-fglb-xhRXJ-m79Eyr4vRdTu7k8UIcWjQ=="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "daum.net",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTb5CMoeHLV3zZite-V3s0u40yQ7IJC8_uxYeMAoPWUcSgUi7VoI5L5vcv27ZFxb9MH__RSFo2YxKEo7t1yn_CUjUylLi3YkhHB7iT_EhngPrSnxrFGRXpxPpyzVUuR-lP"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "daum.net",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFap19aW-veQjrjVYT629ln_o-pqCEm6FZl_oPfWpuoqUczHKqTvUx_LFq0JwVIVgBnzEnEJDUKgeGGdJG44zk_wC0jmTmRc1yetu19UChXt6BUKFIxyou9SNerPqg8TLH5"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "daum.net",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEGA8FzHbOul7RPJ-SFMouGElBfSLOHzgSvBmh0sNNhhoYNxzcs7j7eNnd-TGTpMEBGx81FQ5Fw-65CbDQrtMM5MYaGQixmujMduZxlW-iqbK3ePwNSO0DM5Ulxi3R5EbPP"
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "chosun.com",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHuWJLJjHsRGuTeI7szopjVxuOj5t300bnVcbmDif5gu5_KiRrt6pzLYrT8IF6YAXHH411s0Nz5Pu1_YoC3jtdT3Ut7_2C13QjrW59itmo02LcIGw_fD0slsCxiebQibb6uWwbu6lJ3seVraCuIDBNu59KPy45VYvht4EusjS5b-IVm_fdvNbbbDzLfYhqa4Ic="
+              }
+            },
+            {
+              "image": null,
+              "maps": null,
+              "retrieved_context": null,
+              "web": {
+                "domain": null,
+                "title": "edaily.co.kr",
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE4_sbM2QreMyHyyAZLBRG8qGt_OWke0dfCvRdbuzxYLGQrViNloDaUCHa_nYodDcDFHTk3CbRlBggKxIwIpNuFdNYDS_dxAymz6nESp6G3R5r4BoE3u0frni-IBu8_wPDyVjKSzL0guJ5VeaCQbPtdGzeYTT5YiutTTWew"
+              }
+            }
+          ],
+          "grounding_supports": [
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                0
+              ],
+              "segment": {
+                "start_index": 149,
+                "end_index": 518,
+                "part_index": null,
+                "text": "*   **코로나19 팬데믹 우려 확산 및 WHO 위험도 상향 (2020-02-28)**\n    2월 말 세계보건기구(WHO)가 코로나19의 위험도를 '매우 높음'으로 상향 조정하고, 러시아 등 일부 국가에서 한국발 입국 제한 조치를 발표하면서 글로벌 경기 둔화 및 국내 경제 활동 위축에 대한 우려가 증폭되었다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                1,
+                2,
+                3
+              ],
+              "segment": {
+                "start_index": 706,
+                "end_index": 916,
+                "part_index": null,
+                "text": "*   **한국은행, 2020년 경제성장률 전망치 하향 조정 (2020-02-27)**\n    한국은행은 2월 경제전망에서 2020년 경제성장률 전망치를 기존 2.3%에서 2.1%로 하향 조정했다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                4
+              ],
+              "segment": {
+                "start_index": 1193,
+                "end_index": 1474,
+                "part_index": null,
+                "text": "*   **주요국 증시 급락 및 국제유가 폭락 (2020-02-27)**\n    2월 27일 신종 코로나바이러스의 대확산 우려로 아시아 및 유럽 증시가 3~5% 하락했으며, 북미 3대 지수는 2008년 세계 금융 위기 이후 가장 큰 폭으로 폭락했다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                4
+              ],
+              "segment": {
+                "start_index": 1475,
+                "end_index": 1578,
+                "part_index": null,
+                "text": "유가 또한 1년 사이 최저 수준으로 하락하여 글로벌 경기 침체 우려를 키웠다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                5
+              ],
+              "segment": {
+                "start_index": 1822,
+                "end_index": 2110,
+                "part_index": null,
+                "text": "*   **기획재정부, 2월 경제동향 발표 (2020-02-14)**\n    기획재정부는 2월 경제동향에서 12월 산업활동 주요 지표가 전월 대비 광공업 생산, 소매판매, 설비투자, 건설 투자는 증가했으나 서비스업 생산은 감소했다고 밝혔다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                5
+              ],
+              "segment": {
+                "start_index": 2111,
+                "end_index": 2315,
+                "part_index": null,
+                "text": "고용은 회복세이며 물가는 상승폭이 확대되었고, 국내 금융시장은 1월 하순 이후 주가와 국고채 금리는 하락, 환율은 상승(원화 약세)하는 모습을 보였다."
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                0
+              ],
+              "segment": {
+                "start_index": 2575,
+                "end_index": 3062,
+                "part_index": null,
+                "text": "*   **코로나19 팬데믹 우려 확산 및 WHO 위험도 상향**\n    *   매체명: KBS 뉴스\n    *   기사 제목: [다시보기] WHO, 코로나19 위험도 '매우 높음' 상향 - 2020년 2월 29일(토) 특집 KBS 뉴스광장\n    *   발간일: 2020-02-28\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBxqjza26SyIe1PtLS1vJcjDEU9JO1ncuyG_OjpAg4Oxs744ixV9ObT_y09P_H2FdjndSq4-6rpmLxOVvQIL0tfnfGRTCKxn9OLyje3VczbBHuMv17EN9KCGnts65zxhDyBJZE6no="
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                1
+              ],
+              "segment": {
+                "start_index": 3064,
+                "end_index": 3563,
+                "part_index": null,
+                "text": "*   **한국은행, 2020년 경제성장률 전망치 하향 조정**\n    *   매체명: 대한민국 정책브리핑\n    *   기사 제목: 경제전망(2020.2월)\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkeYa3VGldJLfSPkjqh3ExQPT8KCezekGaKinHsO1RTAzVSnumpJNvcaZVzpyE2yGLbksqMcarIDFhXbiG2QJ6QuDUWygou8JovA25-3v4WpQlYj-y6kbfMy_2fslxnXUSYcbNwQvD9wVo4whWTat6g1qPgEOqKtdPAb2hG128RM67isZqZdmUjHSpgtmZF-a3aAiKfVusFQpWQiAxabuZ3tgae4A="
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                2
+              ],
+              "segment": {
+                "start_index": 3568,
+                "end_index": 3927,
+                "part_index": null,
+                "text": "*   매체명: KDI 경제교육·정보센터\n    *   기사 제목: 경제전망(2020.2월)\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_6AgA3Wl9TH0spXYoJFnfiTWxY4bDujHJYf8kaWtxDQXczDTM-uKhD8CaOBC1nS6_4pKcQEqJmxYtCL7-NBz65Y72bRPKXPokIxzNLBWAnMhKY2NFVj2Rq9HX5zr-GHfW3NR9r-raiK6yTn8oa9kv42xw"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                3
+              ],
+              "segment": {
+                "start_index": 3932,
+                "end_index": 4322,
+                "part_index": null,
+                "text": "*   매체명: 한국은행\n    *   기사 제목: 경제전망(2020년 2월) 기자설명회\n    *   발간일: 2020-02-27\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwX3O6fH47bMGPWmZU7-UV9iEUfI7VB-DsgRtVvihV_rSL9_C7cEGxqzD1vJe70ZDhWlP_esmEd_Vu7v5cdvzNJScL1BOVnQYNzp3lqDRwtF8BOhTPproulvP1YWnlY5MsEMVHCJMTGWNVMyrxjGbnKHid1RKUddKAkDJhKJjA4xFuUe_ahSWuHw"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                4
+              ],
+              "segment": {
+                "start_index": 4324,
+                "end_index": 4845,
+                "part_index": null,
+                "text": "*   **주요국 증시 급락 및 국제유가 폭락**\n    *   매체명: 위키백과\n    *   기사 제목: 2020년 주가 대폭락\n    *   발간일: 발간일 불확실 (2020년 2월 20일 시작된 폭락에 대한 내용 포함)\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG4KO9HSvE_MB-Gz-XCc6Ky4d0L1BI5C1d9s4EicwHUu8w0unqkgpr7bxh0FoPzQYnfpzKqgMLJaWeFbvg7fa_1vNhcWCpvJ_TCYchuKSTQGen3K2OxGJDLRSK2zmXK_t7xoJw-HVz77pJo52GPyngg3xItfZasg9MWqF6FxV47FptgXX0cRmveYEgYlBguYt8rm675xg=="
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                5
+              ],
+              "segment": {
+                "start_index": 4847,
+                "end_index": 5325,
+                "part_index": null,
+                "text": "*   **기획재정부, 2월 경제동향 발표**\n    *   매체명: KDI 경제교육·정보센터\n    *   기사 제목: 2020년 2월 최근 경제동향\n    *   발간일: 2020-02-14\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdGDi-_9MTyhxTS8QtRpGy7GhshGcKbIVw7dg9Hy4xcKQ3wcQJWUdzNqQyzCTZXF1eGkTJPQCetZV3f9FfsKEZn132_rzENG3gPNqUpcxn1s2k9MG0XdvCdzYjtubldcW1J99oZAEiGYYgmvWfZDqt83myccIaNulfWTp5ubrrO2MCn-HMxH_f2DvuuTdzOi4o6cA7uWU49bMwhQ=="
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                6
+              ],
+              "segment": {
+                "start_index": 5330,
+                "end_index": 5695,
+                "part_index": null,
+                "text": "*   매체명: 대한민국 정책브리핑\n    *   기사 제목: 2020년 2월 최근경제동향\n    *   발간일: 2020-02-10\n    *   URL: https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHhR4CfDxh793fMe4fZ_JIHF_1YaVTuj32pUXJC16ZeOWW6iOZcr7-USn7b6K815h3pp94D62ER2NPncmWWLKeKZyNROYSF11wFtJQLqXHl4_WQMG2Qyx6taY3MvfkaCPWYwvE9s7GpqmMCiknIYudQeQ=="
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                7
+              ],
+              "segment": {
+                "start_index": 5805,
+                "end_index": 6140,
+                "part_index": null,
+                "text": "李, 생산적 금융 전환 가속 · 2026-03-02 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGk0f5kROv9HPyUOLRoUh-HFXppBynTNpaYpG0B2_xJON2dIqnbl9LV5pwh6SXKxmEVTYUwpDyHvFpg-C8sY62zu2oQ9XBa3lELVqTRglxsH7BW9bSroD7q_ijXVsnnOo6m0goeLoTRaTBu3uC0ReLZlw== (게재일: 2026-03-02, 컷오프 대비 6년 1일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                8
+              ],
+              "segment": {
+                "start_index": 6206,
+                "end_index": 6666,
+                "part_index": null,
+                "text": "고물가·금리·환율 변수는 남아 · 2026-05-21 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0boSqWumLKBEGwjF_EsEX7Ro0kSKOtWGtWdObXt699AT-NBz44n_rCepnysfUjgFviz0MwpHntAwG2aPtnDgRXVEh0TzRefKKdzMieunz3wIo0xBI1iieTLeRyyv2HIQ79P2oi25OINdeOLirpjZ_8tMMdZKw1XFQAXw7SwGpdBCdDA0gqfDJ3E5VeqHCii8PTNb-uT98V3YdZECSYIlSAcANV6jEdlQcLbovWw_yEDMebLnLH7XOMq0Li4eXqLq7Sn6WE (게재일: 2026-05-21, 컷오프 대비 6년 2개월 20일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                9
+              ],
+              "segment": {
+                "start_index": 6667,
+                "end_index": 7060,
+                "part_index": null,
+                "text": "*   Daum · [팩트체크] 김용범 “고환율은 한국경제 성공의 역설적 현상” 사실일까 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFM2eFGSpgHz8Rx4WiQLOrYGKimba66x7h4PZcVmzT0ymYUnQrsknO-JYOayPfJB0tX07PzGkBLu9dFWiU0a-4G-6CKztegzki7WqjfOjJrKysRZnsm9dtGPxl59up6HW1r (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                10
+              ],
+              "segment": {
+                "start_index": 7061,
+                "end_index": 7385,
+                "part_index": null,
+                "text": "*   한국경제 · 거시경제 뉴스 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHFCKS5nQinbNn5YrR50F52k5EQpLSdmXoIuV8S95u5PlsCTcir2n-QfbTLv7THZVMIrarqv7gx4yfptyHE2deKXk43_g3BFvlk5dqm7ycjsETCrkWeLA-7QoVUvSf99MS7 (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                11
+              ],
+              "segment": {
+                "start_index": 7478,
+                "end_index": 7829,
+                "part_index": null,
+                "text": "시총 대비 순매도 작아 · 2026-05-18 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFPDb0ODFGke0F3NdmnwdE9YQbLmtg_2zFg1AL2iICUvSOp2GLU69M02673VsDI-5dXposqLNFRMLFXoGWNGQzJS0hU995ghG4jCWTvkO_77RLIO-ruy24ODOmNJiUQARuUJOR6svGlCKI3YJqNJl0oiya504Ql9c1l6g== (게재일: 2026-05-18, 컷오프 대비 6년 2개월 17일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                12
+              ],
+              "segment": {
+                "start_index": 7830,
+                "end_index": 8199,
+                "part_index": null,
+                "text": "*   한국경제 · 한은 올해 성장률 2.5~2.6%대로 상향 전망 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPkEbwLdDzJN0BXlKfEhH14AUYiM3yNJxJNHWzHteKNjGIuyEJmILBr0vN_yZPN69OBr_7RqCHP7zTCqq11Z77QYqh7FcZiSaePyLMmHcXWo029DjtQ5rBo3sjrCV0xV1QEtggQlop0EY= (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                13
+              ],
+              "segment": {
+                "start_index": 8245,
+                "end_index": 8567,
+                "part_index": null,
+                "text": "2월은 하락 출발 · 2026-02-02 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkxu-QOBDzDVgyT6Vyh_0xtjMwoi_vnReu2E06FGMevCER7s-HCe4yW3i_e00_FpSe1pJ5QvTCmG49lZmbWEkiXDbkQa3_3FyNpijGJLLvsOR-goQ1NgIP-B7SNagM-GvdlT4x_g6Azfkk-DI= (게재일: 2026-02-02, 컷오프 대비 5년 11개월 1일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                14
+              ],
+              "segment": {
+                "start_index": 8568,
+                "end_index": 9076,
+                "part_index": null,
+                "text": "*   나무위키 · 코로나바이러스감염증-19/경과/2020년 2월 · 2025-12-13 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFp6TtD_c8sW9xPlTi0th0ALktNC20lhB0IZeRfOe0GAt4-P6FvOQqyeOWNCZ20FT37WDdau38tFN7_XGx01urdgmDrZYYaYqKZ-crO3EM-D-8A8L_ZXjjP0m2efBxlQp0xEUZI9mfLmu-H_UH62MdQMnvskqx_-f2xofdCxQLocdYB2_pE0LFbiOyV4dm5NQW2XlJNIqrCW1FPSDYORQ0hcnFEU0e6Wr8KzlPS-o4faTkaQsoFr3Brdj4sCu6itGHXOqGN4jqXYOY7P_HYgSz-Y= (게재일: 2025-12-13, 컷오프 대비 5년 9개월 12일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                15
+              ],
+              "segment": {
+                "start_index": 9121,
+                "end_index": 9483,
+                "part_index": null,
+                "text": "2월 금통위 '금리 만장일치 동결' 유력 [금통위폴]① · 2026-02-22 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXMTV_N5agxuSkX2O-UtGSo7brhDGXaN4k7i9oiyzMz2c-CTKBypK3oGFW4nPrqCP81Xf7umwdWkATtBYyS6RqQpFRWpfLBeT_2Jw02ALXyL3tHvgRlufKA17FsS0C5Vh9JBkpdA== (게재일: 2026-02-22, 컷오프 대비 5년 11개월 21일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                16
+              ],
+              "segment": {
+                "start_index": 9554,
+                "end_index": 9897,
+                "part_index": null,
+                "text": "환율·부동산 안정 최우선 · 2026-03-17 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyCyM-Vc4VxK5gBq-v8H2qhQJDtBDZYq1eOlZZjIXuHgq7qBtPcrBdCCbJc5zk52p9K8VBbemRYbj_BtrHzEZNWas7J8JX4LSlyDepnwNA_ad2IKmu-2mfdKzqxIlc4-fglb-xhRXJ-m79Eyr4vRdTu7k8UIcWjQ== (게재일: 2026-03-17, 컷오프 대비 6년 16일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                17
+              ],
+              "segment": {
+                "start_index": 9898,
+                "end_index": 10247,
+                "part_index": null,
+                "text": "*   Daum · 한은 올해 성장률 2.5~2.6%대로 상향 전망 · 2026-05-25 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTb5CMoeHLV3zZite-V3s0u40yQ7IJC8_uxYeMAoPWUcSgUi7VoI5L5vcv27ZFxb9MH__RSFo2YxKEo7t1yn_CUjUylLi3YkhHB7iT_EhngPrSnxrFGRXpxPpyzVUuR-lP (게재일: 2026-05-25, 컷오프 대비 6년 2개월 24일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                18
+              ],
+              "segment": {
+                "start_index": 10335,
+                "end_index": 10653,
+                "part_index": null,
+                "text": "미 증시 조정·달러 약세 · 2026-02-14 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFap19aW-veQjrjVYT629ln_o-pqCEm6FZl_oPfWpuoqUczHKqTvUx_LFq0JwVIVgBnzEnEJDUKgeGGdJG44zk_wC0jmTmRc1yetu19UChXt6BUKFIxyou9SNerPqg8TLH5 (게재일: 2026-02-14, 컷오프 대비 5년 11개월 13일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                19
+              ],
+              "segment": {
+                "start_index": 10724,
+                "end_index": 11032,
+                "part_index": null,
+                "text": "매도세 이긴 랠리 · 2026-05-22 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEGA8FzHbOul7RPJ-SFMouGElBfSLOHzgSvBmh0sNNhhoYNxzcs7j7eNnd-TGTpMEBGx81FQ5Fw-65CbDQrtMM5MYaGQixmujMduZxlW-iqbK3ePwNSO0DM5Ulxi3R5EbPP (게재일: 2026-05-22, 컷오프 대비 6년 2개월 21일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                20
+              ],
+              "segment": {
+                "start_index": 11151,
+                "end_index": 11496,
+                "part_index": null,
+                "text": "2026-05-27 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHuWJLJjHsRGuTeI7szopjVxuOj5t300bnVcbmDif5gu5_KiRrt6pzLYrT8IF6YAXHH411s0Nz5Pu1_YoC3jtdT3Ut7_2C13QjrW59itmo02LcIGw_fD0slsCxiebQibb6uWwbu6lJ3seVraCuIDBNu59KPy45VYvht4EusjS5b-IVm_fdvNbbbDzLfYhqa4Ic= (게재일: 2026-05-27, 컷오프 대비 6년 2개월 26일 미래)"
+              },
+              "rendered_parts": null
+            },
+            {
+              "confidence_scores": null,
+              "grounding_chunk_indices": [
+                21
+              ],
+              "segment": {
+                "start_index": 11559,
+                "end_index": 11929,
+                "part_index": null,
+                "text": "한은 \"시장심리 쏠리지 않도록 정부와 협조\" · 2026-03-04 · https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE4_sbM2QreMyHyyAZLBRG8qGt_OWke0dfCvRdbuzxYLGQrViNloDaUCHa_nYodDcDFHTk3CbRlBggKxIwIpNuFdNYDS_dxAymz6nESp6G3R5r4BoE3u0frni-IBu8_wPDyVjKSzLgGuJ5VeaCQbPtdGzeYTT5YiutTTWew (게재일: 2026-03-04, 컷오프 대비 6년 3일 미래)"
+              },
+              "rendered_parts": null
+            }
+          ],
+          "retrieval_metadata": null,
+          "search_entry_point": {
+            "rendered_content": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGjSTlRoTlgOrhpeVFV23DO6SrV6PfxuMYPlbXojvkjfcirySr4V4KW0D7j1IPlLX9KFBZh0wb0P3frbqoy9JD8VprRfcffaWvKmWuPjSH1dyUfspF-5wx81MpsU-FuQnhDcDL545zNKSUtorWoXBmyvyNtKjcxROMOgaLFV_-SJFiKf0k-ZNortfJiCIer6BfJuukxFhfSRVUqG4VbA8ThDYqa_4DauA0kDKT-86CCJtoEvYKR0r9hGzOgPlLVyhWk7ThnEHU2UAWchhBLna2-Kl4OQvYiiyzCCK3Kmem1HSvrrS521M-hUUMcQEQBaijX9l3kv5DFJ2DDRx_SrfiwS2DFSxP9J4Q2Fs8bRw1JTKEjHlhcUMpcTDMQ0IS3mCwu\">2020년 2월 한국 금리 환율 수급 심리 정책 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF5n_DkdmuiNi6WpOxkJ25uqmtBRAe_03KBmK9X3az_795c_ttqv7DRNSnP0_O2qZJQx8C6VvJJmyZSITnJIldcpO3SiN2QaJUiK7BQ9hjUA999IkoVjDz50lf0wtHLS-B15p36c8BS--ANDFjaUelAhEzvcBZlriZRlSoDh8CE2Cvt2m3WNqShGq79XZk9Fev9jJTBjypXz_EJkkUCZpSQBvRc7AkJIQn5vneG0BMRdn0WklXPs0nvTGEZ70dBHd9VzODa-FHq0Q==\">2020년 2월 KOSPI 영향 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEJ80QwGMTpPge69FnvwgsBgQEAQ15hqIb6XvfhHmjtNun9i0goIUQM9FQ2MlSYEVvp-LdqvtLGxlAglyK3vSdbfH95imsA9X-OtQ9FGCWUUI5ntpCLZBuZWfZJFyOHHIaH9NwhxSPYUPoZ9cTAoj-GIe67MMokD4d3hEog9GkL6DPQ9YEHQxPCrSiXwrPaQR9LWAVmlwedxwtR49hDFVAiFslHGIhQbd4l1e7mdcGISXMaHatH2ol7xz57qMVhB9f4W8L2aN79xC1Ay9UChEHl25vG_bUlwusbMf2qVQxOl0INAjbCpEZi27zG00JhtM42P48rcU-bRLLpvw==\">2020년 2월 한국 시장 거시 경제 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFK7VuuVLNYmbV0kgkFFk-kH11GILb1C4epMrhQ_o6HSyLCzyJ1aBkmJ8JigyjWC5_zXIN_azV_G0E2gGT8XU9xUDhXMOz4jf04TFEeGW0kty9qvt-9h9DFVr2JPLwfxjaVfjyD8r4Xs2vi2wPdClGGumUFobxWVFXLKVqOWk_NGLSD8nHlKU2V3H3omQ2dejsFrPJ20tTlKSeQvUBk_KeJGYW_mMtXkk1OylgJI7p28K0dye4g8IcMDSf7eNiUqoQohIadg4dJbuJgziI4KVSU-av3z47IJll3S26eBQ4I_IvX9xSChL80V2T4nOuvPpEZ8yCyRWiXIqg8XGPfWAkr-dzsGxp9\">2020년 2월 코로나19 관련 한국 경제 뉴스</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQExkyvEr6RocOm6xIkuzC-jsD8T17Nt5J19IKOpYM-3tylk99ifpPdptlbM6rWQCFYZ5IKtkMZE4L0EwFpqhP8Cg_su_ZpoSMndbrsjQHeRcyl-5sqoM-HgMar-g7Vk788haMLmD6sY5wZfIlx8232TiYjRpYIQjaBZkkCTgl12ZK7gdqlM88kDmQz9jnqSyTJKyn159PjG6n73Co63gHWrqoTklR8VUZ5Q9rqqFkiIft1rTxbSIfe2yeJxXSwlwABXHgtQKhC5ggzliEDfxQY5z3Y_0xRUbKCiicZ6kvyY_NSqR-5e-C3IFWNLPfsY6ZS3uH9KkwMmaVa2og==\">2020년 2월 주요 경제 지표 발표 한국</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFF-CBUrJ5uiU0oE3vlAzlskphEK0ggFduZIg6_12kWr9IQ0Rd6Kne9l1G9or3WDNzCwDZOen0zjVEiRDpkfgP-y4Toyv7eiC3iE96ufWTErG6zIoLcweJXASt7nwC_zz-d2-Eymg-z0eHbdMcsQzNq3-_cOjdHNDTvXGE0rUIkMCb_OOtlXeVR_LUtk2wl7yCUpToR3AyDOJBGnTlEsTsPBbFsMCt4Iv6o91Jvzuk9kFvx1ye_VVDYfcMXqHXo9adtW13L_PeX_yL70mgJXlZ3_eReIk6xPjzRrQY3mRA=\">2020년 2월 국내외 경제 동향</a>\n  </div>\n</div>\n",
+            "sdk_blob": null
+          },
+          "web_search_queries": [
+            "2020년 2월 한국 시장 거시 경제 뉴스",
+            "2020년 2월 KOSPI 영향 뉴스",
+            "2020년 2월 코로나19 관련 한국 경제 뉴스",
+            "2020년 2월 한국 금리 환율 수급 심리 정책 뉴스",
+            "2020년 2월 주요 경제 지표 발표 한국",
+            "2020년 2월 국내외 경제 동향"
+          ],
+          "google_maps_widget_context_token": null,
+          "retrieval_queries": null,
+          "source_flagging_uris": null
+        },
+        "avg_logprobs": null,
+        "index": 0,
+        "logprobs_result": null,
+        "safety_ratings": null,
+        "url_context_metadata": null
+      }
+    ],
+    "create_time": null,
+    "model_version": "gemini-2.5-flash",
+    "prompt_feedback": null,
+    "response_id": "9c0Wav3-K9-p1e8Pmtb6gAo",
+    "usage_metadata": {
+      "cache_tokens_details": null,
+      "cached_content_token_count": null,
+      "candidates_token_count": 5691,
+      "candidates_tokens_details": null,
+      "prompt_token_count": 638,
+      "prompt_tokens_details": [
+        {
+          "modality": "TEXT",
+          "token_count": 638
+        }
+      ],
+      "thoughts_token_count": null,
+      "tool_use_prompt_token_count": 747,
+      "tool_use_prompt_tokens_details": [
+        {
+          "modality": "TEXT",
+          "token_count": 747
+        }
+      ],
+      "total_token_count": 7076,
+      "traffic_type": null
+    },
+    "model_status": null,
+    "automatic_function_calling_history": [],
+    "parsed": null
+  }
+}

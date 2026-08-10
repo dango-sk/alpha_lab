@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>KOSPI 레짐 판정 리포트</title>
+<style>
+  body { font-family: 'Pretendard', sans-serif; background:#0f0f1a; color:#e0e0e0; margin:0; padding:24px }
+  h1 { color:#fff; font-size:1.6em; margin-bottom:4px }
+  .subtitle { color:#888; margin-bottom:24px }
+  .summary-bar { display:flex; gap:24px; margin-bottom:24px }
+  .kpi { background:#1e1e2e; border-radius:8px; padding:16px 24px; text-align:center }
+  .kpi .val { font-size:2em; font-weight:bold; color:#7c9fff }
+  .kpi .lbl { color:#888; font-size:0.85em }
+  table { width:100%; border-collapse:collapse; background:#1e1e2e; border-radius:8px; overflow:hidden }
+  th { background:#2a2a3e; padding:12px 16px; text-align:left; color:#aaa; font-size:0.85em }
+  td { padding:12px 16px; border-bottom:1px solid #2a2a3e; font-size:0.9em }
+  tr:hover > td { background:#252535 }
+  .agent-card { background:#0f0f1a; border-radius:6px; padding:12px }
+  .agent-card pre { white-space:pre-wrap; font-size:0.8em; color:#ccc; margin:8px 0 0 }
+  .agent-label { font-size:0.8em; font-weight:bold; color:#888 }
+  .technical .agent-label { color:#7c9fff }
+  .fundamental .agent-label { color:#a29bfe }
+  .news .agent-label { color:#fdcb6e }
+  .bull .agent-label { color:#2ecc71 }
+  .bear .agent-label { color:#e74c3c }
+</style>
+</head>
+<body>
+<h1>KOSPI 레짐 판정 리포트</h1>
+<div class="subtitle">Trading Agent — 2023-11 ~ 2026-02 | 각 행 클릭 시 상세 내용 확인</div>
+<div class="summary-bar">
+  <div class="kpi"><div class="val">3</div><div class="lbl">분석 개월</div></div>
+  <div class="kpi"><div class="val">66.7%</div><div class="lbl">판정 정확도</div></div>
+  <div class="kpi"><div class="val">0</div><div class="lbl">Bull 판정</div></div>
+  <div class="kpi"><div class="val">0</div><div class="lbl">Bear 판정</div></div>
+</div>
+<table>
+  <thead><tr><th>기준월</th><th>판정</th><th>신뢰도</th><th>실제 다음달 수익률</th><th>정확</th><th>요약</th></tr></thead>
+  <tbody>
+        <tr onclick="toggleDetail('detail_202003')" style="cursor:pointer">
+            <td>2020-03</td>
+            <td style="color:#e74c3c;font-weight:bold">-1.5%</td>
+            <td>60</td>
+            <td style="color:#e74c3c">-12.3%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI는 두 달간의 하락세와 기술적 지표 약세로 당분간 반등이 제한될 가능성이 높습니다. 펀더멘털 개선 신호에도 불구하고, 시장 변동성 증가</td>
+        </tr>
+        <tr id="detail_202003" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI는 최근 두 달간 각각 -5.8%와 -3.1%의 월간 수익률 하락을 보였으며, 이는 MA200 아래로 떨어져 하락 추세에 있다는 것을 시사합니다. MA200과 비교해 현재 위치가 낮아진 가운데, RSI는 과거 평균과 비교해 과매도 구간으로 진입했음을 보여줍니다.
+
+포인트2: RSI는 전월 대비 11.8포인트 감소하며 27.0으로 과매도 상태에 진입했습니다. 과거 데이터에서 RSI가 35 이하일 때 반등 가능성이 높음을 시사하며, 현 시점의 RSI는 과거의 과매도 구간과 일치하지만 평균보다 낮아 강한 조정압력을 나타냅니다.
+
+포인트3: MACD는 전월 대비 -576.8로 급격히 축소되며 모멘텀 악화를 보이고 있으며, 이는 KOSPI와 S&P500, SOX 모두에 상하향 전환점이 있음을 암시할 수 있습니다. MACD 하락은 특히 S&P500에서도 -56.3으로 나타나 두 지수 간의 커플링 가능성을 높입니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 선행종합지수와 장단기금리차의 최근 증가세는 경제 회복 전망을 강화하는 신호입니다. 특히, 선행지수가 201908 이후 2.40 상승하며 98.30을 기록했고, 장단기금리차도 이는 플러스(0.24%p)로 돌아서면서 경기 전반에 긍정적인 신호를 시사합니다.
+
+포인트2: 시장의 불확실성과 변동성이 증가하고 있음을 나타내는 지표로 VIX가 전월대비 40.8% 급등하며 19.63을 기록했습니다. 이와 맞물려 외국인의 매도 가속도가 -332억으로 나타나며 투자 심리가 위축되고 있음을 보여줍니다.
+
+포인트3: 원/달러 환율이 29.5원 상승하면서 원화 약세를 나타내고 있으며, 이는 외국인 자금 유출(2월 -301억)과 관련이 있을 가능성을 시사합니다. 이는 또한 CPI의 100.16 수준과 연계하여 수입 물가 상승 압력으로 이어질 가능성을 제공합니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 코로나19 확산으로 인한 경제적 불확실성이 증가하고 있습니다. 경기도에서만 신천지 관련 확진자가 600명에 달했고, 대구에서는 하루 만에 3명이 사망했으며 전국적으로 확진자가 571명 추가되어 총 2337명에 이르렀습니다.
+
+포인트2: 한국은행이 기준금리를 1.25%로 동결함에 따라 내수 경기 둔화 우려가 지속됩니다. 코로나19 사태로 인한 경기 하강에 따라 기준금리 인하가 예상되었으나 동결이 결정되어 금융권 및 내수 경제에 부담이 가중될 수 있습니다.
+
+포인트3: 경기 침체 우려 속에서 생명보험사들의 실적이 급감했습니다. 저금리와 코로나19의 영향으로 삼성생명과 한화생명 같은 대형사들의 실적이 급격히 악화되었다는 점이 금융시장에 부정적인 영향을 미칠 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre>1. 기술적 분석: RSI가 최근 27.0으로 과매도 상태에 진입했으며, 이는 과거 데이터에서 35 이하일 때 반등 가능성이 높음을 시사합니다. 이러한 지표는 KOSPI가 조만간 기술적 반등을 보일 가능성을 강하게 암시합니다.
+
+2. 펀더멘털 분석: 선행종합지수가 98.30으로 201908 이후 2.40 상승하며 장단기금리차도 플러스로 전환되었습니다. 이는 경제 회복 전망을 강화하고 있으며, KOSPI의 긍정적인 성장을 뒷받침하는 신호입니다.
+
+3. 뉴스 이벤트: 한국은행의 기준금리 동결은 금리 인하에 대한 기대감을 유지시켜, 자금 조달 비용을 장기적으로 안정시킬 수 있습니다. 이는 기업의 투자 환경 개선과 함께 KOSPI의 긍정적인 분위기를 형성할 수 있는 요소로 작용합니다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre>1. KOSPI는 최근 두 달간 -5.8%와 -3.1%의 월간 수익률 하락을 보여, 하락 추세 내에 있으며 MA200 아래로 떨어졌습니다. 이는 현재 시장이 기술적으로 약세를 보이고 있음을 나타냅니다.
+
+2. VIX가 전월 대비 40.8% 급등하며 19.63을 기록, 시장 변동성과 불확실성을 증폭시키고 있습니다. 이와 맞물려 외국인의 매도 가속도가 -332억에 달해 투자 심리가 위축되고 있음을 시사합니다.
+
+3. 원/달러 환율이 29.5원 상승하며 원화 약세를 나타내고, 외국인 자금 유출 (2월 -301억)과 수입 물가 상승 압력을 동반할 가능성이 있습니다. 이는 KOSPI에 하방 압력을 가할 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre>KOSPI는 최근 월간 수익률 하락을 보였지만, RSI가 27.0으로 과매도 상태에 진입하여 과거 평균 기준 반등 가능성을 시사합니다. 기술적 분석에서 RSI가 35 이하일 때 반등이 자주 발생했던 과거 패턴을 보면, 현재 시점은 잠재적 상승 전환의 시기일 수 있습니다. 
+
+선행종합지수가 98.30으로 강한 상승세를 보이고, 장단기금리차가 플러스(0.24%p)로 전환되어 경제 회복 전망을 뒷받침하고 있습니다. 이러한 경제 펀더멘털의 개선은 하락 추세를 중화시킬 수 있는 긍정적 지표입니다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre>1. 과매도 상태의 RSI가 과거에 반드시 반등으로 이어진 것은 아닙니다; KOSPI의 최근 두 달간 -5.8%와 -3.1%의 하락은 RSI가 반등 신호로서의 신뢰성을 약화시킵니다.
+
+2. 선행종합지수의 상승에도 불구하고, KOSPI는 MA200 아래로 떨어지며 기술적 약세를 보이고 있고, VIX의 40.8% 급등은 시장의 불안정성을 가중시키고 있습니다.
+
+3. 한국은행의 기준금리 동결이 긍정적인 요소로 작용할 수 있지만, 원/달러 환율이 29.5원 상승하며 외환시장 불안정성을 유발할 수 있기에 KOSPI의 하방 압력 요인이 됩니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 60
+KOSPI는 두 달간의 하락세와 기술적 지표 약세로 당분간 반등이 제한될 가능성이 높습니다. 펀더멘털 개선 신호에도 불구하고, 시장 변동성 증가와 외환 리스크는 하방 압력을 가중시키고 있습니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202209')" style="cursor:pointer">
+            <td>2022-09</td>
+            <td style="color:#e74c3c;font-weight:bold">-1.5%</td>
+            <td>65</td>
+            <td style="color:#e74c3c">-10.2%</td>
+            <td>✅</td>
+            <td style="font-size:0.85em;color:#aaa">기술적 지표의 하락 추세와 경제 불확실성, 그리고 환율 상승이 KOSPI에 하방 압력을 가하고 있습니다. 펀더멘털의 긍정적 신호에도 불구하고 즉</td>
+        </tr>
+        <tr id="detail_202209" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI의 MA50과 MA200 모두 하락 추세로, MA50은 645 하락하고 MA200은 734 하락했습니다. 이는 KOSPI가 장기적으로 하락 추세에 있음을 시사합니다.
+
+포인트2: 8월 말 기준 KOSPI의 RSI는 48.9로 중립 구간이며, 전월비 감소(9.2)와 함께 3개월 변화량은 증가(17.6)했습니다. 이는 최근 단기적 조정 이후 중립적인 매수/매도 압력이 존재할 수 있음을 나타냅니다.
+
+포인트3: KOSPI의 MACD는 8월 말 -30.2로 모멘텀 악화를 보여주며, 전월 대비 60.5 감소했습니다. 이는 최근 하락 모멘텀이 강해졌음을 시사합니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 선행종합지수는 지속적으로 상승하여 2022년 7월에 108.90을 기록했으며, 이는 경제 활동의 개선을 시사합니다. 장단기금리차도 증가하여 같은 시점에 1.65%p를 기록, 경제 성장에 긍정적인 신호로 해석될 수 있습니다.
+
+포인트2: 소비자물가지수(CPI)는 108.63으로 계속 상승세를 보이며 인플레이션 압력이 존재함을 시사합니다. 생산자물가지수(PPI) 또한 상승하여 116.90을 기록, 기업 비용 부담 증가를 나타냅니다.
+
+포인트3: 경기전망CSI는 58.00으로 크게 하락하며 경제에 대한 기업 및 소비자의 부정적 전망을 보여줍니다. 이는 전반적인 경기 회복에 대한 불확실성과 원/달러 환율 상승(1318.44) 및 원화 약세가 요인으로 작용할 수 있습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 달러 강세로 인한 원화 약세
+최근 서울에서 달러당 원화 환율이 지속적으로 오름에 따라, 달러를 팔기 위한 개인 중고거래가 활성화되고 있다. 이는 국내 시장에서 외환 수급 불균형과 경제 불확실성을 시사하며 투자 심리에 영향을 미칠 수 있다.
+
+포인트2: 금리 인상과 부동산 시장의 위축
+서울의 주택구입잠재력지수(KB-HOI)가 2분기에 2.8로 떨어지면서 금리 인상과 함께 아파트 시장의 구매 가능성이 낮아지고 있다. 이는 실물 자산에 대한 투자 감소로 이어져 자본 시장 유동성에 영향을 미칠 수 있다.
+
+포인트3: 바이든의 학자금 대출 탕감 정책
+조 바이든 미국 대통령이 최대 2만 달러의 학자금 대출을 탕감해 주는 방안을 발표, 국내 투자자에게 미국의 소비 증가와 경제 회복 기대감을 높일 수 있다. 이는 글로벌 시장과의 연계를 고려한 투자 선택에도 영향을 미칠 가능성이 있다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre>1. **펀더멘털 분석**: 선행종합지수가 꾸준히 상승하여 108.90을 기록하고, 장단기금리차가 증가하면서 같은 시점에 1.65%p를 기록하였습니다. 이는 경제 활동 성장과 회복의 긍정적 신호로, KOSPI 상승에 기여할 것으로 전망됩니다.
+
+2. **뉴스 이벤트**: 조 바이든 대통령의 최대 2만 달러 학자금 대출 탕감 발표가 투자자에게 미국 경제 회복 기대감을 제공하고 있습니다. 이로 인해 글로벌 시장과의 연계성 증대로 KOSPI에도 긍정적인 영향을 줄 것으로 예상됩니다.
+
+3. **기술적 분석**: KOSPI의 RSI가 48.9로 중립 구간에 위치하며, 3개월 변화량이 17.6 증가했습니다. 이는 최근 시장의 단기 조정 이후 반등 가능성을 시사하며, KOSPI의 상승세를 지지할 수 있습니다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre>1. KOSPI의 MA50과 MA200이 각각 645, 734 하락한 것은 장기적인 하락 추세를 나타내며, 이는 추가적인 하락 압박 가능성을 시사합니다.
+
+2. 경기전망CSI가 58.00으로 크게 하락하여 기업 및 소비자가 경제에 대해 부정적 전망을 보이고 있으며, 원/달러 환율 상승(1318.44)은 불확실성을 가중시키고 있습니다.
+
+3. 금리 인상과 부동산 시장 위축으로 인해 서울의 주택구입잠재력지수(KB-HOI)가 2.8로 떨어지면서 자본 시장 유동성이 감소할 가능성이 큽니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre>1. KOSPI의 이동평균(MA50과 MA200)이 하락한 것은 맞지만, 선행종합지수의 지속적 상승(108.90)과 장단기금리차의 증가(1.65%p)는 경제의 펀더멘털이 여전히 강건함을 보여줍니다. 이는 중장기적으로 시장의 긍정적 성장을 지지할 수 있는 강력한 신호입니다.
+
+2. 경기전망CSI의 하락에도 불구하고, 조 바이든의 학자금 대출 탕감과 같은 긍정적인 뉴스 이벤트가 글로벌 시장에 대한 낙관적 기대를 조성하고 있으며, 이로 인해 KOSPI에도 긍정적인 파급 효과가 예상됩니다.
+
+3. 부동산 시장의 유동성이 감소하더라도, KOSPI의 RSI가 중립 구간(48.9)에 있으며 3개월 변화량이 17.6 증가한 점은 시장이 최근 조정을 거친 후 반등 여력이 있음을 시사합니다. 이는 투자자에게 주식 시장의 매력도를 다시 인식시킬 수 있습니다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre>1. 선행종합지수가 108.90으로 상승하고 장단기금리차가 1.65%p로 증가한 것은 긍정적이나, 경기전망CSI는 58.00으로 감소했습니다. 이는 기업 및 소비자들이 경제에 대해 부정적으로 평가하고 있음을 나타내며, 경제 활동의 회복에 의문을 제기합니다.
+
+2. 조 바이든 대통령의 학자금 대출 탕감 발표는 미국 경제에는 긍정적일 수 있지만, KOSPI에 대한 직접적인 영향을 보장하지 않습니다. 원/달러 환율의 상승(1318.44)은 글로벌 시장 불확실성을 보여주며, KOSPI에 부정적인 영향을 미칠 수 있습니다.
+
+3. KOSPI의 RSI가 중립적인 48.9임에도 불구하고, MACD는 -30.2로 모멘텀 악화를 나타내며 전월 대비 60.5 감소했습니다. 이는 단기적 조정 이후 상승 반등보다는 하락 압력이 강할 수 있음을 의미합니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 65
+기술적 지표의 하락 추세와 경제 불확실성, 그리고 환율 상승이 KOSPI에 하방 압력을 가하고 있습니다. 펀더멘털의 긍정적 신호에도 불구하고 즉각적인 상승세는 어려울 것으로 보입니다.</pre>
+                </div>
+            </td>
+        </tr>
+        
+        <tr onclick="toggleDetail('detail_202408')" style="cursor:pointer">
+            <td>2024-08</td>
+            <td style="color:#2ecc71;font-weight:bold">+0.5%</td>
+            <td>60</td>
+            <td style="color:#e74c3c">-4.9%</td>
+            <td>❌</td>
+            <td style="font-size:0.85em;color:#aaa">KOSPI의 기술적 상승 기울기와 경제 지표 개선은 긍정적이나, 모멘텀 약화와 시장 불확실성은 약간의 제약을 가할 수 있습니다. 전반적으로 KO</td>
+        </tr>
+        <tr id="detail_202408" style="display:none;background:#1a1a2e">
+            <td colspan="6" style="padding:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card technical">
+                        <div class="agent-label">📈 Technical</div>
+                        <pre>포인트1: KOSPI의 7월 종가는 MA200 위에서 마감하며 상승추세를 유지하고 있으나, 월간 수익률이 -1.1%로 감소했습니다. MA50과 MA200의 기울기는 각각 +952, +619로 상승 기울기를 띄고 있어 장기적으로 긍정적 신호로 해석됩니다.
+
+포인트2: KOSPI의 RSI는 47.0으로 중립 구간에 진입했으며, 전월대비 15.9 하락했습니다. 이는 모멘텀 약화를 시사하며, MACD 또한 -533.0 감소하여 모멘텀 악화를 나타냅니다.
+
+포인트3: 거래대금은 최근 6개월 동안 변동이 심했으나, 7월 평균 거래대금은 1987억으로 12개월 평균과 같았습니다. 이는 거래량 측면에서 안정성을 보이며, 시장의 큰 변동보다는 안정적인 흐름을 보였다는 것을 의미합니다.</pre>
+                    </div>
+                    <div class="agent-card fundamental">
+                        <div class="agent-label">📊 Fundamental</div>
+                        <pre>포인트1: 선행종합지수와 전산업 BSI의 상승세는 경제 활동을 긍정적으로 나타냅니다. 선행종합지수는 115.20으로 2.00 증가하고, 전산업 BSI는 74.00으로 5.00 증가했습니다.
+
+포인트2: 장단기 금리차의 감소와 VIX의 증가는 시장 불확실성을 시사합니다. 장단기 금리차는 -0.11%p로 -0.05 감소했으며, VIX는 14.47로 전월대비 14.1% 상승했습니다.
+
+포인트3: WTI 유가 상승과 CPI 증가가 인플레이션 압력을 나타냅니다. CPI는 114.13으로 0.35 증가했고, WTI 유가는 81.95달러로 4.59 상승했습니다.</pre>
+                    </div>
+                    <div class="agent-card news">
+                        <div class="agent-label">📰 News</div>
+                        <pre>포인트1: 정부가 2024년 세법개정안을 확정 발표하여 경제 정책에 변화가 예상됩니다. 이는 기업과 투자자들의 세금 관련 계획에 영향을 미칠 수 있으며, KOSPI를 포함한 금융 시장에 변동성을 가져올 수 있습니다.
+
+포인트2: AI 및 AI반도체가 국가 전략 기술로 강조되면서, 관련 산업에 투자와 자원의 집중이 이루어질 것입니다. 이는 관련 기업 및 산업 군의 성장과 더불어 KOSPI 전체 시장에 긍정적 영향을 미칠 가능성이 있습니다.
+
+포인트3: 서울 집값 상승세가 경기도로 확산되며 경기도 내 일부 지역에서 부동산 가격이 급등하고 있습니다. 이는 부동산 시장의 열기로 인한 경제의 과열 우려와 건설 관련 업종의 활동 증가로 이어질 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">1라운드 — 독립 주장</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자</div>
+                        <pre>1. 기술적 분석에서 KOSPI의 MA50과 MA200 기울기가 각각 +952와 +619로 상승 기울기를 보이며, 이는 장기적인 상승 추세를 시사합니다. KOSPI는 안정적인 거래량을 유지하고 있어, 긍정적인 기술적 모멘텀을 기대할 수 있습니다.
+
+2. 펀더멘털적으로, 선행종합지수와 전산업 BSI가 각각 115.20으로 2.00 증가, 74.00으로 5.00 증가하며 경제 활동의 긍정적인 신호를 보이고 있습니다. 이는 경제 지표 개선이 KOSPI의 상승에 기여할 가능성을 높입니다.
+
+3. 뉴스 이벤트 측면에서, AI 및 AI반도체의 국가 전략 기술 강조가 관련 산업에 투자와 자원의 집중을 유도할 것입니다. 이는 관련 산업의 성장을 통해 KOSPI 전체 시장에 긍정적인 영향을 미칠 전망입니다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자</div>
+                        <pre>1. KOSPI의 RSI가 47.0으로 전월대비 15.9 하락하며, 모멘텀 약화를 시사합니다. 또한, MACD가 -533.0 감소하여 KOSPI의 모멘텀 악화를 더욱 분명히 나타냅니다.
+
+2. 장단기 금리차가 -0.11%p로 -0.05 감소함에 따라, 시장의 잠재적 불안 요소로 작용하고 있습니다. 또한, VIX가 14.47로 전월대비 14.1% 상승하여 시장 불확실성이 증가하고 있습니다.
+
+3. 2024년 세법개정안 발표로 인해 경제 정책의 변화가 예견되며, 이는 KOSPI를 포함한 금융 시장에 변동성을 초래할 가능성이 큽니다. 기업과 투자자들의 세금 관련 계획에 미치는 영향이 부정적일 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">2라운드 — 재반박</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="agent-card bull">
+                        <div class="agent-label">🐂 강세론자 반박</div>
+                        <pre>KOSPI의 RSI 지수가 47.0으로 중립 구간에 진입했다는 점에서, 이는 모멘텀의 즉각적인 약화를 뜻하지 않으며 단지 일시적인 조정일 수 있습니다. 또한 MA50과 MA200의 긍정적인 상승 기울기(+952, +619)는 장기적인 상승 추세를 더 강하게 시사하고 있어, 기술적 약세 신호보다 더 큰 긍정적 영향을 줄 가능성이 높습니다.
+
+장단기 금리 차가 -0.11%로 감소했지만 이는 미미한 변화이며, VIX 지수 상승에도 불구하고 선행종합지수와 전산업 BSI의 상승(각각 2.00, 5.00 증가)은 경제 펀더멘털의 강화를 의미해 KOSPI의 잠재적인 불안 요소를 잡을 수 있습니다. 경제 견인의 긍정적인 신호가 변동성을 감안하여 KOSPI의 회복에 기여할 가능성이 큽니다.</pre>
+                    </div>
+                    <div class="agent-card bear">
+                        <div class="agent-label">🐻 약세론자 반박</div>
+                        <pre>1. KOSPI의 월간 수익률은 -1.1%로 감소했으며, 이는 MA50과 MA200의 상승 기울기에도 불구하고 시장의 전체적인 약세를 나타냅니다. 긍정적인 기술적 지표가 있지만 단기적인 하락세는 여전히 존재합니다.
+
+2. 장단기 금리차의 감소와 VIX의 14.1% 상승은 여전히 경제 불확실성을 가중시키고 있으며, 이는 긍정적인 선행종합지수와 전산업 BSI에도 부정적인 영향을 미칠 수 있습니다. 경제 지표의 개선은 있지만, 잠재적 위험 요소가 여전합니다.
+
+3. AI 및 AI반도체의 국가 전략 기술 강조는 일부 산업에 긍정적일 수 있지만, 전반적인 경기 불확실성과 세법 개정이 전반적인 금융 시장에 변동성을 더할 가능성이 큽니다. 따라서, 이로 인한 긍정적 효과는 한정적일 수 있습니다.</pre>
+                    </div>
+                </div>
+                <div style="margin:8px 0 4px;color:#888;font-size:0.85em">최종 판정</div>
+                <div class="agent-card" style="border-color:#f39c12;padding:12px">
+                    <div class="agent-label">⚖️ Manager</div>
+                    <pre>판정: 변동성 / 신뢰도: 60
+KOSPI의 기술적 상승 기울기와 경제 지표 개선은 긍정적이나, 모멘텀 약화와 시장 불확실성은 약간의 제약을 가할 수 있습니다. 전반적으로 KOSPI는 보합세를 보일 것으로 예상됩니다.</pre>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+</table>
+<script>
+function toggleDetail(id) {
+  var el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+</script>
+</body>
+</html>

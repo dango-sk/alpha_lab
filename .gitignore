@@ -23,9 +23,23 @@ pipeline.log
 nondeterminism_runs/
 **/legacy/
 
-# Personal/misc
+# Personal/misc — 문서/발표자료는 git에 올리지 않음
 *.xlsx
+*.docx
+*.pptx
+*.pdf
+*.hwp
+*.hwpx
+~$*
 cache/prefetch/
+
+# Temp/tool dirs (DB URL 등 시크릿 포함 가능)
+.codex_tmp/
+.matplotlib-cache/
+
+# DB dumps / 대용량 (GitHub 100MB 제한)
+*.dump
+analysis/kospi_stocks_2000_2016.csv
 
 # IDE & OS
 .idea/
