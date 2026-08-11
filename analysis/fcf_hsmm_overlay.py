@@ -14,7 +14,8 @@ HSMM 레짐의 '연속 익스포저'를 FCF불 전략 월수익에 곱해서(ove
 import os, sys
 from pathlib import Path
 REPO = Path(__file__).parent.parent
-sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO))                        # lib.data 용
+sys.path.insert(0, str(Path(__file__).parent))       # hsmm_final 용 (analysis/)
 import numpy as np
 import hsmm_final as H
 from lib.data import load_strategy

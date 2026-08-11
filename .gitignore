@@ -46,3 +46,6 @@ analysis/kospi_stocks_2000_2016.csv
 .claude/
 .DS_Store
 *.swp
+
+# HSMM 레짐 피처 캐시 (build_features 결과, DB에서 재생성 가능)
+analysis/.cache/

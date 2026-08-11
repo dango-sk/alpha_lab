@@ -19,6 +19,8 @@ HSMM 핵심 (IO-HMM 대비 차이):
 출력 (박사님 §5·§1·§6): HSMM filtered 연속확률 → EMA스무딩 → vol-targeting 익스포저(하한0.2,
   하방변동성 반영) → Z단계 리밸밴드 → MDD 중심 자체 리포트.
 데이터: 외국인 순매수 DB(2000~), breadth/신저가용 종목시세 2017~ 병목 → 판단 2018-01부터.
+유니버스: breadth/신저가 = **KOSPI 상장기업만** (fnspace_master 월별 스냅샷 point-in-time,
+  우선주·ETF·리츠·스팩 제외, 최근 ~800종목. 2026-08 변경 — 이전엔 KOSPI+KOSDAQ 전 시장).
 
 사용: python analysis/hsmm_final.py   (백그라운드 권장)
 """
@@ -26,14 +28,28 @@ import os, sys, warnings
 import numpy as np, pandas as pd, psycopg2
 from datetime import timedelta
 from pathlib import Path
-from dotenv import load_dotenv
 from scipy.stats import nbinom
 from sklearn.covariance import LedoitWolf
 from sklearn.preprocessing import StandardScaler
 from hmmlearn.hmm import GaussianHMM
 warnings.filterwarnings("ignore")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")     # cp949 콘솔에서 —, ※ 등 깨짐 방지
+except Exception:
+    pass
 BASE = Path(__file__).parent.parent
-load_dotenv(BASE / ".env")
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE / ".env")
+except ModuleNotFoundError:                      # dotenv 미설치 파이썬에서도 동작(.env 직접 파싱)
+    _env = BASE / ".env"
+    if _env.exists():
+        for _ln in _env.read_text(encoding="utf-8").splitlines():
+            _ln = _ln.strip()
+            if not _ln or _ln.startswith("#") or "=" not in _ln:
+                continue
+            _k, _v = _ln.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 sys.path.insert(0, str(BASE))
 A = Path(__file__).parent
 
@@ -44,6 +60,8 @@ USE_DURATION = True                                    # True =HSMM 명시적 �
                                                        # False=plain 2-state HMM(지속기간 제약 없음, 대조군)
                                                        # ※이산 성과는 두 경우 동일, 연속은 HSMM이 소폭 열위(회전↑). 명시적 지속기간 = 진짜 HSMM.
 TARGET_VOL, EXP_FLOOR, VOL_FLOOR = 0.25, 0.20, 0.08    # §5 vol-targeting (하방변동성 기준, 소프트 비대칭)
+# ※ TARGET_VOL은 이제 목표값이 아니라 '결측 대체용 상수'다. 실제 목표변동성은 main()에서
+#    백테스트 시작~당월의 하방변동성 확장평균(tgt_vol)으로 매월 새로 계산한다.
 HL = 36.0                                              # 시간감쇠 half-life(월)
 PBEAR_EMA = 0.5                                        # §5 P_bear EMA 스무딩
 REBAL_BAND = 0.15                                      # §6 익스포저 변화가 밴드 넘을 때만 리밸(0.05 스텝)
@@ -54,8 +72,28 @@ TRAN_COLS = ["fx3m", "fflow"]                         # 변화율 방아쇠 (환
 
 
 # ─────────────────────────── 데이터/피처 ───────────────────────────
-def build_features():
-    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+FEAT_CACHE = A / ".cache" / "hsmm_features.pkl"   # build_features() 결과 캐시(체인 3개 스크립트가 공유)
+
+
+def _connect():
+    """Railway 퍼블릭 프록시는 유휴 연결을 조용히 끊는다. keepalive가 없으면 죽은 소켓의
+    read에서 무한 대기(CPU 0%로 영원히 멈춤)하므로 반드시 지정한다."""
+    return psycopg2.connect(
+        os.environ['DATABASE_URL'],
+        connect_timeout=15,
+        keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5,
+    )
+
+
+def build_features(use_cache=True):
+    """DB에서 월별 레짐 피처 패널을 만든다. 결정론적이므로 디스크에 캐시한다.
+    갱신하려면 --refresh 플래그 또는 analysis/.cache/hsmm_features.pkl 삭제."""
+    if use_cache and "--refresh" not in sys.argv and FEAT_CACHE.exists():
+        print(f"[cache] 피처 재사용: {FEAT_CACHE.relative_to(BASE)} "
+              f"(갱신하려면 --refresh)", flush=True)
+        return pd.read_pickle(FEAT_CACHE)
+    print("[db] 일별 주가 로드 중(658만 행, ~1.5분)...", flush=True)
+    conn = _connect()
 
     def mac(ind):
         x = pd.read_sql(f"SELECT period p, value::float v FROM alpha_lab.macro_indicators WHERE indicator='{ind}' AND freq='D'", conn)
@@ -65,12 +103,26 @@ def build_features():
     frn = mac('investor_foreign_kospi')  # 외국인 순매수(일별, DB 2000~)
     d = pd.read_sql("SELECT trade_date::date dt, stock_code, close::float close FROM alpha_lab.daily_price "
                     "WHERE close IS NOT NULL AND trade_date>='2017-01-01'", conn)
+    # breadth/신저가 유니버스 = KOSPI 상장기업만 (2026-08 변경. 이전엔 daily_price 전체 = KOSPI+KOSDAQ+ETF·우선주)
+    #   fnspace_master 월별 스냅샷에서 market='KOSPI' AND 섹터 있음 → ETF(섹터 NULL)·우선주·리츠·스팩(마스터 부재) 제외
+    #   point-in-time 소속(이전상장 반영). 판정(P_bear)은 전 시장 대비 사실상 동일, MDD 소폭 개선 확인 후 채택.
+    snap = pd.read_sql("SELECT snapshot_date ym, stock_code FROM alpha_lab.fnspace_master "
+                       "WHERE market='KOSPI' AND sec_cd_nm IS NOT NULL", conn)
     conn.close()
     d['dt'] = pd.to_datetime(d['dt'])
     wide = d.pivot_table(index='dt', columns='stock_code', values='close').sort_index()
-    ma = wide.rolling(200, min_periods=100).mean(); vld = wide.notna() & ma.notna()     # breadth: 200일선 기준
+    snap['code'] = snap.stock_code.str[1:]                              # 'A005930' → '005930'
+    snap = snap[snap.code.str.match(r'^\d{5}0$')]                       # 보통주 코드(끝자리 0)만 — 우선주 잔재 방지
+    by_ym = snap.groupby('ym')['code'].apply(set).to_dict(); yms_snap = sorted(by_ym)
+    K = pd.DataFrame(False, index=wide.index, columns=wide.columns)     # 그 달 KOSPI 기업 소속 마스크(일×종목)
+    day_ym = wide.index.to_period('M').strftime('%Y-%m')
+    for _ym in np.unique(day_ym):
+        avail = [s for s in yms_snap if s <= _ym]
+        if avail: K.loc[day_ym == _ym, wide.columns.isin(by_ym[avail[-1]])] = True
+    ma = wide.rolling(200, min_periods=100).mean(); vld = wide.notna() & ma.notna() & K  # breadth: 200일선 기준
     breadth = ((wide > ma) & vld).sum(axis=1) / vld.sum(axis=1).clip(lower=1); breadth = breadth[vld.sum(axis=1) > 50]
-    rmn = wide.rolling(252, min_periods=60).min(); newlow = ((wide <= rmn) & wide.notna()).sum(axis=1) / wide.notna().sum(axis=1).clip(lower=1)
+    rmn = wide.rolling(252, min_periods=60).min(); okK = wide.notna() & K
+    newlow = ((wide <= rmn) & okK).sum(axis=1) / okK.sum(axis=1).clip(lower=1)
     lr = np.log(kospi / kospi.shift(1))
     kma = kospi.rolling(200, min_periods=100).mean()          # 추세용 200일선(지수)
     fx_m1y = usdkrw.rolling(252, min_periods=120).mean()      # 환율 레벨 기준(1년 평균)
@@ -82,7 +134,10 @@ def build_features():
     def asof(s, e): x = s[s.index <= e]; return x.iloc[-1] if len(x) else np.nan
     def pctc(s, e, dy): c = asof(s, e); p = s[s.index <= e - timedelta(days=dy)]; return (c / p.iloc[-1] - 1) if len(p) and p.iloc[-1] else np.nan
     def rv(e, win): r = lr[lr.index <= e].iloc[-win:]; return r.std() * np.sqrt(252) if len(r) > 3 else np.nan
-    def dv(e, win): r = lr[lr.index <= e].iloc[-win:]; rn = r[r < 0]; return rn.std() * np.sqrt(252) if len(rn) > 3 else np.nan
+    def dv(e, win):
+        """하방변동성 = semi-deviation. 양(+)수익일을 0으로 바꿔 계산에 포함(분모에 남고 중심은 0)."""
+        r = lr[lr.index <= e].iloc[-win:]
+        return np.sqrt(np.mean(np.minimum(r.values, 0.0) ** 2) * 252) if len(r) > 3 else np.nan
     def flow(e, dy): x = frn[(frn.index <= e) & (frn.index > e - timedelta(days=dy))]; return x.sum() if len(x) else np.nan
 
     base, Px, rvol_l, dvol_l = [], [], [], []
@@ -104,7 +159,11 @@ def build_features():
         if i + 6 < n:
             path = pd.concat([pd.Series([Px[i]], index=[mends[i]]), kospi[(kospi.index > mends[i]) & (kospi.index <= mends[i + 6])]])
             dd6[i] = (path / path.cummax() - 1).min() * 100
-    return df, yms, n, ret, rvol, dvol, dd6
+    out = (df, yms, n, ret, rvol, dvol, dd6)
+    FEAT_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    pd.to_pickle(out, FEAT_CACHE)
+    print(f"[cache] 피처 저장: {FEAT_CACHE.relative_to(BASE)}", flush=True)
+    return out
 
 
 def roll_z(df, cols, win=36):
@@ -165,10 +224,44 @@ def m_step_emis(X, gamma, w):
     return means, covs
 
 
+COLD_VAR_FLOOR = 1e-6          # 콜드 스타트에서 '앵커 외' 피처에 부여하는 초기 분산 바닥값
+COLD_ANCHOR = 0               # 적합 분산을 그대로 쓰는 피처 인덱스 = EMIS_COLS[0] = breadth
+
+
 def cold_emission(X):
+    """콜드 스타트 emission 초기값 — **의도적인 강한 정규화**.
+
+    ■ 왜 '정상적인' 초기화를 쓰지 않는가
+      판정 시작 시점의 학습창은 13개월뿐이다(패널 2017-01~, 판정 2018-01~. daily_price가
+      2017년부터라 창을 더 늘릴 수 없는 데이터 제약). 13샘플·2상태·3피처에서 EM을
+      '각 피처의 적합 분산'으로 출발시키면 두 상태의 우도가 비슷해 식별이 안 되고,
+      한 상태가 전체 가중치를 흡수하며 붕괴한다(공분산 NaN → cholesky 실패, 또는 P_bear 0 고착).
+
+    ■ 그래서 쓰는 정책
+      앵커 피처(EMIS_COLS[0] = breadth)에만 GaussianHMM이 적합한 분산을 주고,
+      나머지 피처의 초기 분산은 바닥값(COLD_VAR_FLOOR)으로 고정한다.
+      나머지 축 방향으로 밀도가 매우 뾰족해져 두 상태가 강제로 분리되고,
+      이후 웜스타트(m_step_emis + Ledoit-Wolf)가 공분산을 정상 범위로 회복시킨다.
+      즉 '초기 상태 분리를 강제하는 정규화'이며, 현재 production 성과의 전제다.
+
+    ■ 바꾸려면 학습창 확대가 선행되어야 한다
+      2026-08-10 검증(analysis/hsmm_slowbear.py):
+        · 모든 피처에 적합 분산을 주도록 '정상화' → Bear 0개월, 수치가드 60회 발동
+        · 거기에 4번째 피처(ma200_slope_60) 추가 → 전 구간 P_bear=0, 가드 140회
+        · 장기 패널(2004~, analysis/hsmm_longrun.py)에서도 slow bear 개선 없음
+      따라서 이 초기화는 유지한다. 변경은 장기 패널로 창을 채운 뒤에만 검토한다.
+
+    ※ 이 함수는 walk_forward의 최초 적합(params is None)에서만 호출되고,
+      이후에는 웜스타트로 이어진다. 그래서 전체 궤적이 이 초기값에 의존한다.
+    """
     d = X.shape[1]
-    hm = GaussianHMM(2, "diag", n_iter=50, random_state=SEED); hm.fit(X)
-    covs = np.array([np.diag(np.asarray(hm.covars_[k]).reshape(-1)[:d]) + 1e-6 * np.eye(d) for k in range(2)])
+    hm = GaussianHMM(2, "diag", n_iter=50, random_state=SEED)
+    hm.fit(X)
+    covs = np.zeros((2, d, d))
+    for k in range(2):
+        var = np.zeros(d)                                        # 앵커 외 피처는 0 →
+        var[COLD_ANCHOR] = float(np.asarray(hm.covars_[k])[COLD_ANCHOR, COLD_ANCHOR])
+        covs[k] = np.diag(var) + COLD_VAR_FLOOR * np.eye(d)      # → 바닥값만 남는다
     return dict(means=hm.means_.copy(), covs=covs,
                 Amat=np.array([[0.9, 0.1], [0.2, 0.8]]), pi=np.array([0.85, 0.15]))
 
@@ -332,7 +425,11 @@ def main():
     #    변동성 축소분(목표 대비 초과분)을 Pbear에 '비례' 적용 → 불장(Pbear↓)엔 안 깎고,
     #    하락장(Pbear↑)에만 방어. 하방변동성만 써서 상승 변동성엔 안 깎임(멜트업 보호).
     cur_vol = np.maximum(dvol, VOL_FLOOR)
-    cut = 1.0 - np.minimum(1.0, TARGET_VOL / cur_vol)   # 변동성 축소분(=목표 대비 초과분)
+    # 목표변동성 = 고정상수가 아니라 '백테스트 시작~당월'의 하방변동성 확장평균(대표님 지시 2026-07-30).
+    # 당월까지의 값만 쓰므로 룩어헤드 없음. 판단 이전(t<start) 구간은 쓰이지 않으나 상수로 채워 둔다.
+    tgt_vol = np.full(n, TARGET_VOL, dtype=float)
+    tgt_vol[start:] = np.cumsum(dvol[start:]) / np.arange(1, n - start + 1)
+    cut = 1.0 - np.minimum(1.0, tgt_vol / cur_vol)      # 변동성 축소분(=목표 대비 초과분)
     vol_factor = 1.0 - pbear * cut                      # Pbear 비례 적용(소프트 비대칭)
     raw_exp = np.clip((1 - pbear) * vol_factor, EXP_FLOOR, 1.0)
     # ── Z단계 리밸밴드 (§6): 변화가 밴드 넘을 때만 0.05 스텝으로 조정 ──
@@ -358,7 +455,8 @@ def main():
     print(line("KOSPI 매수보유", perf(r_bh)))
     print(line("연속(vol타겟)", perf(r_ov)))
     print(line("이산(Bull/Bear)", perf(r_bn)))
-    print(f"\n  * 연속 = 소프트 비대칭 vol-타겟(목표{TARGET_VOL:.0%}/하방변동성, 축소를 P_bear 비례 적용), 하한 {EXP_FLOOR:.0%}, 리밸밴드 {REBAL_BAND}")
+    print(f"\n  * 연속 = 소프트 비대칭 vol-타겟(목표=BT시작~당월 하방변동성 확장평균 {tgt_vol[start]:.1%}→{tgt_vol[-1]:.1%}"
+          f"/하방변동성, 축소를 P_bear 비례 적용), 하한 {EXP_FLOOR:.0%}, 리밸밴드 {REBAL_BAND}")
     print(f"    이산 = P_bear 히스테리시스({T_IN}/{T_OUT}); Bear시 익스포저 {EXP_FLOOR:.0%}")
 
     labs = [yms[t] for t in range(n)]
@@ -369,6 +467,7 @@ def main():
     pd.DataFrame({"ym": [yms[t] for t in idx], "ret": [ret[t] for t in idx],
         "pbear_raw": [pbear_raw[t] for t in idx], "pbear": [pbear[t] for t in idx],
         "rvol": [rvol[t] for t in idx], "dvol": [dvol[t] for t in idx],
+        "tgt_vol": [tgt_vol[t] for t in idx],
         "exposure": [exposure[t] for t in idx], "exp_bin": [exp_bin[t] for t in idx],
         "regime": [reg[t] for t in idx]}).to_csv(A / "hsmm_final_path.csv", index=False, encoding="utf-8-sig")
 
