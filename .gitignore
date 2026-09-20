@@ -49,3 +49,13 @@ analysis/kospi_stocks_2000_2016.csv
 
 # HSMM 레짐 피처 캐시 (build_features 결과, DB에서 재생성 가능)
 analysis/.cache/
+
+# ── 개인 문서 — alpha_lab 과 무관. 절대 커밋 금지 ──
+sinhan/
+
+# ── 분석 중간 산출물 (스크립트로 재생성 가능) ──
+analysis/results/
+output/
+analysis/share/
+analysis/share.zip
+analysis/*_path.csv
