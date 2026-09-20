@@ -28,7 +28,7 @@ import os, sys, warnings
 import numpy as np, pandas as pd, psycopg2
 from datetime import timedelta
 from pathlib import Path
-from scipy.stats import nbinom
+from scipy.stats import nbinom, norm
 from sklearn.covariance import LedoitWolf
 from sklearn.preprocessing import StandardScaler
 from hmmlearn.hmm import GaussianHMM
@@ -69,6 +69,36 @@ T_IN, T_OUT = 0.60, 0.40                               # 이산 레짐 히스테
 WIN, SEED, EPS = 6, 42, 1e-9
 EMIS_COLS = ["breadth", "newlow", "trend"]            # 건전성(breadth 200일선·52주신저가) + 방향(추세)
 TRAN_COLS = ["fx3m", "fflow"]                         # 변화율 방아쇠 (환율 레벨보정, 외국인 3M 누적 순매수)
+
+# ── V5: newlow 축 bounded-influence 학습 (2026-09-10 반영) ─────────────────────────
+# 사양: analysis/HSMM_V5_SPEC.md   검증: analysis/hsmm_v5_bounded.py, hsmm_v5_periods.py
+#
+# ■ 문제
+#   60개월 창에 COVID(2020-02, newlow 0.466)가 들어오자 **Bear 상태의 정의가 이동**했다.
+#     2020-01 재적합 Bear newlow 평균 0.037 → 2022-01 재적합 0.158
+#   그 결과 피처가 거의 같은 두 구간의 판정이 정반대로 갈렸다.
+#     2018-05~2020-03 (breadth 0.265/newlow 0.059) → P_bear 0.868  탐지
+#     2021-10~2022-09 (breadth 0.237/newlow 0.063) → P_bear 0.129  미탐지 ← slow bear
+#
+# ■ 처방 — 방향은 유지, 크기 기여만 상한
+#   newlow 의 Bear 방향 정보(부호)는 전부 살리고, 극단적 '크기'가 상태 평균을 끌고 가는
+#   영향력만 사전 고정 상한 c 로 자른다(Huber M-estimator). BOUNDED_C=inf 면 종전과 동일.
+#
+# ■ 앞서 기각된 대안들 (되돌리지 말 것)
+#   ever_newlow_20/pct60 : 피처를 바꿔 crash 신호까지 소멸
+#   Student-t emission   : 한 성분이 catch-all 로 붕괴(Bear 점유 60~74%, 리프트 1.01)
+#   노이즈 성분(OTRIMLE) : z>0.5 격리월이 newlow 상위 10개월 중 9개 → **위험축 자체가 소거**
+#                          → 2026-05 스파이크 무반응, 익월 −22% 미탐지
+#   z=0 강제(비대칭 복원) : COVID 가 그 조건에 해당 → 평균 오염 재발
+#
+# ■ c=2 검증 요약 (2018-01~2026-08, 30bp, 당월수익×전월말노출)
+#   2022 제외 8년(비용) : CAGR 26.6%→25.9%, Sharpe 1.07→1.05, MDD −13.3% 동일  ≈ 무비용
+#   2022      (편익)    : 수익 −25.4%→−13.8%, MDD −23.2%→−13.1%
+#   탐지 보존           : COVID 0.958→0.961, 2026-05 스파이크 0.503→0.502 (노이즈 성분은 0.021)
+#   시드 0/1/7/42/123 동일. ★미검증: 장기 패널(2008·2011·2015), c 가 표준화 공간 값이라는 점
+BOUNDED_COLS = ["newlow"]                              # 상한을 걸 emission 축
+BOUNDED_C = 2.0                                        # 표준화 공간 상한. np.inf → 종전 production
+_BAX = [EMIS_COLS.index(c) for c in BOUNDED_COLS]
 
 
 # ─────────────────────────── 데이터/피처 ───────────────────────────
@@ -210,16 +240,58 @@ def forward_backward(logB, A, pi, w):
     return gamma, xi
 
 
-def m_step_emis(X, gamma, w):
+def _huber_scale(c):
+    """winsorize 로 인한 분산 축소편향 보정: s = sqrt(E[clip(Z,−c,c)²]), Z~N(0,1)."""
+    if not np.isfinite(c):
+        return 1.0
+    v = (2 * norm.cdf(c) - 1) - 2 * c * norm.pdf(c) + 2 * c * c * (1 - norm.cdf(c))
+    return float(np.sqrt(max(v, 1e-6)))
+
+
+def _pd_guard(C, floor=1e-8):
+    """대칭화 + 고유값 바닥. 상한을 건 편차로 만든 C 가 준-특이해질 때 cholesky 보호."""
+    C = (C + C.T) / 2
+    ev, V = np.linalg.eigh(C)
+    return C if ev.min() >= floor else V @ np.diag(np.maximum(ev, floor)) @ V.T
+
+
+def m_step_emis(X, gamma, w, c=None, axes=None):
+    """가중 M-step. BOUNDED_COLS 축은 **Huber M-estimator**로 영향력을 c 로 유계화한다(V5).
+
+    평균은 IRLS 가중평균 형태로 푼다.
+        u_i = min(1, c / |x_i,j − μ_j|)        # 부호 유지, 크기만 상한
+        μ_j = Σ r_i·u_i·x_i,j / Σ r_i·u_i
+    ★ 덧셈형 스텝 `μ ← μ + Σr·clip(x−μ)/Σr` 은 **발산한다**(상태 평균이 데이터에서 멀면
+      전 관측치가 ±c 로 잘려 매 반복 c 씩 같은 방향으로 행진 → LinAlgError. 실측 확인).
+      가중평균 형태는 갱신값이 데이터 볼록껍질 안에 갇혀 구조적으로 발산할 수 없다.
+    공분산도 같은 상한 편차를 쓰되 _huber_scale 로 축소편향을 보정한다.
+    c=inf 면 종전 production 과 수학적으로 동일하다(nesting).
+    """
+    c = BOUNDED_C if c is None else c
+    axes = _BAX if axes is None else axes
+    s = _huber_scale(c)
     n, d = X.shape; means = np.zeros((2, d)); covs = np.zeros((2, d, d))
     for k in range(2):
         r = gamma[:, k] * w; R = r.sum() + EPS
-        mu = (r[:, None] * X).sum(0) / R
-        Xc = X - mu; C = (r[:, None] * Xc).T @ Xc / R
+        mu = (r[:, None] * X).sum(0) / R                  # 앵커 = 평범한 가중평균
+        if np.isfinite(c):
+            for j in axes:                                # 제한 축만 Huber IRLS
+                for _ in range(20):
+                    u = np.minimum(1.0, c / np.maximum(np.abs(X[:, j] - mu[j]), 1e-12))
+                    rr = r * u
+                    nxt = (rr * X[:, j]).sum() / (rr.sum() + EPS)
+                    if abs(nxt - mu[j]) < 1e-11:
+                        mu[j] = nxt; break
+                    mu[j] = nxt
+        Xc = X - mu
+        if np.isfinite(c):
+            for j in axes:
+                Xc[:, j] = np.clip(Xc[:, j], -c, c) / s
+        C = (r[:, None] * Xc).T @ Xc / R
         hard = gamma[:, k] > 0.5
         delta = float(LedoitWolf().fit(X[hard]).shrinkage_) if hard.sum() >= d + 2 else 0.5
         mt = np.trace(C) / d
-        covs[k] = (1 - delta) * C + delta * mt * np.eye(d) + 1e-6 * np.eye(d)
+        covs[k] = _pd_guard((1 - delta) * C + delta * mt * np.eye(d) + 1e-6 * np.eye(d))
         means[k] = mu
     return means, covs
 
