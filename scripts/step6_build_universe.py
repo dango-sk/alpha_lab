@@ -46,9 +46,12 @@ PG_URL = os.environ["DATABASE_URL"]
 FINANCE_TYPES = ["금융업", "은행업", "보험업", "증권업", "여신전문금융업", "기타금융업"]
 EXCLUDE_KEYWORDS = ["스팩", "SPAC", "ETF", "ETN", "리츠", "REIT"]
 MAX_DEBT_RATIO = 200  # %
-MIN_MARKET_CAP = 500_000_000_000  # 5000억
+MIN_MARKET_CAP = 200_000_000_000  # 2000억 (2026-09 확대, 구 5000억)
 MIN_TRADE_AMOUNT_20D = 500_000_000  # 5억
 START_DATE = "2018-01-01"
+
+# production 행. 이 rebal_type 은 v2 실험에서 절대 쓰지 않는다. (docs/DB_SAFETY.md)
+PRODUCTION_REBAL_TYPE = "monthly"
 
 
 def get_applicable_fiscal_year(rebal_date):
@@ -61,7 +64,9 @@ def get_applicable_fiscal_year(rebal_date):
         return year - 2
 
 
-def build_universe(rebuild_all: bool = False):
+def build_universe(rebuild_all: bool = False,
+                   rebal_type: str = PRODUCTION_REBAL_TYPE,
+                   min_market_cap: float = MIN_MARKET_CAP):
     """
     유니버스 테이블 채우기.
 
@@ -69,11 +74,25 @@ def build_universe(rebuild_all: bool = False):
       → 다른 사람과 공유 DB에서 안전. 중간에 끊겨도 데이터 보존.
     - rebuild_all=True: 기존 전체 DELETE 후 처음부터 재구축. 과거 데이터까지
       뒤집어 다시 만들어야 할 때만 사용 (fnspace_master 스냅샷 정정 등).
+
+    rebal_type / min_market_cap 을 주면 그 조합으로만 읽고 쓴다.
+    인자를 생략하면 production("monthly", 2000억 — 2026-09 확대) 으로 동작한다.
+
+    ⚠️ rebuild_all 의 DELETE 는 WHERE 절이 없어 전체 rebal_type 을 날린다.
+       따라서 production 이외의 rebal_type 에서는 아래에서 막는다.
     """
     import psycopg2
 
+    if rebuild_all and rebal_type != PRODUCTION_REBAL_TYPE:
+        raise SystemExit(
+            f"거부: --rebuild-all 은 'DELETE FROM alpha_lab.universe' (WHERE 절 없음) 이라\n"
+            f"       rebal_type='{rebal_type}' 실행이 production 행까지 전부 지운다.\n"
+            f"       실험 유니버스를 다시 만들려면 해당 rebal_type 행만 직접 지울 것."
+        )
+
     conn = psycopg2.connect(PG_URL)
     cur = conn.cursor()
+    print(f"  [설정] rebal_type={rebal_type}  시총하한={min_market_cap/1e8:,.0f}억")
 
     # 테이블 생성
     cur.execute("""
@@ -97,10 +116,13 @@ def build_universe(rebuild_all: bool = False):
     """)
     conn.commit()
 
-    # freeze 집합 로드
-    cur.execute("SELECT rebal_date, rebal_type FROM alpha_lab.universe_frozen")
+    # freeze 집합 로드 — 대상 rebal_type 것만
+    cur.execute(
+        "SELECT rebal_date, rebal_type FROM alpha_lab.universe_frozen WHERE rebal_type=%s",
+        (rebal_type,),
+    )
     frozen = {(r[0], r[1]) for r in cur.fetchall()}
-    frozen_months = {rd[:7] for (rd, rt) in frozen if rt == "monthly"}
+    frozen_months = {rd[:7] for (rd, rt) in frozen if rt == rebal_type}
     if frozen:
         print(f"  [freeze] 확정 리밸 {len(frozen)}건 (재계산 제외): "
               f"{sorted(rd for rd, _ in frozen)}")
@@ -111,7 +133,10 @@ def build_universe(rebuild_all: bool = False):
         conn.commit()
         existing = set()
     else:
-        cur.execute("SELECT DISTINCT rebal_date, rebal_type FROM alpha_lab.universe")
+        cur.execute(
+            "SELECT DISTINCT rebal_date, rebal_type FROM alpha_lab.universe WHERE rebal_type=%s",
+            (rebal_type,),
+        )
         existing = {(r[0], r[1]) for r in cur.fetchall()}
         print(f"  [incremental] 기존 {len(existing)}건 → 없는 리밸 날짜만 추가")
 
@@ -130,9 +155,9 @@ def build_universe(rebuild_all: bool = False):
         # freeze된 월은 확정 리밸이 이미 그 달을 대표하므로 새 리밸을 만들지 않는다.
         # (예: 2026-08-01(토) freeze 후 8월 데이터 도착 시 실제 첫거래일 2026-08-03이
         #  중복 생성되는 것을 방지 → 8월 리밸이 2개가 되지 않는다)
-        if ym in frozen_months and (first_day, "monthly") not in frozen:
+        if ym in frozen_months and (first_day, rebal_type) not in frozen:
             continue
-        rebal_dates.append((first_day, "monthly"))
+        rebal_dates.append((first_day, rebal_type))
 
     # ── 예정(forward) 리밸: 최신 데이터 다음 달 1일 ──
     # 그 달 거래일이 아직 없어도(예: 6/30 시점의 7/1) 직전 최신 거래일 데이터로
@@ -144,8 +169,8 @@ def build_universe(rebuild_all: bool = False):
         forward_rebal = f"{fy:04d}-{fm:02d}-01"      # 예: 2026-07-01
         forward_month = forward_rebal[:7]
         # forward 달이 이미 freeze돼 있으면(확정본 존재) 재생성하지 않는다.
-        if forward_month not in frozen_months and (forward_rebal, "monthly") not in rebal_dates:
-            rebal_dates.append((forward_rebal, "monthly"))
+        if forward_month not in frozen_months and (forward_rebal, rebal_type) not in rebal_dates:
+            rebal_dates.append((forward_rebal, rebal_type))
 
         # 최신 월 + 예정 리밸은 데이터가 아직 갱신될 수 있으므로 매 실행 시 재구축한다.
         # (지난달에 6/30 데이터로 만든 7/1 forward → 7/1 실데이터 도착 시 자동 갱신)
@@ -153,17 +178,17 @@ def build_universe(rebuild_all: bool = False):
         if not rebuild_all:
             cur.execute(
                 """DELETE FROM alpha_lab.universe u
-                   WHERE u.rebal_type='monthly' AND u.rebal_date >= %s
+                   WHERE u.rebal_type=%s AND u.rebal_date >= %s
                      AND NOT EXISTS (
                          SELECT 1 FROM alpha_lab.universe_frozen f
                          WHERE f.rebal_date = u.rebal_date AND f.rebal_type = u.rebal_type
                      )""",
-                (latest_first,),
+                (rebal_type, latest_first),
             )
             conn.commit()
             existing = {
                 e for e in existing
-                if e in frozen or not (e[1] == "monthly" and e[0] >= latest_first)
+                if e in frozen or not (e[1] == rebal_type and e[0] >= latest_first)
             }
 
     todo_rebal_dates = [rd for rd in rebal_dates if rd not in existing]
@@ -255,7 +280,7 @@ def build_universe(rebuild_all: bool = False):
 
             # market_cap 하한
             mcap = mcap_by.get(code6)
-            if not mcap or mcap < MIN_MARKET_CAP:
+            if not mcap or mcap < min_market_cap:
                 continue
 
             # 거래대금 20일 평균 5억 이상
@@ -290,16 +315,16 @@ def build_universe(rebuild_all: bool = False):
 
     conn.commit()
 
-    # 요약
+    # 요약 — 대상 rebal_type 만 (다른 rebal_type 행은 읽지 않는다)
     cur.execute("""
         SELECT rebal_type, COUNT(DISTINCT rebal_date), COUNT(*),
                ROUND(AVG(cnt)::NUMERIC, 1)
         FROM (
             SELECT rebal_type, rebal_date, COUNT(*) as cnt
-            FROM alpha_lab.universe GROUP BY rebal_type, rebal_date
+            FROM alpha_lab.universe WHERE rebal_type=%s GROUP BY rebal_type, rebal_date
         ) sub
         GROUP BY rebal_type
-    """)
+    """, (rebal_type,))
     summary = cur.fetchall()
 
     print(f"\n=== 완료: {total_inserted:,}건 ===")
@@ -388,8 +413,11 @@ def main():
     parser.add_argument("--unfreeze", type=str, metavar="YYYY-MM-DD",
                         help="확정 해제 (다시 재계산 대상이 됨)")
     parser.add_argument("--list-frozen", action="store_true", help="확정된 리밸 목록 출력")
-    parser.add_argument("--rebal-type", type=str, default="monthly",
-                        help="freeze/unfreeze 대상 rebal_type (기본: monthly)")
+    parser.add_argument("--rebal-type", type=str, default=PRODUCTION_REBAL_TYPE,
+                        help="대상 rebal_type (기본: monthly). "
+                             "v2 실험은 monthly_mc2000 을 쓴다. 이 값과 다른 행은 읽지도 쓰지도 않는다.")
+    parser.add_argument("--min-market-cap", type=float, default=MIN_MARKET_CAP,
+                        help=f"유니버스 시총 하한 (기본: {MIN_MARKET_CAP:,.0f} = 2000억)")
     args = parser.parse_args()
 
     if args.list_frozen:
@@ -403,7 +431,9 @@ def main():
         return
 
     print(f"=== Step 6: 유니버스 생성 ({datetime.now():%Y-%m-%d %H:%M}) ===")
-    build_universe(rebuild_all=args.rebuild_all)
+    build_universe(rebuild_all=args.rebuild_all,
+                   rebal_type=args.rebal_type,
+                   min_market_cap=args.min_market_cap)
 
 
 if __name__ == "__main__":

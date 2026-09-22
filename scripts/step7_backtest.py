@@ -22,7 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from config.settings import BACKTEST_CONFIG, CACHE_DIR
 from lib.factor_engine import (
     score_stocks_from_strategy, code_to_module,
-    DEFAULT_STRATEGY_CODE, clear_factor_cache,
+    CORE_STRATEGY_CODE, clear_factor_cache,
 )
 import lib.factor_engine as _fe  # _prefetch_cache 접근용
 from lib.db import get_conn
@@ -48,11 +48,169 @@ def get_db():
 
 
 # ═══════════════════════════════════════════════════════
+# rebal_type 격리 (docs/DB_SAFETY.md)
+# ═══════════════════════════════════════════════════════
+# alpha_lab.backtest_cache 는 production 웹뷰가 읽는 테이블이다.
+# rebal_type 인자를 한 곳이라도 빠뜨리면 BACKTEST_CONFIG["rebal_type"]("monthly")
+# 로 조용히 fallback 해서 production 행을 덮어쓴다.
+#
+# V2_REBAL_TYPE 환경변수를 설정하면 "실험 모드"가 된다.
+#   - rebal_type 을 생략한 호출은 production 이 아니라 실험 값으로 해석된다.
+#   - production rebal_type 으로의 해석이 발생하면 조용히 넘어가지 않고 즉시 실패한다.
+# 환경변수를 설정하지 않으면 기존 production 동작과 완전히 동일하다.
+
+PRODUCTION_REBAL_TYPE = "monthly"
+
+
+def _experiment_rebal_type():
+    """실험 모드면 그 rebal_type, 아니면 None."""
+    rt = os.environ.get("V2_REBAL_TYPE", "").strip()
+    return rt or None
+
+
+def _resolve_rebal_type(rebal_type=None) -> str:
+    """rebal_type 을 한 곳에서 해석한다. 기존의 `or "monthly"` fallback 전부 대체.
+
+    실험 모드에서 production 으로 해석되면 조용히 넘어가지 않고 예외를 던진다.
+    """
+    exp = _experiment_rebal_type()
+    if exp is None:
+        return rebal_type or BACKTEST_CONFIG.get("rebal_type", PRODUCTION_REBAL_TYPE)
+
+    rt = rebal_type or exp
+    if rt == PRODUCTION_REBAL_TYPE:
+        raise RuntimeError(
+            f"거부: 실험 모드(V2_REBAL_TYPE={exp})인데 rebal_type 이 "
+            f"production '{PRODUCTION_REBAL_TYPE}' 으로 해석됐다.\n"
+            f"       그대로 두면 웹뷰가 읽는 backtest_cache 를 덮어쓴다.\n"
+            f"       호출부에 rebal_type 을 명시하거나 인자를 생략할 것."
+        )
+    return rt
+
+
+def _resolve_min_market_cap(min_market_cap=None) -> float:
+    """시총 하한을 한 곳에서 해석한다.
+
+    실험 모드에서는 V2_MIN_MARKET_CAP 을 강제한다. 백테스트 성과 경로와
+    포트폴리오 캐시 경로가 서로 다른 하한을 쓰면 성과와 보유종목이 어긋나므로,
+    인자로 다른 값이 들어와도 환경변수와 다르면 실패시킨다.
+    """
+    if _experiment_rebal_type() is None:
+        if min_market_cap is not None:
+            return float(min_market_cap)
+        return float(BACKTEST_CONFIG.get("min_market_cap", 200_000_000_000))
+
+    raw = os.environ.get("V2_MIN_MARKET_CAP", "").strip()
+    if not raw:
+        raise RuntimeError(
+            "거부: 실험 모드인데 V2_MIN_MARKET_CAP 이 없다.\n"
+            "       BACKTEST_CONFIG 의 기본값이 조용히 쓰이는 것을 막는다.\n"
+            "       예: V2_MIN_MARKET_CAP=2e11"
+        )
+    exp = float(raw)
+    if min_market_cap is not None and float(min_market_cap) != exp:
+        raise RuntimeError(
+            f"거부: 시총 하한 불일치. 인자={float(min_market_cap):,.0f} "
+            f"V2_MIN_MARKET_CAP={exp:,.0f}\n"
+            f"       경로마다 다른 하한을 쓰면 성과와 보유종목이 어긋난다."
+        )
+    return exp
+
+
+def _guard_write_rebal_type(rebal_type: str, where: str) -> str:
+    """DB 쓰기 직전 최종 확인. 실험 모드에서 production 행 쓰기를 차단한다."""
+    exp = _experiment_rebal_type()
+    if exp and rebal_type == PRODUCTION_REBAL_TYPE:
+        raise RuntimeError(
+            f"거부: {where} 가 production rebal_type='{PRODUCTION_REBAL_TYPE}' 으로 "
+            f"쓰려고 한다. 실험 모드(V2_REBAL_TYPE={exp})에서는 금지."
+        )
+    return rebal_type
+
+
+# ═══════════════════════════════════════════════════════
+# HSMM 레짐 익스포저 오버레이 (2026-09 도입)
+# ═══════════════════════════════════════════════════════
+# analysis/hsmm_final_path.csv 의 exposure 컬럼으로 주식 비중을 일괄 축소하고,
+# 미투자분에는 연 CASH_ANNUAL_RATE 를 월 복리로 환산해 더한다.
+#   최종수익 = exposure × 주식수익 + (1 - exposure) × 현금월수익
+#
+# 종목 수는 TOP_N 고정이고 비중만 스케일한다(v2_settings.EXPOSURE_MODE="scale_weights").
+# exposure[t] 는 t 월말 판정으로 t→t+1 수익에 적용된다. 따라서 리밸일 D 의
+# 직전 월(ym = D 의 전월)을 참조한다. 예: 2026-09-01 리밸 → ym 2026-08.
+#
+# ⚠️ CSV 는 반드시 .venv 환경에서 생성된 것이어야 한다. numpy/hmmlearn 버전이
+#    다르면 같은 스크립트·같은 피처 캐시에서도 exposure 가 달라진다
+#    (2026-09 확인: 2026-08 기준 0.65 vs 0.75).
+
+HSMM_PATH = Path(__file__).parent.parent / "analysis" / "hsmm_final_path.csv"
+CASH_ANNUAL_RATE = 0.025
+CASH_MONTHLY_RATE = (1 + CASH_ANNUAL_RATE) ** (1 / 12) - 1
+_exposure_map = None
+
+
+def _exposure_enabled() -> bool:
+    """HSMM 익스포저 오버레이 사용 여부. 기본 ON. 끄려면 HSMM_EXPOSURE=0."""
+    return os.environ.get("HSMM_EXPOSURE", "1").lower() not in ("0", "false", "no")
+
+
+def load_exposure_map() -> dict:
+    """{'YYYY-MM': exposure} 로드. 파일이 없으면 명시적으로 실패시킨다."""
+    global _exposure_map
+    if _exposure_map is not None:
+        return _exposure_map
+    if not HSMM_PATH.exists():
+        raise RuntimeError(
+            f"거부: HSMM exposure 파일 없음 → {HSMM_PATH}\n"
+            f"       .venv/bin/python analysis/hsmm_final.py 로 생성할 것.\n"
+            f"       오버레이 없이 돌리려면 HSMM_EXPOSURE=0."
+        )
+    import csv
+    m = {}
+    with open(HSMM_PATH, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            try:
+                m[row["ym"].strip()] = float(row["exposure"])
+            except (KeyError, TypeError, ValueError):
+                continue
+    if not m:
+        raise RuntimeError(f"거부: exposure 를 읽지 못했다 → {HSMM_PATH}")
+    _exposure_map = m
+    return m
+
+
+def exposure_for(rebal_date: str) -> float:
+    """리밸일에 적용할 exposure. 직전 월 판정값을 쓴다.
+
+    해당 월이 없으면(모델 경로보다 앞선 과거) 1.0 = 전액 투자로 둔다.
+    모델 시작 이전 구간까지 축소하면 백테스트 초기가 왜곡된다.
+    """
+    y, mo = int(rebal_date[:4]), int(rebal_date[5:7])
+    py, pm = (y - 1, 12) if mo == 1 else (y, mo - 1)
+    return load_exposure_map().get(f"{py:04d}-{pm:02d}", 1.0)
+
+
+def apply_exposure(net_return: float, exp_now: float, exp_prev: float,
+                   cost_rate: float) -> float:
+    """주식수익에 exposure 를 적용하고 현금수익을 더한다.
+
+    exposure 변동분(|exp_now - exp_prev|)은 실제 매매이므로 편도 비용을 물린다.
+    """
+    blended = exp_now * net_return + (1.0 - exp_now) * CASH_MONTHLY_RATE
+    return blended - abs(exp_now - exp_prev) * cost_rate
+
+
+# ═══════════════════════════════════════════════════════
 # 유니버스 & 리밸런싱 (PG universe 테이블 기반)
 # ═══════════════════════════════════════════════════════
 
-def get_rebalance_dates(conn, rebal_type="monthly"):
-    """universe 테이블에서 리밸런싱 날짜 조회"""
+def get_rebalance_dates(conn, rebal_type=None):
+    """universe 테이블에서 리밸런싱 날짜 조회.
+
+    rebal_type 생략 시 _resolve_rebal_type() 을 탄다. 실험 모드에서
+    production universe 를 조용히 읽는 것을 막기 위함.
+    """
+    rebal_type = _resolve_rebal_type(rebal_type)
     rows = conn.execute("""
         SELECT DISTINCT rebal_date FROM universe
         WHERE rebal_type = ? AND rebal_date >= ? AND rebal_date <= ?
@@ -72,8 +230,13 @@ def get_rebalance_dates(conn, rebal_type="monthly"):
     return dates
 
 
-def get_universe_stocks(conn, rebal_date, rebal_type="monthly", min_market_cap=0):
-    """universe 테이블에서 해당 날짜의 종목 set 반환"""
+def get_universe_stocks(conn, rebal_date, rebal_type=None, min_market_cap=0):
+    """universe 테이블에서 해당 날짜의 종목 set 반환.
+
+    min_market_cap 기본 0 은 기존 호출부 동작 보존을 위해 그대로 둔다
+    (호출부가 항상 명시적으로 넘긴다).
+    """
+    rebal_type = _resolve_rebal_type(rebal_type)
     rows = conn.execute("""
         SELECT stock_code, market_cap FROM universe
         WHERE rebal_date = ? AND rebal_type = ? AND market_cap >= ?
@@ -83,7 +246,7 @@ def get_universe_stocks(conn, rebal_date, rebal_type="monthly", min_market_cap=0
 
 # 하위 호환용
 def get_monthly_rebalance_dates(conn):
-    return get_rebalance_dates(conn, rebal_type=BACKTEST_CONFIG.get("rebal_type", "monthly"))
+    return get_rebalance_dates(conn, rebal_type=_resolve_rebal_type())
 
 
 # ═══════════════════════════════════════════════════════
@@ -487,7 +650,7 @@ def calc_all_benchmarks(conn, rebalance_dates):
 # 백테스트 실행
 # ═══════════════════════════════════════════════════════
 
-def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progress_callback=None):
+def run_backtest(strategy_name, stock_selector=None, rebal_type=None, progress_callback=None):
     """단일 전략 백테스트 실행.
 
     stock_selector: 커스텀 종목 선정 콜백 (conn, calc_date, top_n) -> [(code, score), ...]
@@ -503,6 +666,11 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
 
     top_n = BACKTEST_CONFIG["top_n_stocks"]
     tx_cost = BACKTEST_CONFIG["transaction_cost_bp"] / 10000
+    # HSMM 익스포저 상태 (첫 리밸의 직전 노출은 0 = 전액 현금에서 진입)
+    _use_exposure = _exposure_enabled()
+    exp_prev, exposure_list = 0.0, []
+    if _use_exposure:
+        load_exposure_map()   # 파일 없으면 여기서 즉시 실패 (백테스트 다 돌고 나서 말고)
 
     # ─── 레짐별 동적 cap 설정 ───
     regime_enabled = BACKTEST_CONFIG.get("regime_cap_enabled", False)
@@ -665,6 +833,16 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
             for sl_code, _, _, _ in sl_events:
                 prev_weight_map.pop(sl_code, None)
 
+        # ── HSMM 레짐 익스포저 오버레이 ──
+        # 주식 비중을 exposure 배로 줄이고 미투자분은 현금수익(연 2.5% 월복리).
+        # exposure 변동분은 실제 매매이므로 편도 비용을 물린다.
+        if _use_exposure:
+            exp_now = exposure_for(start)
+            net_return = apply_exposure(net_return, exp_now, exp_prev,
+                                        tx_cost + avg_slippage)
+            exposure_list.append(exp_now)
+            exp_prev = exp_now
+
         monthly_returns.append(net_return)
         cumulative *= (1 + net_return)
         portfolio_values.append(cumulative)
@@ -789,21 +967,24 @@ def run_backtest(strategy_name, stock_selector=None, rebal_type="monthly", progr
         "portfolio_sizes": portfolio_sizes,
         "rebalance_dates": list(rebalance_dates),
         "holdings_by_date": holdings_by_date,
+        "exposure": exposure_list,
+        "avg_exposure": (float(np.mean(exposure_list)) if exposure_list else None),
     }
 
 
 # ─── 전략 정의 ───
+# 2026-09: 메인 전략 A0 → CORE (구 "FCF_YIELD추가전략").
 STRATEGIES = [
-    ("A0",   "A0",   "A0: 멀티팩터 전략"),
+    ("CORE", "CORE", "메인전략: 멀티팩터 + FCF수익률 + 평균회귀"),
 ]
 
 # 기본 전략 코드 맵 (factor_engine 기반 파이프라인)
 _BASE_STRATEGY_CODES = {
-    "A0": DEFAULT_STRATEGY_CODE,
+    "CORE": CORE_STRATEGY_CODE,
 }
 
 
-def make_engine_selector(strategy_key, rebal_type="monthly", min_market_cap=0):
+def make_engine_selector(strategy_key, rebal_type=None, min_market_cap=None):
     """factor_engine 기반 stock_selector 콜백 생성.
 
     universe 테이블과 교집합하여 종목 선정 (N+1 유동성 쿼리 제거).
@@ -813,9 +994,13 @@ def make_engine_selector(strategy_key, rebal_type="monthly", min_market_cap=0):
         return None
     strategy_module = code_to_module(code)
 
+    # 여기서 한 번 해석해 두어야 selector 가 매 리밸마다 같은 값을 쓴다.
+    _rt = _resolve_rebal_type(rebal_type)
+    _mcap = _resolve_min_market_cap(min_market_cap)
+
     def selector(conn, calc_date, top_n):
         # universe 테이블에서 해당 날짜 종목 조회
-        universe_set = get_universe_stocks(conn, calc_date, rebal_type, min_market_cap)
+        universe_set = get_universe_stocks(conn, calc_date, _rt, _mcap)
         if not universe_set:
             return []
 
@@ -833,9 +1018,8 @@ def make_engine_selector(strategy_key, rebal_type="monthly", min_market_cap=0):
 def run_all_backtests(rebal_type=None, min_market_cap=None):
     """기본 전략 + 벤치마크 백테스트 (factor_engine 파이프라인 사용)"""
     if rebal_type is None:
-        rebal_type = BACKTEST_CONFIG.get("rebal_type", "monthly")
-    if min_market_cap is None:
-        min_market_cap = BACKTEST_CONFIG.get("min_market_cap", 500_000_000_000)
+        rebal_type = _resolve_rebal_type()
+    min_market_cap = _resolve_min_market_cap(min_market_cap)
 
     rebal_label = "격주" if rebal_type == "biweekly" else "월간"
     print("\n" + "=" * 60)
@@ -894,7 +1078,7 @@ BACKTEST_CACHE = CACHE_DIR / "backtest_results.json"
 def _cache_key(universe: str = None, rebal_type: str = None) -> str:
     """유니버스/리밸런싱 조합의 캐시 키 생성."""
     u = (universe or BACKTEST_CONFIG.get("universe", "KOSPI")).replace("+", "_")
-    r = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    r = _resolve_rebal_type(rebal_type)
     return f"{u}_{r}"
 
 
@@ -930,7 +1114,8 @@ def save_backtest_cache(results, universe: str = None, rebal_type: str = None):
 
     # 2) PG backtest_cache 테이블에도 저장
     _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
-    _rt = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    _rt = _guard_write_rebal_type(_resolve_rebal_type(rebal_type),
+                                 "save_backtest_cache / backtest_cache INSERT")
     try:
         from lib.db import get_conn as _get_pg_conn
         pg = _get_pg_conn()
@@ -984,8 +1169,8 @@ def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
         if not code:
             continue
         strategy_module = code_to_module(code)
-        _rebal_type = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
-        min_mcap = BACKTEST_CONFIG.get("min_market_cap", 0)
+        _rebal_type = _resolve_rebal_type(rebal_type)
+        min_mcap = _resolve_min_market_cap()
         top_n = BACKTEST_CONFIG.get("top_n_stocks", 30)
         cap = BACKTEST_CONFIG.get("weight_cap_pct", 10) / 100
 
@@ -1145,7 +1330,8 @@ def save_portfolio_cache(results, universe: str = None, rebal_type: str = None):
 
     # 2) PG backtest_cache에 holdings_json 업데이트
     _uni = universe or BACKTEST_CONFIG.get("universe", "KOSPI")
-    _rt = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
+    _rt = _guard_write_rebal_type(_resolve_rebal_type(rebal_type),
+                                 "save_portfolio_cache / backtest_cache UPDATE")
     try:
         from lib.db import get_conn as _get_pg_conn
         pg = _get_pg_conn()

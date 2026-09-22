@@ -168,10 +168,10 @@ def _sync_labels(universe: str, weight_cap_pct: int = None):
     """유니버스·캡에 따라 전략 라벨을 동적으로 갱신."""
     STRATEGY_LABELS["KOSPI"] = "KRX 300" if universe == "KOSPI+KOSDAQ" else "KODEX 200"
 
-    # 기존전략(A0)은 항상 디폴트 캡 표시
+    # 메인전략(CORE)은 항상 디폴트 캡 표시
     default_cap = BACKTEST_CONFIG.get("weight_cap_pct", 10)
     cap_suffix = f" ({default_cap}%캡)" if default_cap > 0 else " (캡없음)"
-    STRATEGY_LABELS["A0"] = "기존전략" + cap_suffix
+    STRATEGY_LABELS["CORE"] = "메인전략" + cap_suffix
 
 
 def _render_universe_rebal_selector(key_prefix: str) -> tuple[str, str]:
@@ -1267,7 +1267,7 @@ def render_lab_content():
     st.markdown("---")
     _VIEW_EXPERIMENT = "__experiment__"
     view_options = [
-        ("A0", STRATEGY_LABELS["A0"]),
+        ("CORE", STRATEGY_LABELS["CORE"]),
     ]
     if is_modified:
         view_options.append((_VIEW_EXPERIMENT, "수정 전략"))
@@ -1280,7 +1280,7 @@ def render_lab_content():
     if is_modified and st.session_state.get("lab_view_strategy") != _VIEW_EXPERIMENT:
         st.session_state.lab_view_strategy = _VIEW_EXPERIMENT
     if not is_modified and st.session_state.get("lab_view_strategy") == _VIEW_EXPERIMENT:
-        st.session_state.lab_view_strategy = "A0"
+        st.session_state.lab_view_strategy = "CORE"
 
     # ── 가중치 차트 & 전략 코드 (접기) ──
     _view_code_sel = current_code if (is_modified or not strategies) else None
@@ -1361,7 +1361,7 @@ def render_lab_content():
                 "Sharpe": f"{m.get('sharpe', 0):.3f}",
             })
         # 기존전략은 original에서, 벤치마크는 _bm_source에서
-        for key, source in [("A0", original), ("KOSPI", _bm_source)]:
+        for key, source in [("CORE", original), ("KOSPI", _bm_source)]:
             r = source.get(key, {})
             if r:
                 # 벤치마크는 결과 데이터의 strategy 필드 우선 (유니버스 반영)
@@ -1449,8 +1449,11 @@ def render_lab_content():
                 st.warning("전략 이름을 입력하세요.")
 
     # ─── 4. 레짐 조합 백테스트 ───
-    st.markdown("---")
-    _render_regime_combo()
+    # 2026-09 비활성화. 이 페이지의 레짐 판정은 KOSPI200 50일 이동평균 기준이라
+    # 메인전략이 쓰는 HSMM 레짐(analysis/hsmm_final.py)과 다르다. 두 기준이 한 화면에
+    # 섞이면 혼동을 준다. 함수는 남겨두므로 되살리려면 아래 두 줄 주석만 해제하면 된다.
+    # st.markdown("---")
+    # _render_regime_combo()
 
 
 # ═══════════════════════════════════════════════════════

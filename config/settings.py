@@ -51,8 +51,8 @@ BACKTEST_CONFIG = {
     "rebal_type": "monthly",
     "transaction_cost_bp": 30,       # 편도 30bp
     "top_n_stocks": 30,
-    "weight_cap_pct": 10,            # 개별종목 비중상한 (%)
-    "min_market_cap": 500_000_000_000,  # 유니버스 시총 하한: 5천억원
+    "weight_cap_pct": 30,            # 개별종목 비중상한 (%) — 2026-09 CORE 전략 기준(구 10)
+    "min_market_cap": 200_000_000_000,  # 유니버스 시총 하한: 2천억원 (2026-09 확대, 구 5천억)
     "universe": "KOSPI",                # "KOSPI" or "KOSPI+KOSDAQ"
     "stop_loss_enabled": False,
     "stop_loss_pct": 15,                 # 손절 기준 (매입가 대비 -N%)

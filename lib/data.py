@@ -29,21 +29,25 @@ def _get_conn():
         st.stop()
 from lib.factor_engine import (
     validate_strategy_code, code_to_module, score_stocks_from_strategy,
-    DEFAULT_STRATEGY_CODE, clear_factor_cache,
+    CORE_STRATEGY_CODE, clear_factor_cache,
 )
 
 # ─── Strategy constants (기본 전략) ───
-BASE_STRATEGY_KEYS = ["A0"]
-STRATEGY_KEYS = ["A0"]  # 동적으로 갱신됨
-ALL_KEYS = ["A0", "KOSPI"]  # 동적으로 갱신됨
+BASE_STRATEGY_KEYS = ["CORE"]
+# 2026-09: 메인 전략을 A0 → CORE 로 교체.
+#   CORE = 구 "FCF_YIELD추가전략" (멀티팩터 + FCF수익률 + 평균회귀).
+#   유니버스 시총하한 2000억, HSMM 레짐 익스포저 오버레이, 손절 미사용.
+#   이름에 특정 팩터(FCF)나 버전(v2)을 넣지 않는다 — 가중치가 바뀌어도 유효해야 한다.
+STRATEGY_KEYS = ["CORE"]  # 동적으로 갱신됨
+ALL_KEYS = ["CORE", "KOSPI"]  # 동적으로 갱신됨
 
 STRATEGY_LABELS = {
-    "A0":    "기존전략",
+    "CORE":  "메인전략",
     "KOSPI": "KODEX 200",
 }
 
 STRATEGY_COLORS = {
-    "A0":    "#42A5F5",   # 밝은 파랑
+    "CORE":  "#42A5F5",   # 밝은 파랑
     "KOSPI": "#90A4AE",   # 회색
 }
 
@@ -91,16 +95,16 @@ def _update_strategy_registry(results: dict):
             STRATEGY_COLORS[key] = _CUSTOM_PALETTE[i % len(_CUSTOM_PALETTE)]
 
 # step7 uses these internal codes
-_STRAT_CODE = {"A0": "A0"}
+_STRAT_CODE = {"CORE": "CORE"}
 
 # 기본 전략 코드 (factor_engine 파이프라인용)
 _BASE_STRATEGY_CODES = {
-    "A0": DEFAULT_STRATEGY_CODE,
+    "CORE": CORE_STRATEGY_CODE,
 }
 
 # ─── 기존 전략 팩터 가중치 (step3 기준) ───
 BASE_STRATEGY_WEIGHTS = {
-    "A0": {
+    "CORE": {
         "weights_large": {
             "T_PER": .05, "F_PER": .05, "T_EVEBITDA": .05, "F_EVEBITDA": .05,
             "T_PBR": .05, "F_PBR": .05, "T_PCF": .05,
@@ -475,7 +479,7 @@ def _compute_robustness_from_cache(start, end, is_end, oos_start, rebal_type="mo
             stat_data["full_results"][key] = r
 
     # BM 대비 유의성 (부트스트랩)
-    baseline_key = next((k for k in ["A0"] if k in full_results), None)
+    baseline_key = next((k for k in ["CORE"] if k in full_results), None)
     bm_key = next((k for k in ["KOSPI", "BM"] if k in full_results), None)
     if baseline_key and bm_key:
         bl = full_results[baseline_key]
@@ -558,7 +562,7 @@ def _compute_robustness(start, end, is_end, oos_start):
     is_ret = None
     oos_ret = None
 
-    baseline = next((k for k in ["A0"] if k in is_results), None)
+    baseline = next((k for k in ["CORE"] if k in is_results), None)
     # 날짜 기반 연환산 (is_ret/oos_ret은 현재 None이지만 추후 사용 대비)
     from datetime import datetime as _dt
     _is_nyears = max((_dt.strptime(is_end, "%Y-%m-%d") - _dt.strptime(start, "%Y-%m-%d")).days / 365.25, 0.5)
@@ -688,7 +692,7 @@ def load_all_robustness_results(start: str = None, end: str = None,
     _rebal = rebal_type or BACKTEST_CONFIG.get("rebal_type", "monthly")
     _uni = universe or "KOSPI"
     base_results = load_backtest_results(use_start, use_end, rebal_type=_rebal, universe=_uni)
-    baseline_key = next((k for k in ["A0"] if k in base_results), None)
+    baseline_key = next((k for k in ["CORE"] if k in base_results), None)
     if not baseline_key:
         return is_oos_data, stat_data, rolling_all
 
@@ -1188,10 +1192,10 @@ def get_overlap_matrix(calc_date: str, top_n: int = 30,
 @st.cache_data(ttl=3600)
 def get_stock_comparison(calc_date: str, top_n: int = 30):
     """기존전략 vs 회귀only 종목 비교: 공통/기존전략단독/회귀only단독 반환."""
-    a0_label = STRATEGY_LABELS["A0"]
+    a0_label = STRATEGY_LABELS["CORE"]
     att2_label = STRATEGY_LABELS["ATT2"]
 
-    a0_df = get_holdings("A0", calc_date, top_n)
+    a0_df = get_holdings("CORE", calc_date, top_n)
     att2_df = get_holdings("ATT2", calc_date, top_n)
 
     if a0_df.empty or att2_df.empty:
@@ -1243,13 +1247,13 @@ def run_custom_backtest(top_n: int = 30, tx_cost_bp: int = 30, weight_cap: int =
         BACKTEST_CONFIG["transaction_cost_bp"] = tx_cost_bp
         BACKTEST_CONFIG["weight_cap_pct"] = weight_cap
 
-        selector = make_engine_selector("A0")
-        result = run_backtest("A0", stock_selector=selector)
+        selector = make_engine_selector("CORE")
+        result = run_backtest("CORE", stock_selector=selector)
         clear_factor_cache()
         results = {}
         if result:
-            result["strategy"] = "A0"
-            results["A0"] = result
+            result["strategy"] = "CORE"
+            results["CORE"] = result
 
         conn = get_db()
         rb_dates = get_monthly_rebalance_dates(conn)

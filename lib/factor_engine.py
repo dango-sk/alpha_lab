@@ -597,6 +597,30 @@ def _is_ma_cache_enabled() -> bool:
     return _os.environ.get("FE_USE_MA_CACHE", "0").lower() in ("1", "true", "yes")
 
 
+def _size_group_mode() -> str:
+    """large/mid_small 판정 방식. "absolute"(기본) | "rank"(구 방식).
+
+    2026-09 유니버스 2000억 확대와 함께 절대 시총 기준이 기본이 됐다.
+    순위컷(상위 200)을 쓰면 하한을 내려도 새로 들어온 종목이 전부 200위 밖이라
+    score_stocks_from_strategy 에서 잘려나가 확대가 무의미해진다.
+
+    구 방식으로 되돌리려면 FE_SIZE_GROUP_MODE=rank.
+    """
+    import os as _os
+    mode = _os.environ.get("FE_SIZE_GROUP_MODE", "absolute").lower()
+    return "rank" if mode == "rank" else "absolute"
+
+
+def _large_abs_threshold() -> float:
+    """absolute 모드에서 large 로 볼 시총 하한. 기본 2000억.
+
+    config/settings.BACKTEST_CONFIG["min_market_cap"] 과 같은 값을 유지할 것.
+    어긋나면 유니버스와 채점 대상이 달라진다.
+    """
+    import os as _os
+    return float(_os.environ.get("FE_LARGE_ABS_THRESHOLD", 200_000_000_000))
+
+
 def _is_indicators_db_enabled() -> bool:
     """FE_USE_INDICATORS_DB=1 → alpha_lab.stock_indicators 테이블에서 SELECT 로 MA/MFI 가져옴."""
     import os as _os
@@ -1189,13 +1213,18 @@ def _get_master_for_date(calc_date: str) -> pd.DataFrame:
 def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = None) -> pd.DataFrame | None:
     """
     DB에서 재무/주가/포워드 데이터를 로딩하고 모든 파생 지표를 계산한다.
-    유니버스 설정에 따라 필터링이 달라지므로 (날짜, 유니버스, ma_window) 조합으로 캐시.
+    유니버스 설정에 따라 필터링이 달라지므로
+    (날짜, 유니버스, ma_window, size_group 설정) 조합으로 캐시.
     프리페치 캐시가 있으면 DB 쿼리 대신 메모리에서 처리.
     """
     from config.settings import BACKTEST_CONFIG as _BC
     _universe = _BC.get("universe", "KOSPI")
     _ma_window = ma_reversion_window or _BC.get("ma_reversion_window", 120)
-    _cache_key = (calc_date, _universe, _ma_window)
+    # size_group 은 결과 컬럼이므로 캐시 키에 포함해야 한다.
+    # 빠뜨리면 한 프로세스에서 모드를 바꿨을 때 이전 모드 결과가 그대로 나온다.
+    _sg = (_size_group_mode(),
+           _large_abs_threshold() if _size_group_mode() == "absolute" else None)
+    _cache_key = (calc_date, _universe, _ma_window, _sg)
     if _cache_key in _factor_data_cache:
         return _factor_data_cache[_cache_key].copy()
 
@@ -1617,10 +1646,18 @@ def load_factor_data(conn, calc_date: str, ma_reversion_window: int | None = Non
                 merged = merged.drop(columns=["_fcf_fill"])
 
     # ─── 대형/중소형 분리 ───
+    # 기본(rank): 시총 상위 LARGE_CAP_CUTOFF(200)위까지 large. production 동작.
+    # absolute: 시총 절대 기준(FE_LARGE_ABS_THRESHOLD)으로 large 판정.
+    #   v2 유니버스 확대용. 순위컷을 두면 하한을 2000억으로 내려도 새로 들어온
+    #   종목이 전부 200위 밖이라 score_stocks_from_strategy 에서 잘려나간다.
     merged = merged.sort_values("market_cap", ascending=False).reset_index(drop=True)
-    cutoff = min(LARGE_CAP_CUTOFF, len(merged) // 3)
-    merged["size_group"] = "mid_small"
-    merged.loc[:cutoff - 1, "size_group"] = "large"
+    if _size_group_mode() == "absolute":
+        merged["size_group"] = np.where(
+            merged["market_cap"] >= _large_abs_threshold(), "large", "mid_small")
+    else:
+        cutoff = min(LARGE_CAP_CUTOFF, len(merged) // 3)
+        merged["size_group"] = "mid_small"
+        merged.loc[:cutoff - 1, "size_group"] = "large"
 
     # 캐시 저장 (날짜+유니버스 조합)
     _factor_data_cache[_cache_key] = merged.copy()
@@ -1829,6 +1866,24 @@ def calc_weighted_scores(df, weights_large, weights_small, score_map, scoring_mo
     return df
 
 
+def rank_by_score(df, n=None):
+    """value_score 내림차순 정렬. 동점은 결정적 규칙으로 깬다.
+
+    사분위 채점이라 동점이 매우 흔하다(2026-09 선정 30종목 중 23개가 동점).
+    pandas 의 nlargest/sort_values 는 동점 순서를 입력 순서에 맡기므로,
+    같은 데이터라도 정렬 순서가 달라져 30위 경계에서 종목이 뒤바뀔 수 있다.
+
+    동점 처리: 시가총액 큰 종목 우선 → 그래도 같으면 종목코드 오름차순.
+    (유동성이 큰 쪽을 택하고, 마지막은 완전히 결정적으로 고정)
+    """
+    keys, asc = ["value_score"], [False]
+    if "market_cap" in df.columns:
+        keys.append("market_cap"); asc.append(False)
+    keys.append("stock_code"); asc.append(True)
+    out = df.sort_values(keys, ascending=asc, kind="mergesort")
+    return out if n is None else out.head(n)
+
+
 # ═══════════════════════════════════════════════════════
 # 5. 퀄리티 필터
 # ═══════════════════════════════════════════════════════
@@ -2025,7 +2080,7 @@ def score_stocks_from_strategy(conn, calc_date, strategy, return_df: bool = Fals
 
     # 점수 순 정렬
     _t0 = _t.time()
-    passed = df.nlargest(top_n * 2, "value_score")
+    passed = rank_by_score(df, top_n * 2)
     _SCORE_TIMING_PHASES["sort_result"] += _t.time() - _t0
 
     # stock_code에서 'A' 접두사 제거
@@ -2099,7 +2154,7 @@ def get_score_breakdown(conn, calc_date: str, strategy_module, top_n: int = 10) 
     active     = [(k, v) for k, v in weights_large.items() if v > 0]
 
     stocks = []
-    for rank, (_, row) in enumerate(df.nlargest(top_n, "value_score").iterrows(), 1):
+    for rank, (_, row) in enumerate(rank_by_score(df, top_n).iterrows(), 1):
         code  = str(row.get("stock_code", "")).lstrip("A")
         name  = str(row.get("stock_name", ""))
         score = float(row.get("value_score", 0))
@@ -2364,6 +2419,118 @@ QUALITY_FILTER = {
     "min_avg_volume": 500_000_000,
 }
 '''
+
+# ─── CORE: 메인 전략 (2026-09~) ───
+# 구 이름 "FCF_YIELD추가전략". A0 대비 FCF_YIELD 0.15 / PRICE_MA_REV 0.05 추가,
+# T_PCF·F_SPSG 제거, T_SPSG 0.10→0.05. 손절 미사용(HSMM 익스포저로 방어).
+# 유니버스 시총하한 2000억, size_group 절대기준.
+CORE_STRATEGY_CODE = '''"""
+Strategy: A0 기본 전략 (대형주)
+Created: 2026-02-23
+Description: 원본 사분위 밸류 전략 (밸류 35% + 회귀 30% + 성장 20% + 차별화 15%)
+
+설계 원리:
+  - 대형주(시총 상위 200) 유니버스 한정. KOSPI 200과 공정 비교 가능.
+  - 사분위(Quartile, 0~4점) 채점. 종목 수가 적어 십분위 구간이 촘촘해짐을 방지.
+  - 4개 회귀 모델(PBR-ROE, EV/IC-ROIC, F.PER-이익성장, F.EV/EBIT-EBIT성장)로 내재가치 괴리도 측정.
+"""
+
+# ─── 채점 방식 ───
+SCORING_MODE = {
+    "large": "quartile",   # 대형주: 사분위 (0~4점)
+}
+
+# ─── 팩터 가중치 (합계 1.0) ───
+WEIGHTS_LARGE = {
+    "T_PER": .05, "F_PER": .05, "T_EVEBITDA": .05, "F_EVEBITDA": .05,
+    "T_PBR": .05, "F_PBR": .05, "T_PCF": 0.00,
+    "ATT_PBR": .05, "ATT_EVIC": .05, "ATT_PER": .10, "ATT_EVEBIT": .10,
+    "T_SPSG": 0.05, "F_SPSG": 0.00,
+    "F_EPS_M": 0.15,
+    "PRICE_MA_REV": 0.05,
+    "OBV_SLOPE": 0,
+    "MFI": 0,
+    "FCF_YIELD": 0.15,
+}
+
+WEIGHTS_SMALL = {}
+
+# ─── 회귀 모델 (name, x_col, y_col, formula_type) ───
+# formula_type: "ratio" | "ev_equity" | "ev_equity_ebit" | "simple"
+REGRESSION_MODELS = [
+    ("pbr_roe", "roe", "pbr", "ratio"),
+    ("evic_roic", "roic", "ev_ic", "ev_equity"),
+    ("fper_epsg", "f_epsg", "f_per", "ratio"),
+    ("fevebit_ebitg", "f_ebitg", "f_ev_ebit", "ev_equity_ebit"),
+]
+
+# ─── 회귀 이상치 필터 ───
+OUTLIER_FILTERS = {
+    "pbr_roe": {"x_min": 0, "x_max": 100, "y_min": 0, "y_max": 20},
+    "evic_roic": {"x_min": 0, "x_max": 500, "y_min": 0, "y_max": 51},
+    "fper_epsg": {"x_min": 0, "x_max": 500, "y_min": 0, "y_max": 60},
+    "fevebit_ebitg": {"x_min": 0, "x_max": 500, "y_min": 0, "y_max": 60},
+}
+
+# ─── 가중치 키 -> 점수 컬럼 매핑 ───
+SCORE_MAP = {
+    "T_PER": "t_per_score", "F_PER": "f_per_score",
+    "T_EVEBITDA": "t_ev_ebitda_score", "F_EVEBITDA": "f_ev_ebitda_score",
+    "T_PBR": "pbr_score", "F_PBR": "f_pbr_score", "T_PCF": "t_pcf_score",
+    "ATT_PBR": "pbr_roe_attractiveness_score", "ATT_EVIC": "evic_roic_attractiveness_score",
+    "ATT_PER": "fper_epsg_attractiveness_score", "ATT_EVEBIT": "fevebit_ebitg_attractiveness_score",
+    "T_SPSG": "t_spsg_score", "F_SPSG": "f_spsg_score",
+    "F_EPS_M": "f_eps_m_score",
+    "PRICE_M": "price_m_score", "NDEBT_EBITDA": "ndebt_ebitda_score",
+    "CURRENT": "current_ratio_score",
+    "PRICE_MA_REV": "price_ma_rev_score",
+    "OBV_SLOPE": "obv_slope_score",
+    "MFI": "mfi_score",
+    "FCF_YIELD": "fcf_yield_score",
+}
+
+# ─── 스코어링 규칙 ───
+# "rule1": 낮을수록 좋음 (밸류 멀티플: PER, PBR, EV/EBITDA, PCF)
+# "rule2": 높을수록 좋음 (회귀 매력도, 성장률, EPS 모멘텀, 유동비율)
+# "rule3": 낮을수록 좋음 (주가 모멘텀 역방향, 부채비율)
+SCORING_RULES = {
+    "t_per": "rule1", "f_per": "rule1",
+    "t_ev_ebitda": "rule1", "f_ev_ebitda": "rule1",
+    "pbr": "rule1", "f_pbr": "rule1", "t_pcf": "rule1",
+    "pbr_roe_attractiveness": "rule2",
+    "evic_roic_attractiveness": "rule2",
+    "fper_epsg_attractiveness": "rule2",
+    "fevebit_ebitg_attractiveness": "rule2",
+    "t_spsg": "rule2", "f_spsg": "rule2",
+    "f_eps_m": "rule2",
+    "price_m": "rule3", "ndebt_ebitda": "rule3",
+    "current_ratio": "rule2",
+    "price_ma_rev": "rule2",
+    "obv_slope": "rule2",
+    "mfi": "rule2",
+    "fcf_yield": "rule2",
+}
+
+# ─── 운용 파라미터 ───
+PARAMS = {
+    "ma_reversion_window": 120,
+    "top_n": 30,
+    "tx_cost_bp": 30,
+    "weight_cap_pct": 30,
+    "stop_loss_enabled": False,
+    "stop_loss_pct": 30,
+    "stop_loss_mode": "sell",
+}
+
+# ─── 퀄리티 필터 ───
+QUALITY_FILTER = {
+    "exclude_spac_etf_reit": True,
+    "require_positive_oi": True,
+    "require_positive_roe": True,
+    "min_avg_volume": 500_000_000,
+}
+'''
+
 
 ATT2_STRATEGY_CODE = '''"""
 Strategy: ATT2 회귀 매력도 전략 (대형주)
