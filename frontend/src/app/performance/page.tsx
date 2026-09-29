@@ -932,37 +932,44 @@ export default function PerformancePage() {
           )}
           {hsmmExp?.available && hsmmExp.current && (
             <div className="glass-card p-4 mb-4">
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-                <div>
-                  <p className="text-xs text-muted mb-0.5">이번 달 주식 비중</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {(hsmmExp.current.exposure * 100).toFixed(0)}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted mb-0.5">현금 (연 2.5%)</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {(hsmmExp.current.cash * 100).toFixed(0)}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted mb-0.5">약세확률</p>
-                  <p className="text-lg font-semibold text-foreground">
-                    {(hsmmExp.current.pbear * 100).toFixed(1)}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted mb-0.5">국면</p>
-                  <p className="text-lg font-semibold text-foreground">{hsmmExp.current.regime}</p>
-                </div>
-                <div className="ml-auto text-right">
-                  <p className="text-xs text-muted">
+              <div className="flex items-baseline justify-between mb-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  이번 달 자산 배분
+                  <span className="ml-2 text-xs font-normal text-muted">
                     HSMM {hsmmExp.current.ym} 판정 → {hsmmExp.current.applies} 리밸 적용
-                  </p>
-                  <p className="text-xs text-muted">
-                    전 기간 평균 주식비중 {((hsmmExp.avg_exposure ?? 0) * 100).toFixed(0)}%
-                  </p>
+                  </span>
+                </h3>
+                <span className="text-xs text-muted">
+                  전 기간 평균 주식 {((hsmmExp.avg_exposure ?? 0) * 100).toFixed(0)}%
+                </span>
+              </div>
+
+              <div className="flex h-9 w-full overflow-hidden rounded-md">
+                <div
+                  className="flex items-center justify-center bg-primary text-xs font-semibold text-white"
+                  style={{ width: `${hsmmExp.current.exposure * 100}%` }}
+                >
+                  주식 {(hsmmExp.current.exposure * 100).toFixed(0)}%
                 </div>
+                <div
+                  className="flex items-center justify-center bg-primary/15 text-xs font-semibold text-muted"
+                  style={{ width: `${hsmmExp.current.cash * 100}%` }}
+                >
+                  현금 {(hsmmExp.current.cash * 100).toFixed(0)}%
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted">
+                <span>
+                  국면 <b className="ml-1 text-foreground">{hsmmExp.current.regime}</b>
+                </span>
+                <span>
+                  약세확률{' '}
+                  <b className="ml-1 text-foreground">
+                    {(hsmmExp.current.pbear * 100).toFixed(1)}%
+                  </b>
+                </span>
+                <span>현금 수익률 연 2.5% 가정</span>
               </div>
             </div>
           )}
