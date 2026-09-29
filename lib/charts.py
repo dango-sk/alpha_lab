@@ -69,6 +69,73 @@ def cumulative_return_chart(results: dict) -> go.Figure:
     return fig
 
 
+def exposure_chart(path_csv: str = None) -> go.Figure:
+    """HSMM 익스포저 추이 — 주식 비중(막대) + 약세확률(선) + Bear 구간 음영.
+
+    analysis/hsmm_final_path.csv 를 직접 읽는다.
+    exposure[t] 는 t 월말 판정으로 t→t+1 수익에 적용되므로,
+    "이 달 판정 → 다음 달 주식비중" 으로 읽어야 한다.
+    """
+    import csv
+    from pathlib import Path as _P
+    f = _P(path_csv) if path_csv else _P(__file__).parent.parent / "analysis" / "hsmm_final_path.csv"
+    if not f.exists():
+        fig = go.Figure(); fig.update_layout(**_base_layout(
+            title="HSMM 익스포저 — 경로 파일 없음", height=300)); return fig
+
+    ym, exp, pbear, regime = [], [], [], []
+    with open(f, encoding="utf-8-sig") as fh:
+        for r in csv.DictReader(fh):
+            try:
+                ym.append(r["ym"]); exp.append(float(r["exposure"]))
+                pbear.append(float(r["pbear"])); regime.append(r.get("regime", ""))
+            except (KeyError, TypeError, ValueError):
+                continue
+    if not ym:
+        fig = go.Figure(); fig.update_layout(**_base_layout(title="HSMM 익스포저 — 데이터 없음",
+                                                            height=300)); return fig
+
+    fig = go.Figure()
+    # 주식 비중 — exposure 가 낮을수록 붉게
+    colors = [f"rgba({int(66+(239-66)*(1-e))},{int(165+(83-165)*(1-e))},"
+              f"{int(245+(80-245)*(1-e))},0.85)" for e in exp]
+    fig.add_bar(x=ym, y=[e*100 for e in exp], name="주식 비중(%)",
+                marker=dict(color=colors),
+                hovertemplate="%{x} 판정<br>주식 %{y:.0f}% / 현금 %{customdata:.0f}%<br><i>다음 달에 적용</i><extra></extra>",
+                customdata=[(1-e)*100 for e in exp])
+    # 약세확률
+    fig.add_scatter(x=ym, y=[p*100 for p in pbear], name="약세확률 P(bear)",
+                    yaxis="y2", mode="lines",
+                    line=dict(color="#FFB74D", width=2),
+                    hovertemplate="%{x}<br>P(bear) %{y:.1f}%<extra></extra>")
+    # Bear 구간 음영
+    start = None
+    for i, rg in enumerate(regime + [None]):
+        if rg == "Bear" and start is None:
+            start = i
+        elif rg != "Bear" and start is not None:
+            fig.add_vrect(x0=ym[start], x1=ym[min(i, len(ym)-1)],
+                          fillcolor="rgba(239,83,80,0.10)", line_width=0, layer="below")
+            start = None
+
+    # exposure[t] 는 t 월말 판정 → t+1 월 적용. 다음 달 라벨을 같이 보여준다.
+    _y, _m = int(ym[-1][:4]), int(ym[-1][5:7])
+    nxt = f"{_y+1}-01" if _m == 12 else f"{_y}-{_m+1:02d}"
+    cur = (f"{ym[-1]} 판정 → {nxt} 적용 　주식 {exp[-1]*100:.0f}% / "
+           f"현금 {(1-exp[-1])*100:.0f}%")
+    fig.update_layout(**_base_layout(
+        title=dict(text=f"HSMM 레짐 익스포저 　|　 {cur}", x=0, font=dict(size=15)),
+        height=340,
+        yaxis=dict(title="주식 비중(%)", range=[0, 105], ticksuffix="%",
+                   gridcolor="rgba(255,255,255,0.06)"),
+        yaxis2=dict(title="약세확률", overlaying="y", side="right",
+                    range=[0, 105], ticksuffix="%", showgrid=False),
+        xaxis=dict(showgrid=False, title="판정 월 (비중은 다음 달에 적용)"),
+        bargap=0.15,
+    ))
+    return fig
+
+
 def drawdown_chart(results: dict) -> go.Figure:
     fig = go.Figure()
 

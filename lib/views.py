@@ -24,6 +24,7 @@ from lib.charts import (
     sector_pie_chart, sector_comparison_chart,
     strategy_weight_chart, comparison_cumulative_chart,
     market_cap_distribution_chart, concentration_chart,
+    exposure_chart,
 )
 from lib.ai import (
     is_ai_available, format_weights_for_display, extract_strategy_summary,
@@ -235,6 +236,14 @@ def render_strategy_filter(results: dict) -> dict:
         placeholder="표시할 전략을 선택하세요",
     )
 
+    # 메인전략(CORE)은 항상 포함 — 비교 기준선이므로 빼면 차트 해석이 불가능하다.
+    # 사용자가 해제해도 결과에는 남기고, 안내만 띄운다.
+    from lib.data import BASE_STRATEGY_KEYS
+    _base = [k for k in BASE_STRATEGY_KEYS if k in available and k not in selected]
+    if _base:
+        selected = _base + list(selected)
+        st.caption("· " + ", ".join(labels[k] for k in _base) + " 은(는) 기준 전략이라 항상 표시됩니다.")
+
     if not selected:
         st.warning("최소 1개 전략을 선택하세요.")
         return results
@@ -379,6 +388,17 @@ def render_performance():
                 sub_items=[("MDD", f"{r['mdd']:.1%}"), ("Sharpe", f"{r['sharpe']:.3f}")],
                 color=STRATEGY_COLORS.get(key, "#757575"),
             )
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # HSMM 레짐 익스포저 — 이번 달 주식/현금 비중과 과거 추이
+    section_header("레짐 익스포저")
+    st.caption(
+        "**x축은 판정한 달이고, 그 비중은 다음 달에 적용됩니다.** "
+        "예를 들어 2026-09 막대는 9월 말 데이터로 판정한 값이며 10월 리밸에 쓰입니다. "
+        "막대가 주식 비중(낮을수록 붉게), 주황선이 약세확률, "
+        "붉은 음영이 Bear 판정 구간입니다. 미투자분은 연 2.5% 현금수익으로 계산합니다."
+    )
+    st.plotly_chart(exposure_chart(), width="stretch")
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Comparison Table
