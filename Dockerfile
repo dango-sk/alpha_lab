@@ -30,6 +30,9 @@ COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY analysis/regime_agent_results.json ./analysis/
 COPY analysis/regime_agent_multimodel_results_gemini.json ./analysis/
+# HSMM 레짐 익스포저 경로 — /api/hsmm-exposure 가 직접 읽는다.
+# analysis/ 전체를 복사하지 않으므로 필요한 파일은 여기에 명시해야 한다.
+COPY analysis/hsmm_final_path.csv ./analysis/
 
 # Next.js build
 COPY --from=frontend-build /app/frontend/.next ./.next
