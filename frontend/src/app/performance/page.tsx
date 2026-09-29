@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getResults, getConfig, getRegimeAnalysis } from '@/lib/api';
+import { getResults, getConfig, getRegimeAnalysis, getHsmmExposure } from '@/lib/api';
 import { StrategyResult, Config, valueColor, fmtPct, fmtNum } from '@/lib/hooks';
 import SectionHeader from '@/components/SectionHeader';
 import KpiCard from '@/components/KpiCard';
@@ -457,6 +457,12 @@ export default function PerformancePage() {
   const [endDate, setEndDate] = useState('2026-04-01');
   const [isOosSplit, setIsOosSplit] = useState('2024-07-01');
   const [results, setResults] = useState<Record<string, StrategyResult>>({});
+  // HSMM 레짐 익스포저 (ym 판정 → applies 월에 적용)
+  const [hsmmExp, setHsmmExp] = useState<{
+    available: boolean;
+    current?: { ym: string; applies: string; exposure: number; cash: number; pbear: number; regime: string };
+    avg_exposure?: number;
+  } | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
@@ -492,14 +498,19 @@ export default function PerformancePage() {
     }
   }, []);
 
+  // HSMM 레짐 익스포저 — 이번 달 주식/현금 비중
+  useEffect(() => {
+    getHsmmExposure().then(setHsmmExp).catch(() => setHsmmExp(null));
+  }, []);
+
   useEffect(() => {
     setLoading(true);
     getResults({ start: startDate, end: endDate, universe, rebal_type: rebalType })
       .then((res) => {
         setResults(res);
-        // Auto-select benchmark + A0 on first load
+        // Auto-select benchmark + CORE(메인전략) on first load
         const bm = universe === 'KOSPI+KOSDAQ' ? 'KOSDAQ' : 'KOSPI';
-        setSelectedStrategies((prev) => prev.length > 0 ? prev.filter((k) => res[k]) : [bm, 'A0'].filter((k) => res[k]));
+        setSelectedStrategies((prev) => prev.length > 0 ? prev.filter((k) => res[k]) : [bm, 'CORE'].filter((k) => res[k]));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -917,6 +928,42 @@ export default function PerformancePage() {
                   />
                 );
               })}
+            </div>
+          )}
+          {hsmmExp?.available && hsmmExp.current && (
+            <div className="glass-card p-4 mb-4">
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+                <div>
+                  <p className="text-xs text-muted mb-0.5">이번 달 주식 비중</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {(hsmmExp.current.exposure * 100).toFixed(0)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted mb-0.5">현금 (연 2.5%)</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {(hsmmExp.current.cash * 100).toFixed(0)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted mb-0.5">약세확률</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    {(hsmmExp.current.pbear * 100).toFixed(1)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted mb-0.5">국면</p>
+                  <p className="text-lg font-semibold text-foreground">{hsmmExp.current.regime}</p>
+                </div>
+                <div className="ml-auto text-right">
+                  <p className="text-xs text-muted">
+                    HSMM {hsmmExp.current.ym} 판정 → {hsmmExp.current.applies} 리밸 적용
+                  </p>
+                  <p className="text-xs text-muted">
+                    전 기간 평균 주식비중 {((hsmmExp.avg_exposure ?? 0) * 100).toFixed(0)}%
+                  </p>
+                </div>
+              </div>
             </div>
           )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

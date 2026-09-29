@@ -707,6 +707,52 @@ def api_robustness(
 # ══════════════════════════════════════════════
 # 9. GET /api/strategies
 # ══════════════════════════════════════════════
+@app.get("/api/hsmm-exposure")
+def api_hsmm_exposure():
+    """HSMM 레짐 익스포저 경로.
+
+    analysis/hsmm_final_path.csv 를 읽어 월별 주식비중·약세확률·국면을 반환한다.
+    exposure[t] 는 t 월말 판정으로 t+1 월에 적용되므로, applies 필드에 적용월을 담는다.
+    """
+    import csv
+    f = Path(__file__).parent.parent / "analysis" / "hsmm_final_path.csv"
+    if not f.exists():
+        return {"available": False, "reason": "hsmm_final_path.csv 없음", "path": []}
+
+    rows = []
+    try:
+        with open(f, encoding="utf-8-sig") as fh:
+            for r in csv.DictReader(fh):
+                try:
+                    ym = r["ym"].strip()
+                    y, m = int(ym[:4]), int(ym[5:7])
+                    nxt = f"{y+1}-01" if m == 12 else f"{y}-{m+1:02d}"
+                    rows.append({
+                        "ym": ym,
+                        "applies": nxt,
+                        "exposure": float(r["exposure"]),
+                        "cash": round(1 - float(r["exposure"]), 4),
+                        "pbear": float(r["pbear"]),
+                        "regime": r.get("regime", ""),
+                    })
+                except (KeyError, TypeError, ValueError):
+                    continue
+    except Exception as e:
+        return {"available": False, "reason": str(e), "path": []}
+
+    if not rows:
+        return {"available": False, "reason": "데이터 없음", "path": []}
+
+    last = rows[-1]
+    return {
+        "available": True,
+        "path": rows,
+        "current": last,
+        "cash_annual_rate": 0.025,
+        "avg_exposure": round(sum(r["exposure"] for r in rows) / len(rows), 4),
+    }
+
+
 @app.get("/api/strategies")
 def api_list_strategies(
     universe: Optional[str] = None,

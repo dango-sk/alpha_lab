@@ -281,3 +281,7 @@ export async function executeSql(query: string) {
     body: JSON.stringify({ query }),
   });
 }
+
+export async function getHsmmExposure() {
+  return fetchApi('/api/hsmm-exposure');
+}
