@@ -9,6 +9,8 @@ research/
 analysis/
 !analysis/regime_agent_results.json
 !analysis/regime_agent_multimodel_results_gemini.json
+# HSMM 레짐 익스포저 경로 — /api/hsmm-exposure 가 직접 읽는다
+!analysis/hsmm_final_path.csv
 scripts/step0_*
 scripts/step1_collect*
 scripts/step2_collect*
