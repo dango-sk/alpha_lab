@@ -125,5 +125,21 @@ fi
 echo
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ 완료  $(date '+%Y-%m-%d %H:%M')"
-echo "  확인: 웹뷰 → 성과 비교 탭에서 CORE 갱신 여부"
+echo "════════════════════════════════════════════════════════════"
+echo
+echo "  ⚠ 웹뷰 반영에 필요한 마지막 단계 — git push"
+echo "     hsmm_final_path.csv 는 웹뷰 차트가 직접 읽는 파일이라"
+echo "     커밋하지 않으면 화면에 지난달 exposure 가 계속 표시된다."
+echo
+if ! git diff --quiet analysis/hsmm_final_path.csv 2>/dev/null; then
+  _ym=$(tail -1 analysis/hsmm_final_path.csv | cut -d, -f1)
+  _ex=$(tail -1 analysis/hsmm_final_path.csv | cut -d, -f8)
+  echo "     git add analysis/hsmm_final_path.csv"
+  echo "     git commit -m \"chore(hsmm): ${_ym} 판정 반영 (exposure ${_ex})\""
+  echo "     git push origin main"
+else
+  echo "     (hsmm_final_path.csv 변경 없음 — push 불필요)"
+fi
+echo
+echo "  확인: 웹뷰 → 성과 비교 탭 상단 '레짐 익스포저' 차트"
 echo "════════════════════════════════════════════════════════════"
