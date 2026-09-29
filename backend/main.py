@@ -780,6 +780,24 @@ def _invalidate_results_cache():
         del _cache[k]
 
 
+@app.post("/api/cache/clear")
+def api_clear_cache(prefix: Optional[str] = Query(None)):
+    """서버 TTL 캐시를 비운다 (기본 TTL 1시간).
+
+    백테스트를 DB 에 새로 저장해도 서버는 최대 1시간 옛 결과를 들고 있다.
+    스크립트에서 백테스트 직후 호출해 즉시 반영시킨다.
+      curl -X POST "<host>/api/cache/clear"
+      curl -X POST "<host>/api/cache/clear?prefix=results:"
+    """
+    if prefix:
+        keys = [k for k in _cache if k.startswith(prefix)]
+    else:
+        keys = list(_cache)
+    for k in keys:
+        _cache.pop(k, None)
+    return {"cleared": len(keys), "prefix": prefix or "(전체)"}
+
+
 @app.post("/api/strategies")
 def api_save_strategy(req: SaveStrategyRequest):
     try:
