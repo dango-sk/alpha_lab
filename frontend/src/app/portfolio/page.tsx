@@ -127,7 +127,7 @@ export default function PortfolioPage() {
         setResults(res);
         const keys = Object.keys(res).filter((k: string) => res[k]);
         const bm = universe === 'KOSPI+KOSDAQ' ? 'KOSDAQ' : 'KOSPI';
-        setSelectedStrategies([bm, 'A0'].filter((k) => keys.includes(k)));
+        setSelectedStrategies([bm, 'CORE'].filter((k) => keys.includes(k)));
         for (const key of keys) {
           if (res[key]?.rebalance_dates?.length >= 1) {
             // 예정(forward, 미래 월) 리밸은 제외하고 현재까지 시작된 최신 리밸을 기본 선택
@@ -141,12 +141,13 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [universe, rebalType]);
 
-  // Available dates — A0(base) 리밸 일정.
-  // 파이프라인이 마지막에 예정(forward) 리밸(다음 달 1일)을 붙이지만,
-  // 아직 시작되지 않은 미래 월은 드롭다운에서 제외한다(현재 보유 달까지만 노출).
+  // Available dates — CORE(메인전략) 리밸 일정.
+  // 파이프라인이 마지막에 예정(forward) 리밸(다음 달 1일)을 붙인다.
+  // 2026-09 변경: 예정 리밸도 드롭다운에 노출한다(다음 달 편입 종목을 미리 확인하기 위함).
+  // 기본 선택은 여전히 확정된 최신 리밸이다 — 위 excludeForward 참고.
   const availableDates = useMemo(() => {
-    const base = results['A0']?.rebalance_dates;
-    if (base?.length) return excludeForward([...base].sort());
+    const base = results['CORE']?.rebalance_dates;
+    if (base?.length) return [...base].sort();
     // fallback: union of all strategies
     const dateSet = new Set<string>();
     Object.values(results).forEach((r) => {
@@ -176,7 +177,7 @@ export default function PortfolioPage() {
 
   // Next date for attribution (selectedDate ~ nextDate 기간의 종목 수익률)
   const nextDate = useMemo(() => {
-    const base = results['A0']?.rebalance_dates;
+    const base = results['CORE']?.rebalance_dates;
     if (!base) return '';
     const idx = base.indexOf(selectedDate);
     return idx >= 0 && idx < base.length - 1 ? base[idx + 1] : '';
